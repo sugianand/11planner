@@ -116,3 +116,16 @@ export function getColorClass(color?: string): string {
   };
   return colorMap[color || 'blue'] || colorMap.blue;
 }
+
+export function getMonthsInYear(year: number): { month: number; name: string; daysInMonth: DayData[] }[] {
+  const months = [];
+  for (let month = 0; month < 12; month++) {
+    const date = new Date(year, month, 1);
+    months.push({
+      month,
+      name: date.toLocaleDateString('en-US', { month: 'long' }),
+      daysInMonth: getDaysInMonth(date),
+    });
+  }
+  return months;
+}

@@ -1,4 +1,4 @@
-export type ViewMode = 'daily' | 'weekly' | 'monthly';
+export type ViewMode = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
 export interface Event {
   id: string;
