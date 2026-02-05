@@ -2,10 +2,11 @@
 
 import React, { useState, useCallback } from 'react';
 import { ViewMode, Event, DayData } from '@/types/schedule';
-import { getDaysInMonth, getWeekDays, getDayData } from '@/utils/dateUtils';
+import { getDaysInMonth, getWeekDays, getDayData, getMonthsInYear } from '@/utils/dateUtils';
 import { DayView } from './DayView';
 import { WeekView } from './WeekView';
 import { MonthView } from './MonthView';
+import { YearView } from './YearView';
 
 interface ScheduleViewProps {
   events?: Event[];
@@ -17,6 +18,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [] }) => {
   const [weekDays, setWeekDays] = useState<DayData[]>(getWeekDays(currentDate));
   const [daysInMonth, setDaysInMonth] = useState<DayData[]>(getDaysInMonth(currentDate));
   const [dayData, setDayData] = useState<DayData>(getDayData(currentDate));
+  const [monthsInYear, setMonthsInYear] = useState(getMonthsInYear(currentDate.getFullYear()));
 
   const handlePreviousPeriod = useCallback(() => {
     const newDate = new Date(currentDate);
@@ -29,6 +31,9 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [] }) => {
         break;
       case 'monthly':
         newDate.setMonth(newDate.getMonth() - 1);
+        break;
+      case 'yearly':
+        newDate.setFullYear(newDate.getFullYear() - 1);
         break;
     }
     updateDate(newDate);
@@ -46,6 +51,9 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [] }) => {
       case 'monthly':
         newDate.setMonth(newDate.getMonth() + 1);
         break;
+      case 'yearly':
+        newDate.setFullYear(newDate.getFullYear() + 1);
+        break;
     }
     updateDate(newDate);
   }, [currentDate, viewMode]);
@@ -59,6 +67,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [] }) => {
     setWeekDays(getWeekDays(newDate));
     setDaysInMonth(getDaysInMonth(newDate));
     setDayData(getDayData(newDate));
+    setMonthsInYear(getMonthsInYear(newDate.getFullYear()));
   };
 
   const handleViewModeChange = (mode: ViewMode) => {
@@ -113,6 +122,16 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [] }) => {
           >
             Month
           </button>
+          <button
+            onClick={() => handleViewModeChange('yearly')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              viewMode === 'yearly'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Year
+          </button>
         </div>
 
         {/* Navigation */}
@@ -127,6 +146,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [] }) => {
             {viewMode === 'daily' && currentDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
             {viewMode === 'weekly' && `Week of ${weekDays[0]?.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
             {viewMode === 'monthly' && currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+            {viewMode === 'yearly' && currentDate.getFullYear()}
           </span>
           <button
             onClick={handleNextPeriod}
@@ -142,6 +162,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [] }) => {
         {viewMode === 'daily' && <DayView dayData={dayData} events={events} />}
         {viewMode === 'weekly' && <WeekView weekDays={weekDays} events={events} />}
         {viewMode === 'monthly' && <MonthView daysInMonth={daysInMonth} events={events} />}
+        {viewMode === 'yearly' && <YearView year={currentDate.getFullYear()} monthsData={monthsInYear} events={events} />}
       </div>
     </div>
   );
