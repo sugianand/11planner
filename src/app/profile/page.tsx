@@ -10,7 +10,7 @@ export default function ProfilePage() {
   const completionRate = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-6">
       <div className="max-w-2xl mx-auto">
         {/* Profile Header */}
         <div className="bg-white rounded-lg shadow-md p-8 mb-6 border-t-4 border-t-blue-500">

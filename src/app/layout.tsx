@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { PlannerProvider } from "@/contexts/PlannerContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import Navigation from "@/components/Navigation";
 import "./globals.css";
 
@@ -27,12 +28,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white dark:bg-slate-900 text-black dark:text-white transition-colors`}
       >
-        <PlannerProvider>
-          <Navigation />
-          {children}
-        </PlannerProvider>
+        <ThemeProvider>
+          <PlannerProvider>
+            <Navigation />
+            {children}
+          </PlannerProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -4,6 +4,26 @@ import { useState, useEffect } from "react";
 
 type Theme = "light" | "dark" | "auto";
 
+const applyTheme = (newTheme: Theme) => {
+  if (newTheme === "dark") {
+    document.documentElement.classList.add("dark");
+    document.documentElement.style.colorScheme = "dark";
+  } else if (newTheme === "light") {
+    document.documentElement.classList.remove("dark");
+    document.documentElement.style.colorScheme = "light";
+  } else {
+    // auto mode - use system preference
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    if (prefersDark) {
+      document.documentElement.classList.add("dark");
+      document.documentElement.style.colorScheme = "dark";
+    } else {
+      document.documentElement.classList.remove("dark");
+      document.documentElement.style.colorScheme = "light";
+    }
+  }
+};
+
 export default function SettingsPage() {
   const [theme, setTheme] = useState<Theme>("light");
   const [notifications, setNotifications] = useState(true);
@@ -24,18 +44,15 @@ export default function SettingsPage() {
     setEmailUpdates(savedEmailUpdates);
     setWeeklyReport(savedWeeklyReport);
     setDailyLimit(savedDailyLimit);
+
+    // Apply theme on mount
+    applyTheme(savedTheme);
   }, []);
 
   const handleThemeChange = (newTheme: Theme) => {
     setTheme(newTheme);
     localStorage.setItem("theme", newTheme);
-
-    // Apply theme
-    if (newTheme === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
+    applyTheme(newTheme);
   };
 
   const handleNotificationChange = (value: boolean) => {
@@ -63,7 +80,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-6">
       <div className="max-w-3xl mx-auto">
         {/* Header */}
         <div className="mb-8">

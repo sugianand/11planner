@@ -9,11 +9,11 @@ export default function Navigation() {
   const isActive = (path: string) => pathname === path;
 
   return (
-    <nav className="bg-white shadow-md sticky top-0 z-50">
-      <div className="max-w-6xl mx-auto px-6 py-4">
+    <nav className="bg-white dark:bg-slate-800 shadow-md sticky top-0 z-50">
+      <div className="w-full px-6 py-4">
         <div className="flex justify-between items-center">
           {/* Logo */}
-          <Link href="/" className="text-2xl font-bold text-blue-600">
+          <Link href="/" className="text-4xl font-bold text-blue-600 dark:text-blue-400 flex-shrink-0">
             11Planner
           </Link>
 
@@ -23,8 +23,8 @@ export default function Navigation() {
               href="/"
               className={`font-medium transition ${
                 isActive("/")
-                  ? "text-blue-600 border-b-2 border-b-blue-600"
-                  : "text-slate-700 hover:text-blue-600"
+                  ? "text-blue-600 dark:text-blue-400 border-b-2 border-b-blue-600"
+                  : "text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400"
               }`}
             >
               Home
@@ -75,17 +75,6 @@ export default function Navigation() {
             </Link>
 
             <Link
-              href="/profile"
-              className={`font-medium transition ${
-                isActive("/profile")
-                  ? "text-blue-600 border-b-2 border-b-blue-600"
-                  : "text-slate-700 hover:text-blue-600"
-              }`}
-            >
-              Profile
-            </Link>
-
-            <Link
               href="/settings"
               className={`font-medium transition ${
                 isActive("/settings")
@@ -100,7 +89,7 @@ export default function Navigation() {
           {/* User Profile Button */}
           <Link
             href="/profile"
-            className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition"
+            className="bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition"
           >
             Profile
           </Link>
