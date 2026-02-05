@@ -40,7 +40,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${manrope.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${manrope.variable} antialiased bg-white dark:bg-slate-900 text-black dark:text-white transition-colors`}
       >
         <ThemeProvider>
           <PlannerProvider>

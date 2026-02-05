@@ -5,6 +5,7 @@ from app.models import (
     TaskBase, TaskCreate, Task, 
     ScheduleBlockBase, ScheduleBlockCreate, ScheduleBlock
 )
+from app.schedule_generator import ScheduleGenerator
 from typing import List
 from datetime import datetime
 
@@ -183,3 +184,76 @@ async def delete_schedule_block(block_id: str):
         raise HTTPException(status_code=404, detail="Schedule block not found")
     del schedule_blocks_db[block_id]
     return {"message": "Schedule block deleted"}
+# ========== SCHEDULE GENERATION ENDPOINTS ==========
+
+@router.post("/schedule/generate/{user_id}")
+async def generate_schedule(user_id: str):
+    """
+    Generate optimal schedule for all pending tasks.
+    Uses smart algorithm that considers:
+    - Task deadline (urgency)
+    - Estimated duration
+    - Priority level
+    - Daily work limit (8 hours)
+    - Break times (15 min between blocks)
+    - Focus blocks (2-4 hours max)
+    """
+    # Get user's pending tasks
+    user_tasks = [t for t in tasks_db.values() if t["user_id"] == user_id and not t["completed"]]
+    
+    if not user_tasks:
+        return {"message": "No pending tasks to schedule", "blocks": []}
+    
+    # Convert to Task objects
+    task_objects = [
+        Task(
+            id=t["id"],
+            title=t["title"],
+            assignment_id=t.get("assignment_id"),
+            course_id=t.get("course_id"),
+            deadline=datetime.fromisoformat(t["deadline"].isoformat()) if isinstance(t["deadline"], datetime) else t["deadline"],
+            estimated_hours=t["estimated_hours"],
+            priority=t["priority"],
+            description=t.get("description"),
+            user_id=t["user_id"],
+            created_at=t["created_at"],
+            completed=t["completed"]
+        )
+        for t in user_tasks
+    ]
+    
+    # Generate schedule
+    generator = ScheduleGenerator(max_hours_per_day=8, focus_block_hours=2)
+    schedule_blocks = generator.generate_schedule(task_objects)
+    
+    # Validate schedule
+    validation = generator.validate_schedule(schedule_blocks)
+    
+    # Store generated blocks in database
+    for block in schedule_blocks:
+        schedule_blocks_db[block.id] = block.dict()
+    
+    return {
+        "message": "Schedule generated successfully",
+        "blocks": schedule_blocks,
+        "stats": validation
+    }
+
+@router.get("/schedule/stats/{user_id}")
+async def get_schedule_stats(user_id: str):
+    """Get statistics about user's schedule"""
+    user_blocks = [b for b in schedule_blocks_db.values() if b["user_id"] == user_id]
+    user_tasks = [t for t in tasks_db.values() if t["user_id"] == user_id]
+    
+    total_hours_scheduled = sum(b["duration_minutes"] for b in user_blocks) / 60
+    pending_hours = sum(t["estimated_hours"] for t in user_tasks if not t["completed"])
+    completed_tasks = len([t for t in user_tasks if t["completed"]])
+    
+    return {
+        "total_tasks": len(user_tasks),
+        "completed_tasks": completed_tasks,
+        "pending_tasks": len(user_tasks) - completed_tasks,
+        "total_hours_needed": pending_hours,
+        "total_hours_scheduled": round(total_hours_scheduled, 2),
+        "schedule_coverage": f"{round((total_hours_scheduled / pending_hours * 100), 1)}%" if pending_hours > 0 else "0%"
+    }

@@ -13,7 +13,7 @@ export default function Navigation() {
       <div className="max-w-6xl mx-auto px-6 py-4">
         <div className="flex justify-between items-center">
           {/* Logo */}
-          <Link href="/" className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+          <Link href="/" className="text-4xl font-bold text-blue-600 dark:text-blue-400 flex-shrink-0">
             11Planner
           </Link>
 
