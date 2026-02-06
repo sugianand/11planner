@@ -28,7 +28,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     if (!mounted) return;
 
     const root = document.documentElement;
-    
+
     const applyTheme = (isDark: boolean) => {
       if (isDark) {
         root.classList.add('dark');
