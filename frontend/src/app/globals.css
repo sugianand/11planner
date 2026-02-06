@@ -1,10 +1,40 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
 }
 
+
+
+/* Apply dark mode variables when .dark class is present */
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+}
+
+/* Focus Mode Gradients */
+.bg-focus-light {
+  /* Cozy Light Study Background (Image Only) */
+  /* Overlay removed per user request */
+  background-image: url('https://images.unsplash.com/photo-1481627834876-b7833e8f5570?auto=format&fit=crop&q=80&w=2000');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+
+.bg-focus-dark {
+  /* Cozy Dark Study Background (Image + Overlay) */
+  /* Using a dark blurred library/study image to match the reference vibe */
+  background-image:
+    linear-gradient(to right, rgba(5, 5, 10, 0.85), rgba(5, 5, 10, 0.7)),
+    url('https://images.unsplash.com/photo-1481627834876-b7833e8f5570?auto=format&fit=crop&q=80&w=2000');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
 
 
 @theme inline {
