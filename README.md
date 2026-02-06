@@ -163,6 +163,3 @@ Displays a full month calendar grid.
 - **Tailwind CSS** - Utility-first CSS framework
 - **ESLint** - Code linting
 
-## License
-
-MIT
