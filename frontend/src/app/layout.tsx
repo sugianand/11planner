@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Manrope } from "next/font/google";
 import { PlannerProvider } from "@/contexts/PlannerContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { NotificationProvider } from "@/contexts/NotificationContext";
 import Navigation from "@/components/Navigation";
+import NotificationToasts from "@/components/NotificationToasts";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -44,8 +46,11 @@ export default function RootLayout({
       >
         <ThemeProvider>
           <PlannerProvider>
-            <Navigation />
-            {children}
+            <NotificationProvider>
+              <Navigation />
+              <NotificationToasts />
+              {children}
+            </NotificationProvider>
           </PlannerProvider>
         </ThemeProvider>
       </body>

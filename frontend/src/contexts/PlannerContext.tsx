@@ -45,6 +45,7 @@ interface PlannerContextType {
   // Schedule Blocks
   scheduleBlocks: ScheduleBlock[];
   loadScheduleBlocks: () => Promise<void>;
+  updateScheduleBlock: (id: string, block: Partial<ScheduleBlock>) => Promise<void>;
 
   // Loading state
   loading: boolean;
@@ -256,6 +257,21 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     }
   }, [userId]);
 
+  const updateScheduleBlock = useCallback(async (id: string, block: Partial<ScheduleBlock>) => {
+    try {
+      setLoading(true);
+      const updated = await scheduleAPI.update(id, block);
+      setScheduleBlocks((prev) =>
+        prev.map((item) => (item.id === id ? updated : item))
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update schedule block");
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const value: PlannerContextType = {
     userId,
     setUserId,
@@ -276,6 +292,7 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     deleteTask,
     scheduleBlocks,
     loadScheduleBlocks,
+    updateScheduleBlock,
     loading,
     error,
   };
