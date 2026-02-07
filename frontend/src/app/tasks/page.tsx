@@ -178,7 +178,7 @@ export default function TasksPage() {
                       setFormData({ ...formData, title: e.target.value })
                     }
                     placeholder="e.g., Finish calculus homework"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
                   />
                 </div>
 
@@ -191,7 +191,7 @@ export default function TasksPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, course_id: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
                   >
                     <option value="">Select a course</option>
                     {courses.map((course) => (
@@ -212,7 +212,7 @@ export default function TasksPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, deadline: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
                   />
                 </div>
 
@@ -231,7 +231,7 @@ export default function TasksPage() {
                         estimated_hours: parseFloat(e.target.value),
                       })
                     }
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
                   />
                 </div>
 
@@ -247,7 +247,7 @@ export default function TasksPage() {
                         priority: parseInt(e.target.value),
                       })
                     }
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
                   >
                     <option value="1">Very Low</option>
                     <option value="2">Low</option>
@@ -269,7 +269,7 @@ export default function TasksPage() {
                   }
                   placeholder="Additional details about the task"
                   rows={3}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
                 />
               </div>
 

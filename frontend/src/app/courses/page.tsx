@@ -129,7 +129,7 @@ export default function CoursesPage() {
                       setFormData({ ...formData, name: e.target.value })
                     }
                     placeholder="e.g., Calculus II"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
                   />
                 </div>
 
@@ -144,7 +144,7 @@ export default function CoursesPage() {
                       setFormData({ ...formData, code: e.target.value })
                     }
                     placeholder="e.g., MATH 241"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
                   />
                 </div>
 
@@ -159,7 +159,7 @@ export default function CoursesPage() {
                       setFormData({ ...formData, professor: e.target.value })
                     }
                     placeholder="e.g., Dr. Smith"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
                   />
                 </div>
               </div>
@@ -175,7 +175,7 @@ export default function CoursesPage() {
                   }
                   placeholder="Course details and notes"
                   rows={3}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
                 />
               </div>
 
