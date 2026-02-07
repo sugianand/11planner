@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { ViewMode, Event, DayData } from '@/types/schedule';
 import { getDaysInMonth, getWeekDays, getDayData, getMonthsInYear } from '@/utils/dateUtils';
 import { DayView } from './DayView';
@@ -10,15 +10,21 @@ import { YearView } from './YearView';
 
 interface ScheduleViewProps {
   events?: Event[];
+  onEventMove?: (eventId: string, newStart: Date) => void;
 }
 
-export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [] }) => {
+export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEventMove }) => {
   const [viewMode, setViewMode] = useState<ViewMode>('monthly');
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [weekDays, setWeekDays] = useState<DayData[]>(getWeekDays(currentDate));
   const [daysInMonth, setDaysInMonth] = useState<DayData[]>(getDaysInMonth(currentDate));
   const [dayData, setDayData] = useState<DayData>(getDayData(currentDate));
   const [monthsInYear, setMonthsInYear] = useState(getMonthsInYear(currentDate.getFullYear()));
+  const [eventList, setEventList] = useState<Event[]>(events);
+
+  useEffect(() => {
+    setEventList(events);
+  }, [events]);
 
   const handlePreviousPeriod = useCallback(() => {
     const newDate = new Date(currentDate);
@@ -74,8 +80,30 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [] }) => {
     setViewMode(mode);
   };
 
+  const handleEventMove = useCallback(
+    (eventId: string, newStart: Date) => {
+      setEventList((prev) =>
+        prev.map((eventItem) => {
+          if (eventItem.id !== eventId) {
+            return eventItem;
+          }
+          const startTime = new Date(eventItem.start).getTime();
+          const endTime = new Date(eventItem.end).getTime();
+          const durationMs = Math.max(endTime - startTime, 0);
+          const updatedStart = new Date(newStart);
+          const updatedEnd = new Date(updatedStart.getTime() + durationMs);
+          return { ...eventItem, start: updatedStart, end: updatedEnd };
+        })
+      );
+      if (onEventMove) {
+        onEventMove(eventId, newStart);
+      }
+    },
+    [onEventMove]
+  );
+
   return (
-    <div className="flex flex-col h-screen bg-white">
+    <div className="flex flex-col h-full bg-white">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 p-4">
         <div className="flex items-center justify-between mb-4">
@@ -159,10 +187,18 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [] }) => {
 
       {/* Content */}
       <div className="flex-1 overflow-hidden">
-        {viewMode === 'daily' && <DayView dayData={dayData} events={events} />}
-        {viewMode === 'weekly' && <WeekView weekDays={weekDays} events={events} />}
-        {viewMode === 'monthly' && <MonthView daysInMonth={daysInMonth} events={events} />}
-        {viewMode === 'yearly' && <YearView year={currentDate.getFullYear()} monthsData={monthsInYear} events={events} />}
+        {viewMode === 'daily' && (
+          <DayView dayData={dayData} events={eventList} onEventMove={handleEventMove} />
+        )}
+        {viewMode === 'weekly' && (
+          <WeekView weekDays={weekDays} events={eventList} onEventMove={handleEventMove} />
+        )}
+        {viewMode === 'monthly' && (
+          <MonthView daysInMonth={daysInMonth} events={eventList} onEventMove={handleEventMove} />
+        )}
+        {viewMode === 'yearly' && (
+          <YearView year={currentDate.getFullYear()} monthsData={monthsInYear} events={eventList} />
+        )}
       </div>
     </div>
   );

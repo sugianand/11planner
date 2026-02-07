@@ -65,6 +65,21 @@ body {
   font-family: var(--font-manrope), Arial, Helvetica, sans-serif;
 }
 
+@keyframes dragGhostIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+}
+
+.drag-ghost {
+  animation: dragGhostIn 160ms ease-out;
+}
+
 .glass-hero {
   background: rgba(255, 255, 255, 0.4);
   backdrop-filter: blur(24px);

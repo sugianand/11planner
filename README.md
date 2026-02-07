@@ -165,4 +165,3 @@ Displays a full month calendar grid.
 
 ## License
 
-MIT
