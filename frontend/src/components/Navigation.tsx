@@ -2,8 +2,41 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { supabase } from "@/app/auth/supabaseClient";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+
+
+
+
+
+
 
 export default function Navigation() {
+
+      const [isLoggedIn, setIsLoggedIn] = useState(false);
+      const router = useRouter();
+
+      useEffect(() => {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          setIsLoggedIn(!!data.session);
+        })
+        const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+          setIsLoggedIn(!!session);
+        });
+
+        return () => {
+          authListener?.subscription.unsubscribe();
+        };
+      }, []);
+
+      async function logout(){
+        await supabase.auth.signOut();
+        router.push("/auth");
+      }
+
+
+
   const pathname = usePathname();
 
   const isActive = (path: string) => pathname === path;
@@ -96,6 +129,29 @@ export default function Navigation() {
             >
               Settings
             </Link>
+
+              {isLoggedIn ? (
+                <button
+                  onClick={logout}
+                  className="font-medium text-slate-700 dark:text-slate-300 hover:text-red-600 transition"
+                >
+                  Logout
+                </button>
+              ) : (
+                <Link
+                  href="/auth"
+                  className={`font-medium transition ${
+                    isActive("/auth")
+                      ? "text-blue-600 border-b-2 border-b-blue-600"
+                      : "text-slate-700 hover:text-blue-600"
+                  }`}
+                >
+                  Login
+                </Link>
+              )}
+
+
+              
               </div>
             </div>
           </div>

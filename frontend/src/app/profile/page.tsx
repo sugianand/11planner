@@ -1,9 +1,87 @@
 "use client";
 
 import { usePlanner } from "@/contexts/PlannerContext";
+import { supabase } from "../auth/supabaseClient";
+import { useEffect, useState } from "react";
+
+
+type ProfileData = {
+  firstname: string;
+  lastname: string;
+  university: string;
+  major: string;
+  
+}
+
 
 export default function ProfilePage() {
-  const { userId, tasks, courses } = usePlanner();
+  const { tasks, courses } = usePlanner();
+  const [userId, setUserId] = useState<string | null>(null);
+  const [email, setEmail] = useState<string | null>(null);
+  const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [editProfile, setEditProfile] = useState<ProfileData | null>(null);
+
+  useEffect(() => {
+
+    async function fetchProfile() {
+      const{
+        data: {user},
+        error: authError,
+      } = await supabase.auth.getUser();
+
+      if (authError || !user) {
+        console.error("Error fetching user:", authError);
+        return;
+      }
+
+
+
+      setEmail(user.email);
+      setUserId(user.id);
+
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("firstname, lastname, university, major")
+        .eq("id", user.id)
+        .single();
+
+      if (profileError) {
+        console.error("Error fetching profile:", profileError);
+        return;
+      }
+
+      setProfile(profileData);
+      setEditProfile(profileData);
+    }
+
+    fetchProfile();
+  }, []);
+
+  async function saveProfile() {
+    if (!editProfile || !userId) return;
+    
+    const { error } = await supabase
+    .from ("profiles")
+    .update({
+      firstname: editProfile.firstname,
+      lastname: editProfile.lastname,
+      university: editProfile.university,
+      major: editProfile.major,
+    })
+    .eq("id", userId);
+
+    if (error) {
+      console.error("Error updating profile:", error);
+      alert("Failed to update profile.");  
+      return;
+    }
+    setProfile(editProfile);
+    setEditing(false);  
+  }
+
+
+
 
   const completedTasks = tasks.filter((t) => t.completed).length;
   const totalTasks = tasks.length;
@@ -16,12 +94,14 @@ export default function ProfilePage() {
         <div className="bg-white rounded-lg shadow-md p-8 mb-6 border-t-4 border-t-blue-500">
           <div className="flex items-center gap-6">
             <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white text-4xl font-bold">
-              SA
+              
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-slate-900">Suganeshwara Anand</h1>
+              <h1 className="text-3xl font-bold text-slate-900">
+                {profile ? `${profile.firstname} ${profile.lastname}` : "?"}
+              </h1>
+
               <p className="text-slate-600 text-lg mt-2">ID: {userId}</p>
-              <p className="text-slate-500 text-sm mt-2">Member since February 2026</p>
             </div>
           </div>
         </div>
@@ -54,27 +134,64 @@ export default function ProfilePage() {
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 Email
               </label>
-              <p className="text-slate-900">suganeshwara@11planner.com</p>
+              <p className="text-slate-900">{email}</p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 University
               </label>
-              <p className="text-slate-900">Your University</p>
+
+              {editing ? (
+                <input
+                  className="border rounded px-3 py-2 w-full"
+                  value={editProfile?.university ?? ""}
+                  onChange={(e) =>
+                    setEditProfile((prev) =>
+                      prev ? { ...prev, university: e.target.value } : prev
+                    )
+                  }
+                />
+              ) : (
+                <p className="text-slate-900">{profile?.university}</p>
+              )}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 Major
               </label>
-              <p className="text-slate-900">Computer Science</p>
+
+              {editing ? (
+                <input
+                  className="border rounded px-3 py-2 w-full"
+                  value={editProfile?.major ?? ""}
+                  onChange={(e) =>
+                    setEditProfile((prev) =>
+                      prev ? { ...prev, major: e.target.value } : prev
+                    )
+                  }
+                />
+              ) : (
+                <p className="text-slate-900">{profile?.major}</p>
+              )}
             </div>
 
+
             <div className="pt-4 border-t border-slate-200">
-              <button className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition">
-                Edit Profile
+              <button
+                onClick={() => {
+                  if (editing) {
+                    saveProfile();
+                  } else {
+                    setEditing(true);
+                  }
+                }}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition"
+              >
+                {editing ? "Save Profile" : "Edit Profile"}
               </button>
+
             </div>
           </div>
         </div>
