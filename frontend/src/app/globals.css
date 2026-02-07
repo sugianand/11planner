@@ -1,8 +1,37 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
+}
+
+/* Apply dark mode variables when .dark class is present */
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+}
+
+/* Focus Mode Gradients */
+.bg-focus-light {
+  /* Cozy Light Study Background (Image Only) */
+  /* Overlay removed per user request */
+  background-image: url('https://images.unsplash.com/photo-1481627834876-b7833e8f5570?auto=format&fit=crop&q=80&w=2000');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+
+.bg-focus-dark {
+  /* Cozy Dark Study Background (Image + Overlay) */
+  /* Using a dark blurred library/study image to match the reference vibe */
+  background-image:
+    linear-gradient(to right, rgba(5, 5, 10, 0.85), rgba(5, 5, 10, 0.7)),
+    url('https://images.unsplash.com/photo-1481627834876-b7833e8f5570?auto=format&fit=crop&q=80&w=2000');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
 }
 
 @theme inline {
@@ -10,8 +39,16 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --color-primary: #2d3436;
+  --color-accent: #00b894;
+  --color-soft-warm: #fdfaf6;
+  --color-brand-green: #306844;
+  --radius-pill: 9999px;
+  --radius-2xl: 1.5rem;
+  --radius-3xl: 2.5rem;
 }
 
+/* Keep media query for initial load/fallback if needed, but .dark class via next-themes will handle the rest */
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
@@ -22,5 +59,69 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-manrope), Arial, Helvetica, sans-serif;
+}
+
+@keyframes dragGhostIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+}
+
+.drag-ghost {
+  animation: dragGhostIn 160ms ease-out;
+}
+
+.glass-hero {
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.nav-glass {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px) rotate(0deg);
+  }
+
+  50% {
+    transform: translateY(-15px) rotate(3deg);
+  }
+
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+}
+
+.floating-icon {
+  animation: float 5s ease-in-out infinite;
+}
+
+.floating-icon-delayed {
+  animation: float 7s ease-in-out infinite;
+  animation-delay: 1.5s;
+}
+
+.bg-hero-scenic {
+  background-image: url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=80&w=2000');
+}
+
+.rounded-pill {
+  border-radius: 9999px;
+}
+
+.bg-soft-warm {
+  background-color: #fdfaf6;
 }
