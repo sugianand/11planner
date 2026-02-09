@@ -9,12 +9,16 @@ export default function Navigation() {
   const isActive = (path: string) => pathname === path;
 
   return (
-    <nav className="bg-white dark:bg-slate-800 shadow-md dark:shadow-slate-900/30 sticky top-0 z-50">
+    <nav className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-white/40 dark:border-slate-800/60 sticky top-0 z-50">
       <div className="max-w-6xl mx-auto px-6 py-4">
-          <div className="flex items-center">
+        <div className="flex items-center">
           {/* Logo */}
-          <Link href="/" className="text-4xl font-bold text-blue-600 dark:text-blue-400 flex-shrink-0">
-            11Planner
+          <Link href="/logo-story" className="flex items-center gap-3 flex-shrink-0">
+            <img
+              src="/11caroon.png"
+              alt="11Planner logo"
+              className="h-10 w-10 object-cover rounded-xl border border-white/30 dark:border-slate-700/40"
+            />
           </Link>
 
           {/* Navigation Links */}
@@ -24,8 +28,8 @@ export default function Navigation() {
               href="/"
               className={`font-medium transition ${
                 isActive("/")
-                  ? "text-blue-600 dark:text-blue-400 border-b-2 border-b-blue-600 dark:border-b-blue-400"
-                  : "text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400"
+                  ? "text-emerald-700 dark:text-emerald-400 border-b-2 border-b-emerald-500"
+                  : "text-slate-700 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400"
               }`}
             >
               Home
@@ -35,8 +39,8 @@ export default function Navigation() {
               href="/dashboard"
               className={`font-medium transition ${
                 isActive("/dashboard")
-                  ? "text-blue-600 dark:text-blue-400 border-b-2 border-b-blue-600 dark:border-b-blue-400"
-                  : "text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400"
+                  ? "text-emerald-700 dark:text-emerald-400 border-b-2 border-b-emerald-500"
+                  : "text-slate-700 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400"
               }`}
             >
               Dashboard
@@ -46,8 +50,8 @@ export default function Navigation() {
               href="/tasks"
               className={`font-medium transition ${
                 isActive("/tasks")
-                  ? "text-blue-600 dark:text-blue-400 border-b-2 border-b-blue-600 dark:border-b-blue-400"
-                  : "text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400"
+                  ? "text-emerald-700 dark:text-emerald-400 border-b-2 border-b-emerald-500"
+                  : "text-slate-700 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400"
               }`}
             >
               Tasks
@@ -57,8 +61,8 @@ export default function Navigation() {
               href="/courses"
               className={`font-medium transition ${
                 isActive("/courses")
-                  ? "text-blue-600 dark:text-blue-400 border-b-2 border-b-blue-600 dark:border-b-blue-400"
-                  : "text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400"
+                  ? "text-emerald-700 dark:text-emerald-400 border-b-2 border-b-emerald-500"
+                  : "text-slate-700 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400"
               }`}
             >
               Courses
@@ -68,8 +72,8 @@ export default function Navigation() {
               href="/schedule"
               className={`font-medium transition ${
                 isActive("/schedule")
-                  ? "text-blue-600 dark:text-blue-400 border-b-2 border-b-blue-600 dark:border-b-blue-400"
-                  : "text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400"
+                  ? "text-emerald-700 dark:text-emerald-400 border-b-2 border-b-emerald-500"
+                  : "text-slate-700 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400"
               }`}
             >
               Schedule
@@ -79,8 +83,8 @@ export default function Navigation() {
               href="/profile"
               className={`font-medium transition ${
                 isActive("/profile")
-                  ? "text-blue-600 dark:text-blue-400 border-b-2 border-b-blue-600 dark:border-b-blue-400"
-                  : "text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400"
+                  ? "text-emerald-700 dark:text-emerald-400 border-b-2 border-b-emerald-500"
+                  : "text-slate-700 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400"
               }`}
             >
               Profile
@@ -90,8 +94,8 @@ export default function Navigation() {
               href="/settings"
               className={`font-medium transition ${
                 isActive("/settings")
-                  ? "text-blue-600 dark:text-blue-400 border-b-2 border-b-blue-600 dark:border-b-blue-400"
-                  : "text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400"
+                  ? "text-emerald-700 dark:text-emerald-400 border-b-2 border-b-emerald-500"
+                  : "text-slate-700 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400"
               }`}
             >
               Settings

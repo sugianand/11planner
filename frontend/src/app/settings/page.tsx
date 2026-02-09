@@ -166,15 +166,40 @@ export default function SettingsPage() {
     setReminderLeadHours(24);
   };
 
+  const handleChangePassword = () => {
+    window.alert("Password change will be available soon.");
+  };
+
+  const handlePrivacySecurity = () => {
+    window.alert("Privacy & security settings will be available soon.");
+  };
+
+  const handleDeleteAccount = () => {
+    const confirmed = window.confirm(
+      "This is a placeholder action. Account deletion is not enabled yet."
+    );
+    if (confirmed) {
+      window.alert("Account deletion will be available soon.");
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-6">
+    <div className="min-h-screen relative overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors duration-500 p-6 lg:p-10">
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute -top-32 -left-24 h-[32rem] w-[32rem] rounded-full bg-emerald-200/40 blur-[120px]" />
+        <div className="absolute top-1/3 -right-32 h-[28rem] w-[28rem] rounded-full bg-amber-200/40 blur-[120px]" />
+        <div className="absolute bottom-[-10%] left-1/2 h-[26rem] w-[26rem] -translate-x-1/2 rounded-full bg-sky-200/40 blur-[120px]" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.08)_1px,transparent_1px)] bg-[size:48px_48px]" />
+        <div className="absolute inset-0 dark:bg-[radial-gradient(circle_at_top,rgba(15,23,42,0.2),transparent_55%)]" />
+      </div>
+
       <div className="max-w-3xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-slate-900 dark:text-white">Settings</h1>
-          <p className="text-slate-600 dark:text-slate-300 mt-2">Customize your 11Planner experience</p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Settings</h1>
+          <p className="text-slate-600 dark:text-slate-300 mt-2 font-medium">Customize your 11Planner experience</p>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-6 mb-6">
+        <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-sm p-6 mb-6 border border-white/40 dark:border-slate-700/40">
           <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">Appearance</h2>
 
           <div className="space-y-4">
@@ -221,7 +246,7 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <div className="p-4 bg-slate-100 dark:bg-slate-700 rounded-lg">
+            <div className="p-4 bg-white/70 dark:bg-slate-800/70 rounded-2xl border border-white/40 dark:border-slate-700/40">
               <p className="text-sm text-slate-600 dark:text-slate-200">
                 Current theme: <span className="font-semibold text-slate-900 dark:text-white">{theme}</span>
               </p>
@@ -229,7 +254,7 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-6 mb-6">
+        <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-sm p-6 mb-6 border border-white/40 dark:border-slate-700/40">
           <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">Productivity</h2>
 
           <div className="space-y-6">
@@ -244,7 +269,7 @@ export default function SettingsPage() {
                   max="12"
                   value={dailyLimit}
                   onChange={(e) => handleDailyLimitChange(parseInt(e.target.value))}
-                  className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"
+                  className="flex-1 h-2 bg-slate-200/80 dark:bg-slate-700/70 rounded-lg appearance-none cursor-pointer"
                 />
                 <div className="flex items-center gap-2">
                   <input
@@ -257,7 +282,7 @@ export default function SettingsPage() {
                         Math.min(12, Math.max(1, parseInt(e.target.value) || 1))
                       )
                     }
-                    className="w-20 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-right text-slate-900 dark:text-white"
+                    className="w-20 rounded-lg border border-slate-200/80 dark:border-slate-700/80 bg-white/70 dark:bg-slate-900/80 px-2 py-1 text-right text-slate-900 dark:text-white"
                   />
                   <span className="text-sm text-slate-500 dark:text-slate-400">hours</span>
                 </div>
@@ -274,7 +299,7 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-6 mb-6">
+        <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-sm p-6 mb-6 border border-white/40 dark:border-slate-700/40">
           <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">Notifications</h2>
 
           <div className="space-y-4">
@@ -285,12 +310,12 @@ export default function SettingsPage() {
                   Receive alerts about upcoming deadlines
                 </p>
               </div>
-              <button
-                onClick={() => handleNotificationChange(!notificationsEnabled)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
-                  notificationsEnabled ? "bg-blue-600" : "bg-slate-300"
-                }`}
-              >
+                <button
+                  onClick={() => handleNotificationChange(!notificationsEnabled)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
+                    notificationsEnabled ? "bg-emerald-600" : "bg-slate-300"
+                  }`}
+                >
                 <span
                   className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
                     notificationsEnabled ? "translate-x-6" : "translate-x-1"
@@ -313,7 +338,7 @@ export default function SettingsPage() {
                   className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
                     isMounted && permission === "granted"
                       ? "bg-emerald-100 text-emerald-700"
-                      : "bg-slate-200 text-slate-700 hover:bg-slate-300"
+                      : "bg-white/70 text-slate-700 hover:bg-white border border-slate-200/80"
                   }`}
                 >
                   {permissionButtonLabel}
@@ -332,7 +357,7 @@ export default function SettingsPage() {
                   max="168"
                   value={reminderLeadHours}
                   onChange={(e) => setReminderLeadHours(parseInt(e.target.value))}
-                  className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"
+                  className="flex-1 h-2 bg-slate-200/80 dark:bg-slate-700/70 rounded-lg appearance-none cursor-pointer"
                 />
                 <div className="flex items-center gap-2">
                   <input
@@ -345,7 +370,7 @@ export default function SettingsPage() {
                         Math.min(168, Math.max(1, parseInt(e.target.value) || 1))
                       )
                     }
-                    className="w-20 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-right text-slate-900 dark:text-white"
+                    className="w-20 rounded-lg border border-slate-200/80 dark:border-slate-700/80 bg-white/70 dark:bg-slate-900/80 px-2 py-1 text-right text-slate-900 dark:text-white"
                   />
                   <span className="text-sm text-slate-500 dark:text-slate-400">hours</span>
                 </div>
@@ -371,7 +396,7 @@ export default function SettingsPage() {
                 <button
                   onClick={() => handleEmailUpdatesChange(!emailUpdates)}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
-                    emailUpdates ? "bg-blue-600" : "bg-slate-300"
+                    emailUpdates ? "bg-emerald-600" : "bg-slate-300"
                   }`}
                 >
                   <span
@@ -394,7 +419,7 @@ export default function SettingsPage() {
                 <button
                   onClick={() => handleWeeklyReportChange(!weeklyReport)}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
-                    weeklyReport ? "bg-blue-600" : "bg-slate-300"
+                    weeklyReport ? "bg-emerald-600" : "bg-slate-300"
                   }`}
                 >
                   <span
@@ -408,21 +433,30 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-6 mb-6">
+        <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-sm p-6 mb-6 border border-white/40 dark:border-slate-700/40">
           <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">Account</h2>
 
           <div className="space-y-4">
-            <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition">
+            <button
+              onClick={handleChangePassword}
+              className="w-full text-left px-4 py-3 rounded-2xl hover:bg-white/70 dark:hover:bg-slate-800/70 border border-white/40 dark:border-slate-700/40 transition"
+            >
               <p className="font-medium text-slate-900 dark:text-white">Change Password</p>
               <p className="text-sm text-slate-600 dark:text-slate-300">Update your login password</p>
             </button>
 
-            <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition">
+            <button
+              onClick={handlePrivacySecurity}
+              className="w-full text-left px-4 py-3 rounded-2xl hover:bg-white/70 dark:hover:bg-slate-800/70 border border-white/40 dark:border-slate-700/40 transition"
+            >
               <p className="font-medium text-slate-900 dark:text-white">Privacy & Security</p>
               <p className="text-sm text-slate-600 dark:text-slate-300">Manage your privacy settings</p>
             </button>
 
-            <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800 transition">
+            <button
+              onClick={handleDeleteAccount}
+              className="w-full text-left px-4 py-3 rounded-2xl hover:bg-rose-50/80 dark:hover:bg-rose-900/20 border border-rose-200/60 dark:border-rose-800/60 transition"
+            >
               <p className="font-medium text-red-600">Delete Account</p>
               <p className="text-sm text-red-600">Permanently delete your account</p>
             </button>
@@ -441,7 +475,7 @@ export default function SettingsPage() {
         <div className="flex gap-3 mt-3">
           <button
             onClick={handleResetDefaults}
-            className="bg-slate-300 hover:bg-slate-400 text-slate-900 font-semibold py-3 px-6 rounded-lg transition flex-1"
+            className="bg-white/70 dark:bg-slate-800/70 hover:bg-white text-slate-700 dark:text-slate-200 font-semibold py-3 px-6 rounded-xl transition flex-1 border border-slate-200/80 dark:border-slate-700/80"
           >
             Reset to Defaults
           </button>
