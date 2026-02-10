@@ -1,3 +1,4 @@
+"use client";
 import React, { useState, useEffect } from "react";
 import "./auth.css";
 import { supabase } from "./supabaseClient";
@@ -5,21 +6,25 @@ import { supabase } from "./supabaseClient";
 type Mode = "login" | "register";
 
 type FormState = {
+  firstname: string;
+  lastname: string;
   loginEmail: string;
   loginPassword: string;
-  username: string;
   email: string;
-  dob: string;
+  university: string;
+  major: string;
   password: string;
   confirmPassword: string;
 };
 
 const initialForm: FormState = {
+  firstname: "",
+  lastname: "",
   loginEmail: "",
   loginPassword: "",
-  username: "",
   email: "",
-  dob: "",
+  university: "",
+  major: "",
   password: "",
   confirmPassword: "",
 };
@@ -71,13 +76,13 @@ function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
 
 
   function goToNextPage(): void {
-    window.location.href = "frontend/src/app/page.tsx";
+    window.location.href = "/profile";
   }
 
   async function registerUser(): Promise<void> {
-    const { username, email, dob, password, confirmPassword } = form;
+    const { firstname, lastname, email, password, confirmPassword, university, major } = form;
 
-    if (!username || !email || !dob || !password || !confirmPassword) {
+    if ( !email || !password || !confirmPassword) {
       alert("Please enter all fields.");
       return;
     }
@@ -90,9 +95,6 @@ function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        data: { username, dob },
-      },
     });
 
     if (error || !data.user) {
@@ -103,12 +105,16 @@ function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
 
     await supabase.from("profiles").insert({
       id: data.user.id, 
-      username, dob
+      firstname: firstname || null,
+      lastname  : lastname || null,
+      university : university || null,
+      major : major || null,
     })
 
-    alert("Registration successful! You can now log in.");
-    setMode("login");
-    setForm(initialForm);
+
+    await supabase.auth.signInWithPassword({ email, password });
+    goToNextPage();
+
   }
 
   async function loginUser(): Promise<void> {
@@ -125,10 +131,16 @@ function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
       password,
     });
 
-    if (error || !authData.user) {
-      alert(error?.message ?? "Login failed");
-      return;
-    }
+  if (error) {
+    console.error("LOGIN ERROR:", error);
+    alert(error.message);
+    return;
+  }
+
+  if (!authData.user) {
+    alert("Login failed");
+    return;
+  }
 
     goToNextPage();
   }
@@ -147,6 +159,7 @@ function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
 
         {mode === "login" ? (
           <>
+
             <input
               type="email"
               name="loginEmail"
@@ -184,31 +197,51 @@ function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
           <>
             <input
               type="text"
-              name="username"
-              placeholder="Username"
-              value={form.username}
+              name="firstname"
+              placeholder="First Name"
+              value={form.firstname}
+              onChange={handleInputChange}
+            />
+
+
+            <input
+              type="text"
+              name="lastname"
+              placeholder="Last Name"
+              value={form.lastname}
               onChange={handleInputChange}
             />
 
             <input
               type="email"
               name="email"
-              placeholder="Email"
+              placeholder="Email (required)"
               value={form.email}
               onChange={handleInputChange}
             />
 
+
             <input
-              type="date"
-              name="dob"
-              value={form.dob}
+              type="text"
+              name="university"
+              placeholder="University"
+              value={form.university}
               onChange={handleInputChange}
             />
 
             <input
+              type="text"
+              name="major"
+              placeholder="Major"
+              value={form.major}
+              onChange={handleInputChange}
+            />
+
+
+            <input
               type="password"
               name="password"
-              placeholder="Password"
+              placeholder="Password (required)"
               value={form.password}
               onChange={handleInputChange}
             />
@@ -216,7 +249,7 @@ function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
             <input
               type="password"
               name="confirmPassword"
-              placeholder="Confirm Password"
+              placeholder="Confirm Password (required)"
               value={form.confirmPassword}
               onChange={handleInputChange}
             />
