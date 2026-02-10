@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import "./auth.css";
-import { supabase } from "./supabaseClient";
+import { supabase } from "@/lib/supabaseClient";
 
 type Mode = "login" | "register";
 
@@ -59,19 +59,19 @@ export default function AuthPage() {
     return () => subscription.unsubscribe();
   }, []);
 
-function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
-  const name = e.target.name;
-  const value = e.target.value;
+  function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const name = e.target.name;
+    const value = e.target.value;
 
-  setForm((prevForm) => {
-    const updatedForm = {
-      ...prevForm,
-    };
+    setForm((prevForm) => {
+      const updatedForm = {
+        ...prevForm,
+      };
 
-    updatedForm[name as keyof FormState] = value;
-    return updatedForm;
-  });
-}
+      updatedForm[name as keyof FormState] = value;
+      return updatedForm;
+    });
+  }
 
 
 
@@ -82,7 +82,7 @@ function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
   async function registerUser(): Promise<void> {
     const { firstname, lastname, email, password, confirmPassword, university, major } = form;
 
-    if ( !email || !password || !confirmPassword) {
+    if (!email || !password || !confirmPassword) {
       alert("Please enter all fields.");
       return;
     }
@@ -104,11 +104,11 @@ function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
 
 
     await supabase.from("profiles").insert({
-      id: data.user.id, 
+      id: data.user.id,
       firstname: firstname || null,
-      lastname  : lastname || null,
-      university : university || null,
-      major : major || null,
+      lastname: lastname || null,
+      university: university || null,
+      major: major || null,
     })
 
 
@@ -131,16 +131,16 @@ function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
       password,
     });
 
-  if (error) {
-    console.error("LOGIN ERROR:", error);
-    alert(error.message);
-    return;
-  }
+    if (error) {
+      console.error("LOGIN ERROR:", error);
+      alert(error.message);
+      return;
+    }
 
-  if (!authData.user) {
-    alert("Login failed");
-    return;
-  }
+    if (!authData.user) {
+      alert("Login failed");
+      return;
+    }
 
     goToNextPage();
   }

@@ -5,6 +5,7 @@ import { usePlanner } from "@/contexts/PlannerContext";
 import { ScheduleView } from "@/components/ScheduleView";
 import { Event } from "@/types/schedule";
 
+
 export default function SchedulePage() {
   const {
     userId,
@@ -18,6 +19,7 @@ export default function SchedulePage() {
   const [error, setError] = useState<string | null>(null);
   const [scheduleStats, setScheduleStats] = useState<any>(null);
   const [generatedBlocks, setGeneratedBlocks] = useState<any[]>([]);
+
 
   useEffect(() => {
     loadTasks();
@@ -95,19 +97,25 @@ export default function SchedulePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-6">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen relative">
+      <div className="fixed inset-0 bg-focus-light dark:bg-focus-dark bg-cover bg-center -z-20"></div>
+      <div className="fixed inset-0 bg-white/20 dark:bg-black/40 -z-10"></div>
+
+      <div className="max-w-6xl mx-auto p-6 md:p-12">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-2">
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2 tracking-tight">
             Schedule Generator
           </h1>
-          <p className="text-slate-600 dark:text-slate-300">
+          <p className="text-slate-600 dark:text-slate-300 font-medium">
             AI-powered schedule generation for optimal productivity
           </p>
+          <div className="mt-6">
+            {/* Tabs removed */}
+          </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-6 mb-6">
-          <div className="flex items-center justify-between">
+        <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-sm p-6 mb-6 border border-white/40 dark:border-slate-700/40">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
                 Generate Smart Schedule
@@ -119,7 +127,7 @@ export default function SchedulePage() {
             <button
               onClick={generateSchedule}
               disabled={loading || pendingTasks.length === 0}
-              className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-[#306844] hover:bg-[#255236] text-white font-semibold py-3 px-6 rounded-xl transition shadow-lg shadow-green-900/10 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? "Generating..." : "Generate Schedule"}
             </button>
@@ -127,42 +135,42 @@ export default function SchedulePage() {
         </div>
 
         {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
-            <p className="text-red-800 dark:text-red-200">Error: {error}</p>
+          <div className="bg-rose-50/80 dark:bg-rose-900/20 border border-rose-200/60 dark:border-rose-800/60 rounded-2xl p-4 mb-6">
+            <p className="text-rose-800 dark:text-rose-200">Error: {error}</p>
           </div>
         )}
 
         {scheduleStats && (
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-4 border-l-4 border-l-blue-500">
+            <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-sm p-4 border border-white/40 dark:border-slate-700/40">
               <p className="text-slate-600 dark:text-slate-300 text-sm font-medium">Total Blocks</p>
               <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">
                 {scheduleStats.total_blocks}
               </p>
             </div>
 
-            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-4 border-l-4 border-l-green-500">
+            <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-sm p-4 border border-white/40 dark:border-slate-700/40">
               <p className="text-slate-600 dark:text-slate-300 text-sm font-medium">Total Hours</p>
               <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">
                 {scheduleStats.total_hours}h
               </p>
             </div>
 
-            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-4 border-l-4 border-l-purple-500">
+            <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-sm p-4 border border-white/40 dark:border-slate-700/40">
               <p className="text-slate-600 dark:text-slate-300 text-sm font-medium">Days Span</p>
               <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">
                 {scheduleStats.days_span}d
               </p>
             </div>
 
-            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-4 border-l-4 border-l-orange-500">
+            <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-sm p-4 border border-white/40 dark:border-slate-700/40">
               <p className="text-slate-600 dark:text-slate-300 text-sm font-medium">Daily Average</p>
               <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">
                 {scheduleStats.avg_hours_per_day}h
               </p>
             </div>
 
-            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-4 border-l-4 border-l-indigo-500">
+            <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-sm p-4 border border-white/40 dark:border-slate-700/40">
               <p className="text-slate-600 dark:text-slate-300 text-sm font-medium">Valid</p>
               <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">
                 {scheduleStats.valid ? "✓" : "✗"}
@@ -172,7 +180,7 @@ export default function SchedulePage() {
         )}
 
         {generatedBlocks.length > 0 && (
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-6">
+          <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-sm p-6 border border-white/40 dark:border-slate-700/40">
             <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">
               Generated Schedule Blocks
             </h3>
@@ -180,7 +188,7 @@ export default function SchedulePage() {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b-2 border-slate-200 dark:border-slate-700">
+                  <tr className="border-b-2 border-slate-200/70 dark:border-slate-700/70">
                     <th className="text-left py-3 px-4 font-bold text-slate-900 dark:text-white">
                       Task ID
                     </th>
@@ -199,7 +207,7 @@ export default function SchedulePage() {
                   {generatedBlocks.map((block, idx) => (
                     <tr
                       key={idx}
-                      className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition"
+                      className="border-b border-slate-200/70 dark:border-slate-700/70 hover:bg-white/60 dark:hover:bg-slate-800/60 transition"
                     >
                       <td className="py-3 px-4 text-slate-900 dark:text-white font-medium">
                         {block.task_id}
@@ -232,7 +240,7 @@ export default function SchedulePage() {
         )}
 
         {scheduleEvents.length > 0 && (
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-6 mt-6">
+          <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-sm p-6 mt-6 border border-white/40 dark:border-slate-700/40">
             <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">
               Weekly Schedule
             </h3>
@@ -243,12 +251,14 @@ export default function SchedulePage() {
         )}
 
         {pendingTasks.length === 0 && !generatedBlocks.length && (
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-8 text-center">
-            <p className="text-blue-800 dark:text-blue-200 text-lg">
+          <div className="bg-emerald-50/70 dark:bg-emerald-900/20 border border-emerald-200/60 dark:border-emerald-800/60 rounded-3xl p-8 text-center">
+            <p className="text-emerald-800 dark:text-emerald-200 text-lg">
               No pending tasks. Create some tasks first to generate a schedule!
             </p>
           </div>
         )}
+
+
       </div>
     </div>
   );

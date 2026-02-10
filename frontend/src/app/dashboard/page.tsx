@@ -78,14 +78,14 @@ export default function Dashboard() {
             value={totalTasks}
             subtext={`${completedTasks} completed`}
             icon="task_alt"
-            accentColor="blue"
+            accentColor="green"
           />
           <StatCard
             label="Total Hours"
             value={`${totalHours.toFixed(1)}h`}
             subtext={`${scheduledHours.toFixed(1)}h scheduled`}
             icon="schedule"
-            accentColor="blue"
+            accentColor="green"
           />
         </div>
 
@@ -142,7 +142,7 @@ export default function Dashboard() {
 
       {/* Decorative Elements */}
       <div className="fixed top-0 left-0 w-full h-full pointer-events-none -z-10 overflow-hidden">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-400/10 dark:bg-blue-600/10 rounded-full blur-3xl opacity-50"></div>
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#306844]/10 dark:bg-[#306844]/20 rounded-full blur-3xl opacity-50"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-orange-400/10 dark:bg-orange-600/10 rounded-full blur-3xl opacity-50"></div>
       </div>
     </div>
