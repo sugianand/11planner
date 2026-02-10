@@ -5,20 +5,28 @@
   --text-light: #64748b;
   --border: #e5e7eb;
   --bg: #f8fafc;
+  --foreground: #0f172a;
 }
 
 body {
+  height: 100%;
   margin: 0;
-  font-family: "Inter", system-ui, -apple-system, sans-serif;
-  background: var(--bg);
-  color: var(--text-dark);
+  background: radial-gradient(
+    circle at top,
+    #1e3a8a,
+    #020617
+  );
+  color: var(--foreground);
+  font-family: var(--font-manrope), Arial, Helvetica, sans-serif;
 }
 
 .page {
-  min-height: 100vh;
+  height: 100vh;            
+  width: 100vw;
   display: flex;
   justify-content: center;
   align-items: center;
+  overflow: hidden;        
 
   background: radial-gradient(
     circle at top,
@@ -59,6 +67,8 @@ body {
   border-radius: 14px;
   border: 1px solid var(--border);
   background: #f9fafb;
+  color: #0f172a;         
+  font-weight: 500;
   text-align: left;
 }
 

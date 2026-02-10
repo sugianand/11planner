@@ -139,11 +139,13 @@ export default function AuthPage() {
   }
 
   return (
+   <div className="auth-shell">
     <div className="page">
       <div className="auth-card">
         <div className="auth-title">Welcome to 11Planner</div>
 
-        <h2>{mode === "login" ? "Login" : "Register"}</h2>
+         {mode === "login" ? "Login" : "Register"}
+
 
         {mode === "login" ? (
           <>
@@ -240,6 +242,7 @@ export default function AuthPage() {
           </>
         )}
       </div>
+    </div>
     </div>
   );
 }
