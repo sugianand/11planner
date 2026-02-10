@@ -238,25 +238,14 @@ export default function SchedulePage() {
           </div>
         )}
 
-        {scheduleEvents.length > 0 && (
-          <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-sm p-6 mt-6 border border-white/40 dark:border-slate-700/40">
-            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">
-              Weekly Schedule
-            </h3>
-            <div className="h-[700px]">
-              <ScheduleView events={scheduleEvents} onEventMove={handleEventMove} />
-            </div>
+        <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-sm p-6 mt-6 border border-white/40 dark:border-slate-700/40">
+          <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">
+            Weekly Schedule
+          </h3>
+          <div className="h-[700px]">
+            <ScheduleView events={scheduleEvents} onEventMove={handleEventMove} />
           </div>
-        )}
-
-        {pendingTasks.length === 0 && !generatedBlocks.length && (
-          <div className="bg-emerald-50/70 dark:bg-emerald-900/20 border border-emerald-200/60 dark:border-emerald-800/60 rounded-3xl p-8 text-center">
-            <p className="text-emerald-800 dark:text-emerald-200 text-lg">
-              No pending tasks. Create some tasks first to generate a schedule!
-            </p>
-          </div>
-        )}
-
+        </div>
 
       </div>
     </div>
