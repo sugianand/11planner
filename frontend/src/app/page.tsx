@@ -27,7 +27,7 @@ export default function Home() {
       <div className="fixed inset-0 bg-focus-light dark:bg-focus-dark bg-cover bg-center -z-20"></div>
 
       <main className="w-full max-w-[1200px] mx-auto px-6 mt-16 md:mt-24 mb-32 relative">
-        <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-3xl p-8 md:p-12 text-center relative overflow-hidden shadow-2xl dark:border dark:border-slate-700/50 max-w-4xl mx-auto">
+        <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-3xl p-8 md:p-12 text-center relative overflow-hidden shadow-2xl dark:border dark:border-slate-700/50 max-w-4xl mx-auto">
 
 
           <div className="flex flex-col items-center gap-8 relative z-10">
@@ -54,7 +54,7 @@ export default function Home() {
         </div>
 
         <section className="mt-24 grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-3xl p-10 shadow-sm border border-white/40 dark:border-slate-700/40 hover:bg-white/80 dark:hover:bg-slate-700/80 transition-all">
+          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-3xl p-10 shadow-sm border border-white/40 dark:border-slate-700/40 hover:bg-white/80 dark:hover:bg-slate-700/80 transition-all">
             <div className="w-12 h-12 rounded-2xl bg-teal-50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400 flex items-center justify-center mb-6">
               <span className="material-symbols-outlined text-2xl">calendar_month</span>
             </div>
@@ -63,7 +63,7 @@ export default function Home() {
               Never submit at the last minute again. Smart scheduling ensures you complete assignments well before the 11:59pm deadline.
             </p>
           </div>
-          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-3xl p-10 shadow-sm border border-white/40 dark:border-slate-700/40 hover:bg-white/80 dark:hover:bg-slate-700/80 transition-all">
+          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-3xl p-10 shadow-sm border border-white/40 dark:border-slate-700/40 hover:bg-white/80 dark:hover:bg-slate-700/80 transition-all">
             <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-6">
               <span className="material-symbols-outlined text-2xl">energy_savings_leaf</span>
             </div>
@@ -72,7 +72,7 @@ export default function Home() {
               Plan tasks based on your energy levels. High focus for deep work, low focus for admin.
             </p>
           </div>
-          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-3xl p-10 shadow-sm border border-white/40 dark:border-slate-700/40 hover:bg-white/80 dark:hover:bg-slate-700/80 transition-all">
+          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-3xl p-10 shadow-sm border border-white/40 dark:border-slate-700/40 hover:bg-white/80 dark:hover:bg-slate-700/80 transition-all">
             <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-6">
               <span className="material-symbols-outlined text-2xl">visibility</span>
             </div>

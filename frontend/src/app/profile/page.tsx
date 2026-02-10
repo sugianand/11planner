@@ -93,7 +93,7 @@ export default function ProfilePage() {
 
 
       <div className="max-w-3xl mx-auto p-6">
-        <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-3xl p-8 shadow-sm border border-white/40 dark:border-slate-700/40">
+        <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-3xl p-8 shadow-sm border border-white/40 dark:border-slate-700/40">
 
           {/* Profile Header */}
           <div className="bg-white/50 dark:bg-slate-700/50 rounded-2xl shadow-sm p-8 mb-6 border border-white/40 dark:border-slate-600/40 border-t-4 border-t-[#306844]">

@@ -174,7 +174,7 @@ export default function SettingsPage() {
       <div className="p-6">
         <div className="max-w-3xl mx-auto">
 
-          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-3xl p-8 mb-6 shadow-sm border border-white/40 dark:border-slate-700/40">
+          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-3xl p-8 mb-6 shadow-sm border border-white/40 dark:border-slate-700/40">
             <div className="mb-8 border-b border-slate-200 dark:border-slate-700/50 pb-6">
               <h1 className="text-4xl font-bold text-slate-900 dark:text-white">Settings</h1>
               <p className="text-slate-600 dark:text-slate-300 mt-2">Customize your 11Planner experience</p>
@@ -234,7 +234,7 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-3xl p-8 mb-6 shadow-sm border border-white/40 dark:border-slate-700/40">
+          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-3xl p-8 mb-6 shadow-sm border border-white/40 dark:border-slate-700/40">
             <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">Productivity</h2>
 
             <div className="space-y-6">
@@ -279,7 +279,7 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-3xl p-8 mb-6 shadow-sm border border-white/40 dark:border-slate-700/40">
+          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-3xl p-8 mb-6 shadow-sm border border-white/40 dark:border-slate-700/40">
             <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">Notifications</h2>
 
             <div className="space-y-4">
@@ -406,7 +406,7 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-3xl p-8 mb-6 shadow-sm border border-white/40 dark:border-slate-700/40">
+          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-3xl p-8 mb-6 shadow-sm border border-white/40 dark:border-slate-700/40">
             <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">Account</h2>
 
             <div className="space-y-4">
@@ -427,7 +427,7 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-3xl p-6 mb-6 shadow-sm border border-white/40 dark:border-slate-700/40">
+          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-3xl p-6 mb-6 shadow-sm border border-white/40 dark:border-slate-700/40">
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between text-sm text-slate-700 dark:text-slate-200">
                 <span>{hasChanges ? "Saving..." : "All changes saved"}</span>

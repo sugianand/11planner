@@ -45,7 +45,7 @@ export default function Dashboard() {
 
       {/* Top Row: Header & Active Courses */}
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-        <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-3xl p-8 shadow-sm border border-white/40 dark:border-slate-700/40 min-w-[300px]">
+        <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-3xl p-8 shadow-sm border border-white/40 dark:border-slate-700/40 min-w-[300px]">
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Focus Dashboard</h1>
           <p className="text-slate-600 dark:text-slate-300 font-medium">Let's get in the zone, {userId ? "Student" : "Guest"}.</p>
         </div>
@@ -108,7 +108,7 @@ export default function Dashboard() {
           />
 
           {/* Quick Actions Panel */}
-          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-3xl p-6 shadow-sm border border-white/40 dark:border-slate-700/40">
+          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-3xl p-6 shadow-sm border border-white/40 dark:border-slate-700/40">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-4">
               Quick Actions
             </h3>
