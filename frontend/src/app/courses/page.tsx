@@ -5,6 +5,7 @@ import { usePlanner } from "@/contexts/PlannerContext";
 import { CourseCreate, Course } from "@/types";
 
 export default function CoursesPage() {
+  const weekDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
   const {
     userId,
     courses,
@@ -17,6 +18,7 @@ export default function CoursesPage() {
   } = usePlanner();
 
   const [showForm, setShowForm] = useState(false);
+  const [showDaysDropdown, setShowDaysDropdown] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<CourseCreate>>({
     name: "",
@@ -24,6 +26,9 @@ export default function CoursesPage() {
     professor: "",
     description: "",
     user_id: userId,
+    courseDate: "",
+    startTime: "",
+    endTime: "",
   });
 
   useEffect(() => {
@@ -51,6 +56,9 @@ export default function CoursesPage() {
         professor: "",
         description: "",
         user_id: userId,
+        courseDate: "",
+        startTime: "",
+        endTime: "",
       });
       setShowForm(false);
     } catch (err) {
@@ -65,6 +73,9 @@ export default function CoursesPage() {
       professor: course.professor,
       description: course.description,
       user_id: course.user_id,
+      courseDate: course.courseDate,
+      startTime: course.startTime,
+      endTime: course.endTime,
     });
     setEditingId(course.id);
     setShowForm(true);
@@ -74,6 +85,21 @@ export default function CoursesPage() {
     if (confirm("Delete this course?")) {
       await deleteCourse(id);
     }
+  };
+
+  const selectedDays = (formData.courseDate || "")
+    .split(" ")
+    .filter(Boolean);
+
+  const toggleDay = (day: string, checked: boolean) => {
+    const nextDays = checked
+      ? [...new Set([...selectedDays, day])]
+      : selectedDays.filter((d) => d !== day);
+
+    setFormData({
+      ...formData,
+      courseDate: nextDays.join(" "),
+    });
   };
 
   return (
@@ -89,23 +115,28 @@ export default function CoursesPage() {
               <h1 className="text-4xl font-bold text-slate-900">Courses</h1>
               <p className="text-slate-600 mt-2">Manage your courses and class information</p>
             </div>
-            <button
-              onClick={() => {
-                setShowForm(!showForm);
-                setEditingId(null);
-                setFormData({
-                  name: "",
-                  code: "",
-                  professor: "",
-                  description: "",
-                  user_id: userId,
-                });
-              }}
-              className="bg-[#306844] hover:bg-[#255236] text-white font-bold py-2.5 px-6 rounded-xl transition shadow-lg shadow-green-900/10 flex items-center gap-2"
-            >
-              <span className="material-symbols-outlined text-sm">add</span>
-              {showForm ? "Cancel" : "New Course"}
-            </button>
+                {!showForm && (
+                  <button
+                    onClick={() => {
+                      setShowForm(true);
+                      setEditingId(null);
+                      setFormData({
+                        name: "",
+                        code: "",
+                        professor: "",
+                        description: "",
+                        user_id: userId,
+                        courseDate: "",
+                        startTime: "",
+                        endTime: "",
+                      });
+                    }}
+                    className="bg-[#306844] hover:bg-[#255236] text-white font-bold py-2.5 px-6 rounded-xl transition shadow-lg shadow-green-900/10 flex items-center gap-2"
+                  >
+                    <span className="material-symbols-outlined text-sm">add</span>
+                    New Course
+                  </button>
+                )}
           </div>
 
           {/* Error Message */}
@@ -137,6 +168,82 @@ export default function CoursesPage() {
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
                     />
                   </div>
+
+
+                  
+
+                    <div className="block text-sm font-medium text-slate-700 mb-1">
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Course Days *
+                      </label>
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setShowDaysDropdown((prev) => !prev)}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-left focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 bg-white"
+                        >
+                          {selectedDays.length > 0
+                            ? selectedDays.join(", ")
+                            : "Select course days"}
+                        </button>
+
+                        {showDaysDropdown && (
+                          <div className="absolute z-10 mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-lg p-3 space-y-2">
+                            {weekDays.map((day) => (
+                              <label key={day} className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedDays.includes(day)}
+                                  onChange={(e) => toggleDay(day, e.target.checked)}
+                                  className="form-checkbox h-4 w-4 text-blue-600"
+                                />
+                                <span className="text-sm text-slate-700">{day}</span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+
+                  <div>
+
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Start Time*
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.startTime || ""}
+                      onChange={(e) =>
+                        setFormData({ ...formData, startTime: e.target.value })
+                      }
+                      placeholder="e.g. 9:00 AM"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                    />
+                  </div>
+
+
+                  <div>
+
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      End Time*
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.endTime || ""}
+                      onChange={(e) =>
+                        setFormData({ ...formData, endTime: e.target.value })
+                      }
+                      placeholder="e.g: 10:00 AM"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                    />
+                  </div>
+
+
+
+
+
+
 
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -266,4 +373,3 @@ export default function CoursesPage() {
     </div>
   );
 }
-

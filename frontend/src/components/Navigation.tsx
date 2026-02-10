@@ -43,7 +43,7 @@ export default function Navigation() {
 
   return (
     <nav className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md shadow-sm border-b border-white/40 dark:border-slate-700/40 sticky top-0 z-50">
-      <div className="max-w-6xl mx-auto px-6 py-4">
+      <div className="max-w-6xl mx-auto pl-6 pr-0 py-4">
         <div className="flex items-center">
           {/* Logo */}
           <Link href="/" className="text-4xl font-bold text-blue-800 dark:text-blue-500 flex-shrink-0">
@@ -126,29 +126,28 @@ export default function Navigation() {
                   </Link>
                 </>
               )}
-
-              {isLoggedIn ? (
-                <button
-                  onClick={logout}
-                  className="font-medium text-slate-700 dark:text-slate-300 hover:text-red-600 transition"
-                >
-                  Logout
-                </button>
-              ) : (
-                <Link
-                  href="/auth"
-                  className={`font-medium transition ${isActive("/auth")
-                    ? "text-slate-900 dark:text-white border-b-2 border-b-white"
-                    : "text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
-                    }`}
-                >
-                  Login
-                </Link>
-              )}
-
-
-
             </div>
+          </div>
+
+          <div className="ml-auto flex-shrink-0">
+            {isLoggedIn ? (
+              <button
+                onClick={logout}
+                className="font-medium text-slate-700 dark:text-slate-300 hover:text-red-600 transition"
+              >
+                Logout
+              </button>
+            ) : (
+              <Link
+                href="/auth"
+                className={`font-medium transition ${isActive("/auth")
+                  ? "text-slate-900 dark:text-white border-b-2 border-b-white"
+                  : "text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
+                  }`}
+              >
+                Login
+              </Link>
+            )}
           </div>
         </div>
       </div>

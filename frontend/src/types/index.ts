@@ -7,6 +7,9 @@ export interface Course {
   description?: string;
   user_id: string;
   created_at: string;
+  courseDate: string;
+  startTime: string;
+  endTime: string;
 }
 
 export interface CourseCreate {
@@ -15,6 +18,9 @@ export interface CourseCreate {
   professor?: string;
   description?: string;
   user_id: string;
+  courseDate: string;
+  startTime: string;
+  endTime: string;
 }
 
 // ========== Assignment Types ==========
