@@ -42,7 +42,7 @@ export default function Navigation() {
   const isActive = (path: string) => pathname === path;
 
   return (
-    <nav className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md shadow-sm border-b border-white/40 dark:border-slate-700/40 sticky top-0 z-50">
+    <nav className="bg-white/40 dark:bg-slate-800/40 backdrop-blur-md shadow-sm border-b border-white/40 dark:border-slate-700/40 sticky top-0 z-50">
       <div className="max-w-6xl mx-auto pl-6 pr-0 py-4">
         <div className="flex items-center">
           {/* Logo */}

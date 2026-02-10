@@ -130,8 +130,8 @@ export default function TasksPage() {
           {/* Header */}
           <div className="flex justify-between items-center mb-8">
             <div>
-              <h1 className="text-4xl font-bold text-slate-900">Tasks</h1>
-              <p className="text-slate-600 mt-2">
+              <h1 className="text-4xl font-bold text-slate-900 dark:text-white">Tasks</h1>
+              <p className="text-slate-600 dark:text-slate-300 mt-2">
                 Manage your assignments and deadlines
               </p>
             </div>
@@ -162,7 +162,7 @@ export default function TasksPage() {
 
           {/* Error Message */}
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+            <div className="bg-red-50/80 dark:bg-red-900/20 border border-red-200/60 dark:border-red-800/60 text-red-700 dark:text-red-200 px-4 py-3 rounded-lg mb-6">
               {error}
             </div>
           )}
@@ -188,14 +188,14 @@ export default function TasksPage() {
 
           {/* Form */}
           {showForm && (
-            <div className="bg-white rounded-lg shadow-md p-6 mb-8 border border-slate-200">
-              <h2 className="text-xl font-bold mb-4 text-slate-900">
+            <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-lg shadow-md p-6 mb-8 border border-slate-200 dark:border-slate-700/40">
+              <h2 className="text-xl font-bold mb-4 text-slate-900 dark:text-white">
                 {editingId ? "Edit Task" : "Create New Task"}
               </h2>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
                       Task Title *
                     </label>
                     <input
@@ -205,12 +205,12 @@ export default function TasksPage() {
                         setFormData({ ...formData, title: e.target.value })
                       }
                       placeholder="e.g., Finish calculus homework"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
                       Course *
                     </label>
                     <select
@@ -218,7 +218,7 @@ export default function TasksPage() {
                       onChange={(e) =>
                         setFormData({ ...formData, course_id: e.target.value })
                       }
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800"
                     >
                       <option value="">Select a course</option>
                       {courses.map((course) => (
@@ -230,7 +230,7 @@ export default function TasksPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
                       Deadline *
                     </label>
                     <input
@@ -239,12 +239,12 @@ export default function TasksPage() {
                       onChange={(e) =>
                         setFormData({ ...formData, deadline: e.target.value })
                       }
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
                       Estimated Hours
                     </label>
                     <input
@@ -258,12 +258,12 @@ export default function TasksPage() {
                           estimated_hours: parseFloat(e.target.value),
                         })
                       }
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
                       Priority
                     </label>
                     <select
@@ -274,7 +274,7 @@ export default function TasksPage() {
                           priority: parseInt(e.target.value),
                         })
                       }
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800"
                     >
                       <option value="1">Very Low</option>
                       <option value="2">Low</option>
@@ -286,7 +286,7 @@ export default function TasksPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
                     Description
                   </label>
                   <textarea
@@ -296,7 +296,7 @@ export default function TasksPage() {
                     }
                     placeholder="Additional details about the task"
                     rows={3}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800"
                   />
                 </div>
 
@@ -327,11 +327,11 @@ export default function TasksPage() {
           <div className="space-y-4">
             {loading && tasks.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-slate-600 text-lg">Loading tasks...</p>
+                <p className="text-slate-600 dark:text-slate-300 text-lg">Loading tasks...</p>
               </div>
             ) : sortedTasks.length === 0 ? (
-              <div className="bg-white rounded-lg p-8 text-center border border-slate-200">
-                <p className="text-slate-600 text-lg">
+              <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-lg p-8 text-center border border-slate-200 dark:border-slate-700/40">
+                <p className="text-slate-600 dark:text-slate-300 text-lg">
                   No tasks yet. Create one to get started!
                 </p>
               </div>
@@ -343,10 +343,10 @@ export default function TasksPage() {
                 >
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-slate-900">
+                      <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
                         {task.title}
                       </h3>
-                      <p className="text-sm text-slate-600 mt-1">
+                      <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
                         {getCourseName(task.course_id)}
                       </p>
                     </div>
@@ -359,9 +359,9 @@ export default function TasksPage() {
                     </span>
                   </div>
 
-                  <p className="text-slate-700 text-sm mb-4">{task.description}</p>
+                  <p className="text-slate-700 dark:text-slate-300 text-sm mb-4">{task.description}</p>
 
-                  <div className="flex flex-wrap gap-6 text-sm text-slate-600 mb-4">
+                  <div className="flex flex-wrap gap-6 text-sm text-slate-600 dark:text-slate-300 mb-4">
                     <div>
                       <span className="font-medium">Deadline:</span>{" "}
                       {new Date(task.deadline).toLocaleDateString()} at{" "}
@@ -387,13 +387,13 @@ export default function TasksPage() {
                   <div className="flex gap-3">
                     <button
                       onClick={() => handleEdit(task)}
-                      className="text-slate-500 hover:text-[#002966] dark:hover:text-blue-400 font-medium py-1.5 px-3 rounded-lg transition hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                      className="text-slate-500 dark:text-slate-400 hover:text-[#002966] dark:hover:text-blue-400 font-medium py-1.5 px-3 rounded-lg transition hover:bg-blue-50 dark:hover:bg-blue-900/20"
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => handleDelete(task.id)}
-                      className="text-slate-500 hover:text-red-600 font-medium py-1.5 px-3 rounded-lg transition hover:bg-red-50 dark:hover:bg-red-900/20"
+                      className="text-slate-500 dark:text-slate-400 hover:text-red-600 font-medium py-1.5 px-3 rounded-lg transition hover:bg-red-50 dark:hover:bg-red-900/20"
                     >
                       Delete
                     </button>
