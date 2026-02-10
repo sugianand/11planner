@@ -146,8 +146,8 @@ export default function Navigation() {
                   href="/auth"
                   className={`font-medium transition ${
                     isActive("/auth")
-                      ? "text-blue-600 border-b-2 border-b-blue-600"
-                      : "text-slate-700 hover:text-blue-600"
+                  ? "text-blue-600 dark:text-blue-400 border-b-2 border-b-blue-600 dark:border-b-blue-400"
+                  : "text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400"
                   }`}
                 >
                   Login
