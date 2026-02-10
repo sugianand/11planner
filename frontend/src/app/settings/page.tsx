@@ -427,16 +427,19 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between text-sm text-slate-500 dark:text-slate-300">
-              <span>{hasChanges ? "Saving..." : "All changes saved"}</span>
-              {lastSavedAt && <span>Last saved at {lastSavedAt}</span>}
+          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-3xl p-6 mb-6 shadow-sm border border-white/40 dark:border-slate-700/40">
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between text-sm text-slate-700 dark:text-slate-200">
+                <span>{hasChanges ? "Saving..." : "All changes saved"}</span>
+                {lastSavedAt && <span>Last saved at {lastSavedAt}</span>}
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-400">
+                Changes are saved automatically as you update settings.
+              </p>
             </div>
-            <p className="text-xs text-slate-400 dark:text-slate-500">
-              Changes are saved automatically as you update settings.
-            </p>
           </div>
-          <div className="flex gap-3 mt-3">
+
+          <div className="flex gap-3">
             <button
               onClick={handleResetDefaults}
               className="bg-slate-300 hover:bg-slate-400 text-slate-900 font-semibold py-3 px-6 rounded-lg transition flex-1"

@@ -99,25 +99,24 @@ export default function SchedulePage() {
   return (
     <div className="min-h-screen relative">
       <div className="fixed inset-0 bg-focus-light dark:bg-focus-dark bg-cover bg-center -z-20"></div>
-      <div className="fixed inset-0 bg-white/20 dark:bg-black/40 -z-10"></div>
+
 
       <div className="max-w-6xl mx-auto p-6 md:p-12">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2 tracking-tight">
-            Schedule Generator
-          </h1>
-          <p className="text-slate-600 dark:text-slate-300 font-medium">
-            AI-powered schedule generation for optimal productivity
-          </p>
-          <div className="mt-6">
-            {/* Tabs removed */}
-          </div>
-        </div>
-
-        <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-sm p-6 mb-6 border border-white/40 dark:border-slate-700/40">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-sm p-8 mb-6 border border-white/40 dark:border-slate-700/40">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
             <div>
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+              <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2 tracking-tight">
+                Schedule Generator
+              </h1>
+              <p className="text-slate-600 dark:text-slate-300 font-medium">
+                AI-powered schedule generation for optimal productivity
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-6 border-t border-slate-200/50 dark:border-slate-700/50">
+            <div>
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">
                 Generate Smart Schedule
               </h2>
               <p className="text-slate-600 dark:text-slate-300">
@@ -127,7 +126,7 @@ export default function SchedulePage() {
             <button
               onClick={generateSchedule}
               disabled={loading || pendingTasks.length === 0}
-              className="bg-[#306844] hover:bg-[#255236] text-white font-semibold py-3 px-6 rounded-xl transition shadow-lg shadow-green-900/10 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-[#306844] hover:bg-[#255236] text-white font-semibold py-3 px-8 rounded-xl transition shadow-lg shadow-green-900/10 disabled:opacity-50 disabled:cursor-not-allowed text-lg"
             >
               {loading ? "Generating..." : "Generate Schedule"}
             </button>

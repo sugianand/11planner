@@ -96,9 +96,9 @@ export default function ProfilePage() {
         <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-3xl p-8 shadow-sm border border-white/40 dark:border-slate-700/40">
 
           {/* Profile Header */}
-          <div className="bg-white/50 dark:bg-slate-700/50 rounded-2xl shadow-sm p-8 mb-6 border border-white/40 dark:border-slate-600/40 border-t-4 border-t-blue-500">
+          <div className="bg-white/50 dark:bg-slate-700/50 rounded-2xl shadow-sm p-8 mb-6 border border-white/40 dark:border-slate-600/40 border-t-4 border-t-[#306844]">
             <div className="flex items-center gap-6">
-              <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white text-4xl font-bold shadow-lg">
+              <div className="w-24 h-24 bg-gradient-to-br from-[#306844] to-[#255236] rounded-full flex items-center justify-center text-white text-4xl font-bold shadow-lg">
                 {profile?.firstname?.[0]?.toUpperCase() || "?"}
               </div>
               <div>
@@ -112,18 +112,18 @@ export default function ProfilePage() {
 
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="bg-white/50 dark:bg-slate-700/50 rounded-2xl shadow-sm p-6 border-l-4 border-l-blue-500 border-y border-r border-white/40 dark:border-slate-600/40">
+            <div className="bg-white/50 dark:bg-slate-700/50 rounded-2xl shadow-sm p-6 border-l-4 border-l-[#306844] border-y border-r border-white/40 dark:border-slate-600/40">
               <p className="text-slate-600 dark:text-slate-300 text-sm font-medium">Total Tasks</p>
               <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">{totalTasks}</p>
             </div>
 
-            <div className="bg-white/50 dark:bg-slate-700/50 rounded-2xl shadow-sm p-6 border-l-4 border-l-green-500 border-y border-r border-white/40 dark:border-slate-600/40">
+            <div className="bg-white/50 dark:bg-slate-700/50 rounded-2xl shadow-sm p-6 border-l-4 border-l-[#306844] border-y border-r border-white/40 dark:border-slate-600/40">
               <p className="text-slate-600 dark:text-slate-300 text-sm font-medium">Completed</p>
               <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">{completedTasks}</p>
               <p className="text-green-600 dark:text-green-400 text-sm mt-2">{completionRate}% complete</p>
             </div>
 
-            <div className="bg-white/50 dark:bg-slate-700/50 rounded-2xl shadow-sm p-6 border-l-4 border-l-purple-500 border-y border-r border-white/40 dark:border-slate-600/40">
+            <div className="bg-white/50 dark:bg-slate-700/50 rounded-2xl shadow-sm p-6 border-l-4 border-l-[#306844] border-y border-r border-white/40 dark:border-slate-600/40">
               <p className="text-slate-600 dark:text-slate-300 text-sm font-medium">Courses</p>
               <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">{courses.length}</p>
             </div>
@@ -191,7 +191,7 @@ export default function ProfilePage() {
                       setEditing(true);
                     }
                   }}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-6 rounded-lg transition shadow-md hover:shadow-lg"
+                  className="bg-[#306844] hover:bg-[#255236] text-white font-semibold py-2.5 px-6 rounded-lg transition shadow-md hover:shadow-lg"
                 >
                   {editing ? "Save Profile" : "Edit Profile"}
                 </button>
@@ -205,7 +205,7 @@ export default function ProfilePage() {
             <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-4">Overall Progress</h3>
             <div className="w-full bg-slate-200 dark:bg-slate-600/50 rounded-full h-3 overflow-hidden">
               <div
-                className="bg-gradient-to-r from-blue-500 to-green-500 h-3 rounded-full transition-all duration-500 ease-out"
+                className="bg-gradient-to-r from-[#306844] to-[#3d8658] h-3 rounded-full transition-all duration-500 ease-out"
                 style={{ width: `${completionRate}%` }}
               />
             </div>

@@ -124,7 +124,6 @@ export default function TasksPage() {
   return (
     <div className="min-h-screen relative">
       <div className="fixed inset-0 bg-focus-light dark:bg-focus-dark bg-cover bg-center -z-20"></div>
-      <div className="fixed inset-0 bg-white/20 dark:bg-black/40 -z-10"></div>
 
       <div className="max-w-6xl mx-auto p-6 md:p-12">
         <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-3xl p-8 shadow-sm border border-white/40 dark:border-slate-700/40">
@@ -138,7 +137,11 @@ export default function TasksPage() {
             </div>
             <button
               onClick={() => {
-                setShowForm(!showForm);
+                if (courses.length === 0) {
+                  alert("Please add a course first before creating tasks.");
+                  return;
+                }
+                setShowForm(true);
                 setEditingId(null);
                 setFormData({
                   title: "",
@@ -153,7 +156,7 @@ export default function TasksPage() {
               className="bg-[#306844] hover:bg-[#255236] text-white font-bold py-2.5 px-6 rounded-xl transition shadow-lg shadow-green-900/10 flex items-center gap-2"
             >
               <span className="material-symbols-outlined text-sm">add</span>
-              {showForm ? "Cancel" : "New Task"}
+              New Task
             </button>
           </div>
 
@@ -161,6 +164,25 @@ export default function TasksPage() {
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
               {error}
+            </div>
+          )}
+
+          {/* No Courses Warning */}
+          {courses.length === 0 && !showForm && (
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-6 mb-6 text-center">
+              <p className="text-amber-800 dark:text-amber-200 text-lg font-semibold mb-2">
+                No courses added yet
+              </p>
+              <p className="text-amber-700 dark:text-amber-300 mb-4">
+                Please add a course first before creating tasks.
+              </p>
+              <a
+                href="/courses"
+                className="inline-flex items-center gap-2 bg-[#306844] hover:bg-[#255236] text-white font-semibold py-2.5 px-6 rounded-xl transition shadow-md"
+              >
+                <span className="material-symbols-outlined text-sm">school</span>
+                Go to Courses
+              </a>
             </div>
           )}
 

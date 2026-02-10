@@ -45,17 +45,17 @@ export default function Dashboard() {
 
       {/* Top Row: Header & Active Courses */}
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-        <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Focus Dashboard</h1>
-          <p className="text-white/80 font-medium">Let's get in the zone, {userId ? "Student" : "Guest"}.</p>
+        <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-3xl p-8 shadow-sm border border-white/40 dark:border-slate-700/40 min-w-[300px]">
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Focus Dashboard</h1>
+          <p className="text-slate-600 dark:text-slate-300 font-medium">Let's get in the zone, {userId ? "Student" : "Guest"}.</p>
         </div>
 
         {/* Course Scroll/Grid - Compact */}
         <div className="flex gap-3 overflow-x-auto pb-2 max-w-full lg:max-w-2xl no-scrollbar">
           {courses.length === 0 ? (
-            <Link href="/courses" className="flex items-center gap-2 px-4 py-2 bg-white/40 dark:bg-slate-800/40 rounded-full border border-dashed border-slate-300 dark:border-slate-600 text-slate-500 hover:bg-white/60 transition">
+            <Link href="/courses" className="flex items-center gap-2 px-4 py-2 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-2xl shadow-sm border border-white/40 dark:border-slate-700/40 text-[#306844] hover:bg-white/80 dark:hover:bg-slate-800/80 transition min-w-[120px]">
               <span className="material-symbols-outlined text-sm">add</span>
-              <span className="text-sm font-semibold">Add Courses</span>
+              <span className="text-sm font-bold">Add Courses</span>
             </Link>
           ) : (
             courses.map(course => (
