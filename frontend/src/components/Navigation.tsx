@@ -46,9 +46,11 @@ export default function Navigation() {
       <div className="max-w-6xl mx-auto pl-6 pr-0 py-4">
         <div className="flex items-center">
           {/* Logo */}
-          <Link href="/" className="text-4xl font-bold text-blue-800 dark:text-blue-500 flex-shrink-0">
-            11PLANNER
-          </Link>
+          <div className="min-w-[190px]">
+            <Link href="/" className="text-4xl font-bold text-blue-800 dark:text-blue-500 flex-shrink-0">
+              11PLANNER
+            </Link>
+          </div>
 
           {/* Navigation Links */}
           <div className="flex-1 flex justify-center">
@@ -129,7 +131,7 @@ export default function Navigation() {
             </div>
           </div>
 
-          <div className="ml-auto flex-shrink-0">
+          <div className="ml-auto min-w-[190px] text-right flex-shrink-0">
             {isLoggedIn ? (
               <button
                 onClick={logout}
