@@ -3,6 +3,7 @@
 import { usePlanner } from "@/contexts/PlannerContext";
 import { supabase } from "@/lib/supabaseClient";
 import { useEffect, useState } from "react";
+import Footer from "@/components/Footer";
 
 
 type ProfileData = {
@@ -219,6 +220,7 @@ export default function ProfilePage() {
 
         </div>
       </div>
+      <Footer />
     </div>
   );
 }

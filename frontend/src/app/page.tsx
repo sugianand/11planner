@@ -92,12 +92,15 @@ export default function Home() {
             </div>
             <h2 className="text-slate-900 dark:text-white text-xl font-bold tracking-tight">11 Planner</h2>
           </div>
-          <div className="flex gap-8 text-sm font-semibold text-slate-500 dark:text-slate-400">
-            <a className="hover:text-black dark:hover:text-white" href="#">Privacy</a>
-            <a className="hover:text-black dark:hover:text-white" href="#">Terms</a>
-            <a className="hover:text-black dark:hover:text-white" href="#">Support</a>
+          <div className="flex gap-8 text-sm font-semibold text-slate-900 dark:text-white">
+            <a className="hover:text-blue-600 dark:hover:text-blue-400 transition" href="/privacy">Privacy</a>
+            <a className="hover:text-blue-600 dark:hover:text-blue-400 transition" href="/terms">Terms</a>
+            <a className="hover:text-blue-600 dark:hover:text-blue-400 transition" href="/support">Support</a>
           </div>
-          <p className="text-slate-400 dark:text-slate-500 text-sm font-medium">© 2026 11 Planner. Designed for peace.</p>
+          <div className="flex flex-col items-center md:items-end gap-2">
+            <p className="text-slate-900 dark:text-white text-sm font-semibold">© 2026 11 Planner. All copyright rights reserved.</p>
+            <p className="text-slate-700 dark:text-slate-200 text-sm italic">Work smarter, not harder.</p>
+          </div>
         </div>
       </footer>
     </div>
