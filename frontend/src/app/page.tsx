@@ -95,6 +95,7 @@ export default function Home() {
           <div className="flex gap-8 text-sm font-semibold text-slate-900 dark:text-white">
             <a className="hover:text-blue-600 dark:hover:text-blue-400 transition" href="/privacy">Privacy</a>
             <a className="hover:text-blue-600 dark:hover:text-blue-400 transition" href="/terms">Terms</a>
+            <a className="hover:text-blue-600 dark:hover:text-blue-400 transition" href="/about">About Us</a>
             <a className="hover:text-blue-600 dark:hover:text-blue-400 transition" href="/support">Support</a>
           </div>
           <div className="flex flex-col items-center md:items-end gap-2">
