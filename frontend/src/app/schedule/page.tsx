@@ -102,7 +102,7 @@ export default function SchedulePage() {
 
 
       <div className="max-w-6xl mx-auto p-6 md:p-12">
-        <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-sm p-8 mb-6 border border-white/40 dark:border-slate-700/40">
+        <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm rounded-3xl shadow-sm p-8 mb-6 border border-white/40 dark:border-slate-700/40">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
             <div>
               <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2 tracking-tight">
@@ -141,35 +141,35 @@ export default function SchedulePage() {
 
         {scheduleStats && (
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-            <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-sm p-4 border border-white/40 dark:border-slate-700/40">
+            <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm rounded-3xl shadow-sm p-4 border border-white/40 dark:border-slate-700/40">
               <p className="text-slate-600 dark:text-slate-300 text-sm font-medium">Total Blocks</p>
               <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">
                 {scheduleStats.total_blocks}
               </p>
             </div>
 
-            <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-sm p-4 border border-white/40 dark:border-slate-700/40">
+            <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm rounded-3xl shadow-sm p-4 border border-white/40 dark:border-slate-700/40">
               <p className="text-slate-600 dark:text-slate-300 text-sm font-medium">Total Hours</p>
               <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">
                 {scheduleStats.total_hours}h
               </p>
             </div>
 
-            <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-sm p-4 border border-white/40 dark:border-slate-700/40">
+            <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm rounded-3xl shadow-sm p-4 border border-white/40 dark:border-slate-700/40">
               <p className="text-slate-600 dark:text-slate-300 text-sm font-medium">Days Span</p>
               <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">
                 {scheduleStats.days_span}d
               </p>
             </div>
 
-            <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-sm p-4 border border-white/40 dark:border-slate-700/40">
+            <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm rounded-3xl shadow-sm p-4 border border-white/40 dark:border-slate-700/40">
               <p className="text-slate-600 dark:text-slate-300 text-sm font-medium">Daily Average</p>
               <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">
                 {scheduleStats.avg_hours_per_day}h
               </p>
             </div>
 
-            <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-sm p-4 border border-white/40 dark:border-slate-700/40">
+            <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm rounded-3xl shadow-sm p-4 border border-white/40 dark:border-slate-700/40">
               <p className="text-slate-600 dark:text-slate-300 text-sm font-medium">Valid</p>
               <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">
                 {scheduleStats.valid ? "✓" : "✗"}
@@ -179,7 +179,7 @@ export default function SchedulePage() {
         )}
 
         {generatedBlocks.length > 0 && (
-          <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-sm p-6 border border-white/40 dark:border-slate-700/40">
+          <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm rounded-3xl shadow-sm p-6 border border-white/40 dark:border-slate-700/40">
             <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">
               Generated Schedule Blocks
             </h3>
@@ -238,7 +238,7 @@ export default function SchedulePage() {
           </div>
         )}
 
-        <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-sm p-6 mt-6 border border-white/40 dark:border-slate-700/40">
+        <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm rounded-3xl shadow-sm p-6 mt-6 border border-white/40 dark:border-slate-700/40">
           <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">
             Weekly Schedule
           </h3>
