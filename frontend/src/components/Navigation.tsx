@@ -41,15 +41,15 @@ export default function Navigation() {
 
   return (
     <nav className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md shadow-sm border-b border-white/40 dark:border-slate-700/40 sticky top-0 z-50">
-      <div className="max-w-6xl mx-auto px-4 md:px-6 py-3 md:py-4">
-        <div className="flex items-center justify-between">
+      <div className="max-w-6xl mx-auto px-4 md:px-6 h-16 md:h-16">
+        <div className="flex items-center justify-between h-full">
           {/* Logo */}
           <div>
             <Link href="/" className="flex items-center flex-shrink-0">
               <img
                 src="/images/logo.png"
                 alt="11Planner Logo"
-                className="h-20 md:h-24 w-auto"
+                className="h-28 md:h-28 w-auto"
               />
             </Link>
           </div>

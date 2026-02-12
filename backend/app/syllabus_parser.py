@@ -357,7 +357,7 @@ def _extract_course_info(lines: list[str]) -> dict:
                                 if prof_candidate:
                                     professor = prof_candidate
 
-                if not description and re.search(r"\b(course\s*description|description|overview|about)\b", line, re.IGNORECASE):
+                if not description and re.search(r"\b(course\s*description|description|overview|about|course\s*objective|objectives?)\b", line, re.IGNORECASE):
                     parts = re.split(r":", line, maxsplit=1)
                     if len(parts) == 2:
                         desc_candidate = parts[1].strip()
@@ -398,7 +398,7 @@ def _extract_course_info(lines: list[str]) -> dict:
                         if prof_candidate:
                             professor = prof_candidate
 
-        if not description and re.search(r"\b(course\s*description|description|overview|about)\b", line, re.IGNORECASE):
+        if not description and re.search(r"\b(course\s*description|description|overview|about|course\s*objective|objectives?)\b", line, re.IGNORECASE):
             parts = re.split(r":", line, maxsplit=1)
             if len(parts) == 2:
                 desc_candidate = parts[1].strip()
