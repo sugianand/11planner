@@ -25,34 +25,38 @@ export default function ProfilePage() {
   useEffect(() => {
 
     async function fetchProfile() {
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser();
+      try {
+        const {
+          data: { user },
+          error: authError,
+        } = await supabase.auth.getUser();
 
-      if (authError || !user) {
-        console.error("Error fetching user:", authError);
-        return;
+        if (authError || !user) {
+          // Guest user - not an error, just no auth session
+          console.debug("No authenticated user, showing guest profile");
+          return;
+        }
+
+        setEmail(user.email);
+        setUserId(user.id);
+
+        const { data: profileData, error: profileError } = await supabase
+          .from("profiles")
+          .select("firstname, lastname, university, major")
+          .eq("id", user.id)
+          .single();
+
+        if (profileError) {
+          console.debug("No profile data found:", profileError.message);
+          return;
+        }
+
+        setProfile(profileData);
+        setEditProfile(profileData);
+      } catch (err) {
+        // Suppress auth errors for guest users
+        console.debug("Profile fetch error (guest mode):", err);
       }
-
-
-
-      setEmail(user.email);
-      setUserId(user.id);
-
-      const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select("firstname, lastname, university, major")
-        .eq("id", user.id)
-        .single();
-
-      if (profileError) {
-        console.error("Error fetching profile:", profileError);
-        return;
-      }
-
-      setProfile(profileData);
-      setEditProfile(profileData);
     }
 
     fetchProfile();

@@ -30,12 +30,17 @@ export default function AuthPage() {
 
   useEffect(() => {
     async function checkSession() {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
 
-      if (session) {
-        goToNextPage();
+        if (session) {
+          goToNextPage();
+        }
+      } catch (err) {
+        // Suppress session check errors on auth page
+        console.debug("No active session on auth page:", err);
       }
     }
 

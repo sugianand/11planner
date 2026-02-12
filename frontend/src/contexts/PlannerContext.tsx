@@ -68,13 +68,19 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
   // Sync with Supabase Auth
   useEffect(() => {
     // Check active session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUserId(session.user.id);
-      } else {
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        if (session?.user) {
+          setUserId(session.user.id);
+        } else {
+          setUserId("user_demo");
+        }
+      })
+      .catch((err) => {
+        // Suppress auth session errors for guest users
+        console.debug("No active session, using guest mode:", err.message);
         setUserId("user_demo");
-      }
-    });
+      });
 
     // Listen for changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
