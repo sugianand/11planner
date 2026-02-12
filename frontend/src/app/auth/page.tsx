@@ -33,6 +33,9 @@ export default function AuthPage() {
   const [mode, setMode] = useState<Mode>("login");
   const [form, setForm] = useState<FormState>(initialForm);
   const [errorMessage, setErrorMessage] = useState("");
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const goToNextPage = (): void => {
     window.location.href = "/profile";
@@ -81,9 +84,11 @@ export default function AuthPage() {
   async function registerUser(): Promise<void> {
     const { firstname, lastname, email, password, confirmPassword, university, major } = form;
     const hasSpecialCharacter = /[^A-Za-z0-9]/.test(password);
+    const first = firstname.trim();
+    const last = lastname.trim();
 
-    if (!email || !password || !confirmPassword) {
-      setErrorMessage("Please enter all required fields.");
+    if (!first || !last || !email || !password || !confirmPassword) {
+      setErrorMessage("First name, last name, email, and password fields are required.");
       return;
     }
 
@@ -115,8 +120,8 @@ export default function AuthPage() {
 
     const { error: profileError } = await supabase.from("profiles").insert({
       id: data.user.id,
-      firstname: firstname || null,
-      lastname: lastname || null,
+      firstname: first,
+      lastname: last,
       university: university || null,
       major: major || null,
     });
@@ -192,13 +197,22 @@ export default function AuthPage() {
               onChange={handleInputChange}
             />
 
-            <input
-              type="password"
-              name="loginPassword"
-              placeholder="Password"
-              value={form.loginPassword}
-              onChange={handleInputChange}
-            />
+            <div className="password-field">
+              <input
+                type={showLoginPassword ? "text" : "password"}
+                name="loginPassword"
+                placeholder="Password"
+                value={form.loginPassword}
+                onChange={handleInputChange}
+              />
+              <button
+                type="button"
+                className="toggle-password-btn"
+                onClick={() => setShowLoginPassword((prev) => !prev)}
+              >
+                {showLoginPassword ? "Hide" : "Show"}
+              </button>
+            </div>
 
             <button className="btn" onClick={loginUser}>
               Log in
@@ -223,7 +237,7 @@ export default function AuthPage() {
             <input
               type="text"
               name="firstname"
-              placeholder="First Name"
+              placeholder="First Name (required)"
               value={form.firstname}
               onChange={handleInputChange}
             />
@@ -232,7 +246,7 @@ export default function AuthPage() {
             <input
               type="text"
               name="lastname"
-              placeholder="Last Name"
+              placeholder="Last Name (required)"
               value={form.lastname}
               onChange={handleInputChange}
             />
@@ -263,23 +277,41 @@ export default function AuthPage() {
             />
 
 
-            <input
-              type="password"
-              name="password"
-              placeholder="Password (required)"
-              value={form.password}
-              minLength={6}
-              onChange={handleInputChange}
-            />
+            <div className="password-field">
+              <input
+                type={showRegisterPassword ? "text" : "password"}
+                name="password"
+                placeholder="Password (required)"
+                value={form.password}
+                minLength={6}
+                onChange={handleInputChange}
+              />
+              <button
+                type="button"
+                className="toggle-password-btn"
+                onClick={() => setShowRegisterPassword((prev) => !prev)}
+              >
+                {showRegisterPassword ? "Hide" : "Show"}
+              </button>
+            </div>
             <p className="field-hint">Password must be at least 6 characters and include 1 special character.</p>
 
-            <input
-              type="password"
-              name="confirmPassword"
-              placeholder="Confirm Password (required)"
-              value={form.confirmPassword}
-              onChange={handleInputChange}
-            />
+            <div className="password-field">
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                name="confirmPassword"
+                placeholder="Confirm Password (required)"
+                value={form.confirmPassword}
+                onChange={handleInputChange}
+              />
+              <button
+                type="button"
+                className="toggle-password-btn"
+                onClick={() => setShowConfirmPassword((prev) => !prev)}
+              >
+                {showConfirmPassword ? "Hide" : "Show"}
+              </button>
+            </div>
 
             <button className="btn" onClick={registerUser}>
               Register

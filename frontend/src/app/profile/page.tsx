@@ -105,7 +105,6 @@ export default function ProfilePage() {
                 <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
                   {profile ? `${profile.firstname} ${profile.lastname}` : "Guest User"}
                 </h1>
-                <p className="text-slate-600 dark:text-slate-300 text-lg mt-2">ID: {userId}</p>
               </div>
             </div>
           </div>
