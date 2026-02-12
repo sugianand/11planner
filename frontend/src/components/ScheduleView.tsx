@@ -105,13 +105,13 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
   return (
     <div className="flex flex-col h-full bg-white">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 p-4">
+      <div className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 p-4">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-3xl font-bold text-gray-900">Schedule</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Schedule</h1>
           <div className="flex gap-2">
             <button
               onClick={handleToday}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-slate-200 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600"
             >
               Today
             </button>
@@ -124,8 +124,8 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
             onClick={() => handleViewModeChange('daily')}
             className={`px-4 py-2 rounded-lg font-medium transition-colors ${
               viewMode === 'daily'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'bg-emerald-600 text-white'
+                : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-200 dark:hover:bg-slate-600'
             }`}
           >
             Day
@@ -134,8 +134,8 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
             onClick={() => handleViewModeChange('weekly')}
             className={`px-4 py-2 rounded-lg font-medium transition-colors ${
               viewMode === 'weekly'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'bg-emerald-600 text-white'
+                : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-200 dark:hover:bg-slate-600'
             }`}
           >
             Week
@@ -144,8 +144,8 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
             onClick={() => handleViewModeChange('monthly')}
             className={`px-4 py-2 rounded-lg font-medium transition-colors ${
               viewMode === 'monthly'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'bg-emerald-600 text-white'
+                : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-200 dark:hover:bg-slate-600'
             }`}
           >
             Month
@@ -154,8 +154,8 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
             onClick={() => handleViewModeChange('yearly')}
             className={`px-4 py-2 rounded-lg font-medium transition-colors ${
               viewMode === 'yearly'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'bg-emerald-600 text-white'
+                : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-200 dark:hover:bg-slate-600'
             }`}
           >
             Year
@@ -166,11 +166,11 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
         <div className="flex items-center justify-between">
           <button
             onClick={handlePreviousPeriod}
-            className="px-3 py-1 text-gray-700 hover:bg-gray-100 rounded-lg"
+            className="px-3 py-1 text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg"
           >
             ← Previous
           </button>
-          <span className="text-lg font-semibold text-gray-900">
+          <span className="text-lg font-semibold text-gray-900 dark:text-white">
             {viewMode === 'daily' && currentDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
             {viewMode === 'weekly' && `Week of ${weekDays[0]?.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
             {viewMode === 'monthly' && currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
@@ -178,7 +178,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
           </span>
           <button
             onClick={handleNextPeriod}
-            className="px-3 py-1 text-gray-700 hover:bg-gray-100 rounded-lg"
+            className="px-3 py-1 text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg"
           >
             Next →
           </button>

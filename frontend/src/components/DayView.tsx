@@ -105,9 +105,9 @@ export const DayView: React.FC<DayViewProps> = ({ dayData, events, onEventMove }
 
   return (
     <div className="flex flex-col h-full">
-      <div className="sticky top-0 bg-white border-b border-gray-200 p-4">
-        <h2 className="text-2xl font-bold text-gray-900">{dayData.dayOfWeek}</h2>
-        <p className="text-lg text-gray-600">{dayData.date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+      <div className="sticky top-0 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 dark:border-slate-700 p-4">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{dayData.dayOfWeek}</h2>
+        <p className="text-lg text-gray-600 dark:text-slate-300">{dayData.date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -120,8 +120,8 @@ export const DayView: React.FC<DayViewProps> = ({ dayData, events, onEventMove }
           const isActive = activeSlot === slotKey;
 
           return (
-            <div key={slotKey} className="flex border-b border-gray-100">
-              <div className="w-20 flex-shrink-0 py-2 px-4 bg-gray-50 text-sm font-semibold text-gray-700 border-r border-gray-100">
+            <div key={slotKey} className="flex border-b border-gray-100 dark:border-slate-700">
+              <div className="w-20 flex-shrink-0 py-2 px-4 bg-gray-50 dark:bg-slate-800 text-sm font-semibold text-gray-700 dark:text-slate-200 border-r border-gray-100 dark:border-slate-700">
                 {slot.minute === 0
                   ? new Date(0, 0, 0, slot.hour).toLocaleTimeString('en-US', {
                       hour: 'numeric',
@@ -131,14 +131,14 @@ export const DayView: React.FC<DayViewProps> = ({ dayData, events, onEventMove }
               </div>
               <div
                 className={`flex-1 py-2 px-4 relative min-h-10 transition-colors ${
-                  isActive ? 'bg-blue-50' : 'bg-white'
+                  isActive ? 'bg-emerald-50 dark:bg-emerald-900/20' : 'bg-white dark:bg-slate-800'
                 }`}
                 onDragOver={(event) => handleDragOver(event, slotKey)}
                 onDragLeave={() => handleDragLeave(slotKey)}
                 onDrop={(event) => handleDrop(event, slot.hour, slot.minute)}
               >
                 {isActive && (
-                  <div className="absolute right-2 top-1 text-[10px] text-blue-700 bg-blue-100 rounded px-1">
+                  <div className="absolute right-2 top-1 text-[10px] text-emerald-700 bg-emerald-100 rounded px-1">
                     {new Date(0, 0, 0, slot.hour, slot.minute).toLocaleTimeString('en-US', {
                       hour: 'numeric',
                       minute: '2-digit',

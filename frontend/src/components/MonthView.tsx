@@ -132,18 +132,18 @@ export const MonthView: React.FC<MonthViewProps> = ({ daysInMonth, events, onEve
 
   return (
     <div className="flex flex-col h-full">
-      <div className="sticky top-0 bg-white border-b border-gray-200 p-4">
-        <h2 className="text-2xl font-bold text-gray-900">Month View</h2>
-        <p className="text-lg text-gray-600">{monthYear}</p>
+      <div className="sticky top-0 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 dark:border-slate-700 p-4">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Month View</h2>
+        <p className="text-lg text-gray-600 dark:text-slate-300">{monthYear}</p>
       </div>
 
       <div className="flex-1 overflow-auto">
         {/* Week day headers */}
-        <div className="grid grid-cols-7 gap-px bg-gray-200">
+        <div className="grid grid-cols-7 gap-px bg-gray-200 dark:bg-slate-700">
           {weekDays.map((day) => (
             <div
               key={day}
-              className="bg-gray-100 p-2 text-center font-semibold text-gray-700"
+              className="bg-gray-100 dark:bg-slate-700 p-2 text-center font-semibold text-gray-700 dark:text-slate-200"
             >
               {day}
             </div>
@@ -151,7 +151,7 @@ export const MonthView: React.FC<MonthViewProps> = ({ daysInMonth, events, onEve
         </div>
 
         {/* Calendar grid */}
-        <div className="grid grid-cols-7 gap-px bg-gray-200">
+        <div className="grid grid-cols-7 gap-px bg-gray-200 dark:bg-slate-700">
           {daysInMonth.map((day) => {
             const dayEvents = events.filter((e) => {
               const eventDate = new Date(e.start);
@@ -167,16 +167,16 @@ export const MonthView: React.FC<MonthViewProps> = ({ daysInMonth, events, onEve
                 className={`min-h-24 p-2 transition-colors ${
                   day.isCurrentMonth
                     ? day.isToday
-                      ? 'bg-blue-50'
-                      : 'bg-white'
-                    : 'bg-gray-50'
-                } ${isActive ? 'ring-2 ring-blue-400' : ''}`}
+                      ? 'bg-emerald-50 dark:bg-emerald-900/20'
+                      : 'bg-white dark:bg-slate-800'
+                    : 'bg-white dark:bg-slate-800'
+                } ${isActive ? 'ring-2 ring-emerald-400 dark:ring-emerald-500' : ''}`}
                 onDragOver={(event) => handleDragOver(event, dayKey)}
                 onDragLeave={() => handleDragLeave(dayKey)}
                 onDrop={(event) => handleDrop(event, day)}
               >
                 {isActive && draggingEventId && (
-                  <div className="mb-1 text-[10px] text-blue-700 bg-blue-100 rounded px-1 inline-block">
+                  <div className="mb-1 text-[10px] text-emerald-700 bg-emerald-100 rounded px-1 inline-block">
                     {day.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {getDragTimeLabel()}
                   </div>
                 )}
@@ -184,8 +184,8 @@ export const MonthView: React.FC<MonthViewProps> = ({ daysInMonth, events, onEve
                   className={`text-sm font-semibold mb-1 ${
                     day.isCurrentMonth
                       ? day.isToday
-                        ? 'bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center'
-                        : 'text-gray-900'
+                        ? 'bg-emerald-600 text-white rounded-full w-6 h-6 flex items-center justify-center'
+                        : 'text-gray-900 dark:text-white'
                       : 'text-gray-400'
                   }`}
                 >
@@ -208,7 +208,7 @@ export const MonthView: React.FC<MonthViewProps> = ({ daysInMonth, events, onEve
                     </div>
                   ))}
                   {dayEvents.length > 2 && (
-                    <p className="text-xs text-gray-600">+{dayEvents.length - 2} more</p>
+                    <p className="text-xs text-gray-600 dark:text-slate-300">+{dayEvents.length - 2} more</p>
                   )}
                 </div>
               </div>

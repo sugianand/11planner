@@ -170,11 +170,11 @@ export default function TasksPage() {
 
           {/* No Courses Warning */}
           {courses.length === 0 && !showForm && (
-            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-6 mb-6 text-center">
-              <p className="text-amber-800 dark:text-amber-200 text-lg font-semibold mb-2">
-                No courses added yet
+            <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-lg p-8 text-center border border-slate-200 dark:border-slate-700/40 mb-6">
+              <p className="text-slate-600 dark:text-slate-300 text-lg font-semibold mb-2">
+                No courses added yet.
               </p>
-              <p className="text-amber-700 dark:text-amber-300 mb-4">
+              <p className="text-slate-600 dark:text-slate-300 mb-4">
                 Please add a course first before creating tasks.
               </p>
               <a
@@ -325,19 +325,20 @@ export default function TasksPage() {
           )}
 
           {/* Tasks List */}
-          <div className="space-y-4">
-            {loading && tasks.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-slate-600 dark:text-slate-300 text-lg">Loading tasks...</p>
-              </div>
-            ) : sortedTasks.length === 0 ? (
-              <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-lg p-8 text-center border border-slate-200 dark:border-slate-700/40">
-                <p className="text-slate-600 dark:text-slate-300 text-lg">
-                  No tasks yet. Create one to get started!
-                </p>
-              </div>
-            ) : (
-              sortedTasks.map((task) => (
+          {courses.length > 0 && (
+            <div className="space-y-4">
+              {loading && tasks.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-slate-600 dark:text-slate-300 text-lg">Loading tasks...</p>
+                </div>
+              ) : sortedTasks.length === 0 ? (
+                <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-lg p-8 text-center border border-slate-200 dark:border-slate-700/40">
+                  <p className="text-slate-600 dark:text-slate-300 text-lg">
+                    No tasks added yet. Create one to get started!
+                  </p>
+                </div>
+              ) : (
+                sortedTasks.map((task) => (
                 <div
                   key={task.id}
                   className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-2xl shadow-sm p-6 border border-white/40 dark:border-slate-700/40 hover:bg-white/70 dark:hover:bg-slate-800/70 transition group"
@@ -414,7 +415,8 @@ export default function TasksPage() {
 
               ))
             )}
-          </div>
+            </div>
+          )}
         </div>
       </div >
       <Footer />

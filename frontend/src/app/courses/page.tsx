@@ -381,7 +381,7 @@ export default function CoursesPage() {
             ) : courses.length === 0 ? (
               <div className="col-span-full bg-white/70 dark:bg-slate-900/70 rounded-lg p-8 text-center border border-slate-200 dark:border-slate-700/40">
                 <p className="text-slate-600 dark:text-slate-300 text-lg">
-                  No courses yet. Create one to get started!
+                  No courses added yet. Create one to get started!
                 </p>
               </div>
             ) : (

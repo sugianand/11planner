@@ -112,22 +112,22 @@ export const WeekView: React.FC<WeekViewProps> = ({ weekDays, events, onEventMov
 
   return (
     <div className="flex flex-col h-full">
-      <div className="sticky top-0 bg-white border-b border-gray-200 p-4">
-        <h2 className="text-2xl font-bold text-gray-900">Week View</h2>
-        <p className="text-lg text-gray-600">{formatDateRange(startDate, endDate)}</p>
+      <div className="sticky top-0 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 dark:border-slate-700 p-4">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Week View</h2>
+        <p className="text-lg text-gray-600 dark:text-slate-300">{formatDateRange(startDate, endDate)}</p>
       </div>
 
       <div className="flex-1 overflow-x-auto">
         <div className="flex min-w-full">
           {/* Time column */}
           <div className="w-20 flex-shrink-0">
-            <div className="bg-gray-50 border-r border-gray-200">
+            <div className="bg-gray-50 dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700">
               {/* Empty header space to align with day headers */}
-              <div className="h-20 border-b-2 border-gray-200"></div>
+              <div className="h-20 border-b-2 border-gray-200 dark:border-slate-700"></div>
               {slots.map((slot) => (
                 <div
                   key={`${slot.hour}-${slot.minute}`}
-                  className="h-10 py-2 px-4 text-sm font-semibold text-gray-700 border-b border-gray-100"
+                  className="h-10 py-2 px-4 text-sm font-semibold text-gray-700 dark:text-slate-200 border-b border-gray-100 dark:border-slate-700"
                 >
                   {slot.minute === 0
                     ? new Date(0, 0, 0, slot.hour).toLocaleTimeString('en-US', {
@@ -143,13 +143,13 @@ export const WeekView: React.FC<WeekViewProps> = ({ weekDays, events, onEventMov
           {/* Days columns */}
           <div className="flex flex-1">
             {weekDays.map((day) => (
-              <div key={day.date.toString()} className="flex-1 border-r border-gray-200 last:border-r-0">
+              <div key={day.date.toString()} className="flex-1 border-r border-gray-200 dark:border-slate-700 last:border-r-0">
                 {/* Day header */}
-                <div className="bg-white border-b-2 border-gray-200 p-2 text-center h-20 flex flex-col justify-center">
-                  <p className={`font-semibold ${day.isToday ? 'text-blue-600' : 'text-gray-900'}`}>
+                <div className="bg-white dark:bg-slate-800 border-b-2 border-gray-200 dark:border-slate-700 p-2 text-center h-20 flex flex-col justify-center">
+                  <p className={`font-semibold ${day.isToday ? 'text-emerald-600' : 'text-gray-900 dark:text-white'}`}>
                     {day.dayOfWeek}
                   </p>
-                  <p className={`text-sm ${day.isToday ? 'bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center mx-auto' : 'text-gray-600'}`}>
+                  <p className={`text-sm ${day.isToday ? 'bg-emerald-600 text-white rounded-full w-8 h-8 flex items-center justify-center mx-auto' : 'text-gray-600 dark:text-slate-300'}`}>
                     {day.dayNumber}
                   </p>
                 </div>
@@ -171,15 +171,15 @@ export const WeekView: React.FC<WeekViewProps> = ({ weekDays, events, onEventMov
                     return (
                       <div
                         key={slotKey}
-                        className={`h-10 border-b border-gray-100 p-1 relative transition-colors ${
-                          isActive ? 'bg-blue-50' : 'bg-white'
+                        className={`h-10 border-b border-gray-100 dark:border-slate-700 p-1 relative transition-colors ${
+                          isActive ? 'bg-emerald-50 dark:bg-emerald-900/20' : 'bg-white dark:bg-slate-800'
                         }`}
                         onDragOver={(event) => handleDragOver(event, slotKey)}
                         onDragLeave={() => handleDragLeave(slotKey)}
                         onDrop={(event) => handleDrop(event, day, slot.hour, slot.minute)}
                       >
                         {isActive && (
-                          <div className="absolute right-1 top-1 text-[10px] text-blue-700 bg-blue-100 rounded px-1">
+                          <div className="absolute right-1 top-1 text-[10px] text-emerald-700 bg-emerald-100 rounded px-1">
                             {new Date(0, 0, 0, slot.hour, slot.minute).toLocaleTimeString('en-US', {
                               hour: 'numeric',
                               minute: '2-digit',

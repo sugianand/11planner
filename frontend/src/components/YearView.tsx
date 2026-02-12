@@ -20,13 +20,13 @@ export const YearView: React.FC<YearViewProps> = ({ year, monthsData, events }) 
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="sticky top-0 bg-white border-b border-gray-200 p-4">
-        <h2 className="text-2xl font-bold text-gray-900">Year View</h2>
-        <p className="text-lg text-gray-600">{year}</p>
+    <div className="flex flex-col h-full bg-white dark:bg-slate-900">
+      <div className="sticky top-0 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 dark:border-slate-700 p-4">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Year View</h2>
+        <p className="text-lg text-gray-600 dark:text-slate-300">{year}</p>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto p-4 bg-white dark:bg-slate-900">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {monthsData.map((monthData) => {
             const firstDayOfMonth = monthData.daysInMonth.find(day => day.isCurrentMonth);
@@ -34,10 +34,10 @@ export const YearView: React.FC<YearViewProps> = ({ year, monthsData, events }) 
             return (
               <div
                 key={monthData.month}
-                className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm"
+                className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-3 shadow-sm"
               >
                 {/* Month header */}
-                <h3 className="text-center font-semibold text-gray-900 mb-2">
+                <h3 className="text-center font-semibold text-gray-900 dark:text-white mb-2">
                   {monthData.name}
                 </h3>
 
@@ -46,7 +46,7 @@ export const YearView: React.FC<YearViewProps> = ({ year, monthsData, events }) 
                   {weekDays.map((day, idx) => (
                     <div
                       key={idx}
-                      className="text-center text-xs font-medium text-gray-500"
+                      className="text-center text-xs font-medium text-gray-500 dark:text-slate-400"
                     >
                       {day}
                     </div>
@@ -65,14 +65,14 @@ export const YearView: React.FC<YearViewProps> = ({ year, monthsData, events }) 
                         className={`aspect-square flex items-center justify-center text-xs relative ${
                           day.isCurrentMonth
                             ? day.isToday
-                              ? 'bg-blue-600 text-white rounded-full font-bold'
-                              : 'text-gray-900'
-                            : 'text-gray-300'
+                              ? 'bg-emerald-600 text-white rounded-full font-bold'
+                              : 'bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded'
+                            : 'bg-gray-50 dark:bg-slate-900 text-gray-300 dark:text-slate-500'
                         }`}
                       >
                         {day.dayNumber}
                         {hasEvents && day.isCurrentMonth && !day.isToday && (
-                          <div className="absolute bottom-0.5 w-1 h-1 bg-blue-500 rounded-full"></div>
+                          <div className="absolute bottom-0.5 w-1 h-1 bg-emerald-500 rounded-full"></div>
                         )}
                       </div>
                     );

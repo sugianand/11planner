@@ -7,6 +7,20 @@ import Footer from "@/components/Footer";
 
 type Theme = "light" | "dark" | "auto";
 
+// Add styles for range slider
+const sliderStyles = `
+  input[type="range"] {
+    accent-color: rgb(16, 185, 129);
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    accent-color: rgb(16, 185, 129);
+  }
+  input[type="range"]::-moz-range-thumb {
+    background-color: rgb(16, 185, 129);
+    border-color: rgb(16, 185, 129);
+  }
+`;
+
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const [emailUpdates, setEmailUpdates] = useState(true);
@@ -169,6 +183,7 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen relative">
+      <style>{sliderStyles}</style>
       <div className="fixed inset-0 bg-focus-light dark:bg-focus-dark bg-cover bg-center -z-20"></div>
 
 
@@ -196,7 +211,7 @@ export default function SettingsPage() {
                       value="light"
                       checked={theme === "light"}
                       onChange={(e) => handleThemeChange(e.target.value as Theme)}
-                      className="w-4 h-4"
+                      className="w-4 h-4 accent-emerald-600"
                     />
                     <span className="ml-3 text-slate-900 dark:text-white">Light</span>
                   </label>
@@ -208,7 +223,7 @@ export default function SettingsPage() {
                       value="dark"
                       checked={theme === "dark"}
                       onChange={(e) => handleThemeChange(e.target.value as Theme)}
-                      className="w-4 h-4"
+                      className="w-4 h-4 accent-emerald-600"
                     />
                     <span className="ml-3 text-slate-900 dark:text-white">Dark</span>
                   </label>
@@ -220,7 +235,7 @@ export default function SettingsPage() {
                       value="auto"
                       checked={theme === "auto"}
                       onChange={(e) => handleThemeChange(e.target.value as Theme)}
-                      className="w-4 h-4"
+                      className="w-4 h-4 accent-emerald-600"
                     />
                     <span className="ml-3 text-slate-900 dark:text-white">Auto</span>
                   </label>
@@ -293,7 +308,7 @@ export default function SettingsPage() {
                 </div>
                 <button
                   onClick={() => handleNotificationChange(!notificationsEnabled)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${notificationsEnabled ? "bg-blue-600" : "bg-slate-300"
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${notificationsEnabled ? "bg-emerald-600" : "bg-slate-300"
                     }`}
                 >
                   <span
@@ -373,7 +388,7 @@ export default function SettingsPage() {
                   </div>
                   <button
                     onClick={() => handleEmailUpdatesChange(!emailUpdates)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${emailUpdates ? "bg-blue-600" : "bg-slate-300"
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${emailUpdates ? "bg-emerald-600" : "bg-slate-300"
                       }`}
                   >
                     <span
@@ -394,7 +409,7 @@ export default function SettingsPage() {
                   </div>
                   <button
                     onClick={() => handleWeeklyReportChange(!weeklyReport)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${weeklyReport ? "bg-blue-600" : "bg-slate-300"
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${weeklyReport ? "bg-emerald-600" : "bg-slate-300"
                       }`}
                   >
                     <span
