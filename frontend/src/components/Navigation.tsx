@@ -169,7 +169,7 @@ export default function Navigation() {
                   : "text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400"
                   }`}
               >
-                Login
+                Register/Login
               </Link>
             )}
           </div>

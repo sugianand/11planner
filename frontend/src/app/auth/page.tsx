@@ -33,6 +33,7 @@ export default function AuthPage() {
   const [mode, setMode] = useState<Mode>("login");
   const [form, setForm] = useState<FormState>(initialForm);
   const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -43,6 +44,7 @@ export default function AuthPage() {
 
   useEffect(() => {
     async function checkSession() {
+      if (window.location.hash.includes("type=recovery")) return;
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -71,6 +73,7 @@ export default function AuthPage() {
     const name = e.target.name;
     const value = e.target.value;
     setErrorMessage("");
+    setSuccessMessage("");
 
     setForm((prevForm) => {
       const updatedForm = {
@@ -169,7 +172,29 @@ export default function AuthPage() {
     }
 
     setErrorMessage("");
+    setSuccessMessage("");
     goToNextPage();
+  }
+
+  async function forgotPassword(): Promise<void> {
+    const email = form.loginEmail.trim();
+
+    if (!email) {
+      setErrorMessage("Enter your email, then click 'Forgot your password?'");
+      return;
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/reset-password`,
+    });
+
+    if (error) {
+      setErrorMessage(error.message);
+      return;
+    }
+
+    setErrorMessage("");
+    setSuccessMessage("If email exists, a password reset link has been sent.");
   }
 
   return (
@@ -183,6 +208,11 @@ export default function AuthPage() {
           <div className="error-card" role="alert">
             <div className="error-title">Please fix the following:</div>
             <div className="error-text">{errorMessage}</div>
+          </div>
+        )}
+        {successMessage && (
+          <div className="success-card" role="status">
+            <div className="success-text">{successMessage}</div>
           </div>
         )}
 
@@ -213,6 +243,9 @@ export default function AuthPage() {
                 {showLoginPassword ? "Hide" : "Show"}
               </button>
             </div>
+            <button type="button" className="forgot-password-btn" onClick={forgotPassword}>
+              Forgot your password?
+            </button>
 
             <button className="btn" onClick={loginUser}>
               Log in
@@ -226,6 +259,7 @@ export default function AuthPage() {
                   setMode("register");
                   setForm(initialForm);
                   setErrorMessage("");
+                  setSuccessMessage("");
                 }}
               >
                 Register
@@ -325,6 +359,7 @@ export default function AuthPage() {
                   setMode("login");
                   setForm(initialForm);
                   setErrorMessage("");
+                  setSuccessMessage("");
                 }}
               >
                 Log in
