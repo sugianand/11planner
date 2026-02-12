@@ -22,9 +22,9 @@ type Soundscape = {
 
 const focusBackgrounds: FocusBackground[] = [
   {
-    id: "plain",
-    label: "Plain",
-    description: "No live background, just the dashboard.",
+    id: "default",
+    label: "Default",
+    description: "Standard app background used across all pages.",
     category: "All",
     videoUrl: "",
     imageUrl: "",
@@ -340,10 +340,90 @@ export default function Dashboard() {
   const [isAtmosphereOpen, setIsAtmosphereOpen] = useState(false);
   const [isUiHidden, setIsUiHidden] = useState(false);
   const [isUiTransparent, setIsUiTransparent] = useState(false);
+  const [showMiniTimer, setShowMiniTimer] = useState(false);
+  const [timerPosition, setTimerPosition] = useState({ x: 32, y: window.innerHeight - 400 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [timerMode, setTimerMode] = useState<"pomodoro" | "shortBreak" | "longBreak">("pomodoro");
+  const [timeLeft, setTimeLeft] = useState(25 * 60);
+  const [isTimerActive, setIsTimerActive] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(0.6);
   const [videoError, setVideoError] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    setIsDragging(true);
+    setDragOffset({
+      x: e.clientX - timerPosition.x,
+      y: e.clientY - timerPosition.y,
+    });
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isDragging) {
+        setTimerPosition({
+          x: e.clientX - dragOffset.x,
+          y: e.clientY - dragOffset.y,
+        });
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    if (isDragging) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, dragOffset]);
+
+  const timerModes = {
+    pomodoro: { label: "Focus", minutes: 25 },
+    shortBreak: { label: "Short Break", minutes: 5 },
+    longBreak: { label: "Long Break", minutes: 15 },
+  };
+
+  useEffect(() => {
+    setTimeLeft(timerModes[timerMode].minutes * 60);
+    setIsTimerActive(false);
+    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+  }, [timerMode]);
+
+  useEffect(() => {
+    if (isTimerActive && timeLeft > 0) {
+      timerIntervalRef.current = setInterval(() => {
+        setTimeLeft((prev) => prev - 1);
+      }, 1000);
+    } else if (timeLeft === 0) {
+      setIsTimerActive(false);
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    }
+
+    return () => {
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    };
+  }, [isTimerActive, timeLeft]);
+
+  const toggleMiniTimer = () => setIsTimerActive(!isTimerActive);
+  const resetMiniTimer = () => {
+    setIsTimerActive(false);
+    setTimeLeft(timerModes[timerMode].minutes * 60);
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  };
 
   const activeBackground = useMemo(
     () => focusBackgrounds.find((scene) => scene.id === backgroundId) ?? focusBackgrounds[0],
@@ -426,10 +506,31 @@ export default function Dashboard() {
     <div
       className={`${
         isUiTransparent
-          ? "bg-white/55 dark:bg-slate-900/50 border-white/30 dark:border-slate-700/30"
+          ? "bg-white/30 dark:bg-slate-900/30 border-white/20 dark:border-slate-700/20"
           : "bg-white/75 dark:bg-slate-900/70 border-white/40 dark:border-slate-700/40"
-      } backdrop-blur-xl rounded-3xl border p-6 shadow-sm transition-colors text-center`}
+      } backdrop-blur-xl rounded-3xl border p-6 shadow-sm transition-colors relative`}
     >
+      <div className="absolute top-6 right-6 flex items-center gap-2 flex-wrap">
+        <button
+          onClick={() => setIsAtmosphereOpen((prev) => !prev)}
+          className="px-4 py-2 rounded-full text-sm font-semibold border border-slate-200/80 dark:border-slate-700/80 text-slate-600 dark:text-slate-300 hover:bg-white/80 dark:hover:bg-slate-800/80 transition"
+        >
+          {isAtmosphereOpen ? "Hide" : "Show"}
+        </button>
+        <button
+          onClick={() => setIsUiTransparent((prev) => !prev)}
+          className="px-4 py-2 rounded-full text-sm font-semibold border border-slate-200/80 dark:border-slate-700/80 text-slate-600 dark:text-slate-300 hover:bg-white/80 dark:hover:bg-slate-800/80 transition"
+        >
+          {isUiTransparent ? "Solid" : "Glass"}
+        </button>
+        <button
+          onClick={() => setIsUiHidden(true)}
+          className="px-4 py-2 rounded-full text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition"
+        >
+          Hide All UI
+        </button>
+      </div>
+
       <div className="flex flex-col gap-4 items-center text-center">
         <div className="flex flex-col items-center gap-3">
           <div>
@@ -438,12 +539,6 @@ export default function Dashboard() {
               Pick a live background and a soundscape to match your focus.
             </p>
           </div>
-          <button
-            onClick={() => setIsAtmosphereOpen((prev) => !prev)}
-            className="px-3 py-1.5 rounded-full text-xs font-semibold border border-slate-200/80 dark:border-slate-700/80 text-slate-600 dark:text-slate-300 hover:bg-white/80 dark:hover:bg-slate-800/80 transition"
-          >
-            {isAtmosphereOpen ? "Hide" : "Show"}
-          </button>
         </div>
 
         {isAtmosphereOpen && (
@@ -524,7 +619,7 @@ export default function Dashboard() {
                         <div>
                           <p className="text-sm font-semibold text-slate-900">{scene.label}</p>
                           <p className="text-xs text-slate-600 mt-1">{scene.description}</p>
-                          {!scene.videoUrl && !scene.imageUrl && scene.id !== "plain" && (
+                          {!scene.videoUrl && !scene.imageUrl && scene.id !== "default" && (
                             <p className="text-[11px] text-amber-600 mt-2">
                               Add a video or image URL to enable a live background.
                             </p>
@@ -631,10 +726,10 @@ export default function Dashboard() {
             style={{
               backgroundImage: activeBackground?.imageUrl
                 ? `url(${activeBackground.imageUrl})`
-                : activeBackground?.id === "plain"
+                : activeBackground?.id === "default"
                   ? "none"
                   : "radial-gradient(circle at top, rgba(34, 197, 94, 0.35), transparent 55%), radial-gradient(circle at 30% 40%, rgba(251, 191, 36, 0.3), transparent 45%), radial-gradient(circle at 80% 20%, rgba(56, 189, 248, 0.25), transparent 45%)",
-              backgroundColor: activeBackground?.id === "plain" ? "#f8fafc" : undefined,
+              backgroundColor: activeBackground?.id === "default" ? "#f8fafc" : undefined,
               backgroundSize: "cover",
               backgroundPosition: "center",
             }}
@@ -651,22 +746,91 @@ export default function Dashboard() {
           Video failed to load: {activeBackground?.videoUrl}
         </div>
       )}
-      <div className="fixed top-6 right-6 z-20 flex items-center gap-2 rounded-full bg-white/80 dark:bg-slate-900/70 backdrop-blur border border-white/40 dark:border-slate-700/40 px-3 py-2 shadow">
-        <button
-          onClick={() => setIsUiHidden((prev) => !prev)}
-          className="text-xs font-semibold text-slate-700 dark:text-slate-200 px-2 py-1 rounded-full hover:bg-white/80 dark:hover:bg-slate-800/80 transition"
-        >
-          {isUiHidden ? "Show UI" : "Hide UI"}
-        </button>
-        {!isUiHidden && (
-          <button
-            onClick={() => setIsUiTransparent((prev) => !prev)}
-            className="text-xs font-semibold text-slate-700 dark:text-slate-200 px-2 py-1 rounded-full hover:bg-white/80 dark:hover:bg-slate-800/80 transition"
-          >
-            {isUiTransparent ? "Solid UI" : "Glass UI"}
-          </button>
-        )}
-      </div>
+      
+      {isUiHidden && (
+        <>
+          <div className="fixed bottom-8 right-8 z-50 flex items-center gap-3">
+            <button
+              onClick={() => setShowMiniTimer((prev) => !prev)}
+              className="rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-white/60 dark:border-slate-700/60 p-3 shadow-lg hover:bg-white dark:hover:bg-slate-800 transition"
+              title="Toggle Mini Timer"
+            >
+              <span className="material-symbols-outlined text-slate-700 dark:text-slate-200">timer</span>
+            </button>
+            <div className="rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-white/60 dark:border-slate-700/60 px-4 py-2 shadow-lg">
+              <button
+                onClick={() => setIsUiHidden(false)}
+                className="text-sm font-semibold px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white transition"
+              >
+                Show UI
+              </button>
+            </div>
+          </div>
+
+          {showMiniTimer && (
+            <div 
+              className="fixed z-50 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-white/60 dark:border-slate-700/60 rounded-3xl p-4 shadow-lg w-48 cursor-move select-none"
+              style={{
+                left: `${timerPosition.x}px`,
+                top: `${timerPosition.y}px`,
+              }}
+              onMouseDown={handleMouseDown}
+            >
+              <div className="flex flex-col items-center gap-3">
+                <div className="text-center">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{timerModes[timerMode].label}{timerMode === "pomodoro" ? " Session" : ""}</p>
+                  <p className="text-3xl font-bold text-slate-900 dark:text-white">{formatTime(timeLeft)}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={resetMiniTimer}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                  >
+                    <span className="material-symbols-outlined text-lg text-slate-700 dark:text-slate-200">restart_alt</span>
+                  </button>
+                  <button 
+                    onClick={toggleMiniTimer}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    className="p-3 rounded-full bg-emerald-600 hover:bg-emerald-700 transition"
+                  >
+                    <span className="material-symbols-outlined text-xl text-white fill-current">{isTimerActive ? "pause" : "play_arrow"}</span>
+                  </button>
+                  <button 
+                    onMouseDown={(e) => e.stopPropagation()}
+                    className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                  >
+                    <span className="material-symbols-outlined text-lg text-slate-700 dark:text-slate-200">settings</span>
+                  </button>
+                </div>
+                <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-full p-1">
+                  <button 
+                    onClick={() => setTimerMode("pomodoro")}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    className={`px-2 py-1 text-[10px] font-semibold rounded-full transition ${timerMode === "pomodoro" ? "bg-emerald-600 text-white" : "text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700"}`}
+                  >
+                    Focus
+                  </button>
+                  <button 
+                    onClick={() => setTimerMode("shortBreak")}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    className={`px-2 py-1 text-[10px] font-semibold rounded-full transition ${timerMode === "shortBreak" ? "bg-emerald-600 text-white" : "text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700"}`}
+                  >
+                    Short
+                  </button>
+                  <button 
+                    onClick={() => setTimerMode("longBreak")}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    className={`px-2 py-1 text-[10px] font-semibold rounded-full transition ${timerMode === "longBreak" ? "bg-emerald-600 text-white" : "text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700"}`}
+                  >
+                    Long
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
 
       {!isUiHidden && (
         <div className={`${isUiTransparent ? "opacity-70" : "opacity-100"} transition-opacity duration-300`}>
