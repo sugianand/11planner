@@ -65,6 +65,18 @@ export default function Navigation() {
                 Home
               </Link>
 
+              {!isLoggedIn && (
+                <Link
+                  href="/about"
+                  className={`font-medium transition ${isActive("/about")
+                    ? "text-blue-600 dark:text-blue-400 border-b-2 border-b-blue-600 dark:border-b-blue-400"
+                    : "text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400"
+                    }`}
+                >
+                  About Us
+                </Link>
+              )}
+
               {isLoggedIn && (
                 <>
                   <Link

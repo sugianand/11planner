@@ -4,6 +4,7 @@ import { useMemo, useState, useEffect } from "react";
 import { usePlanner } from "@/contexts/PlannerContext";
 import { ScheduleView } from "@/components/ScheduleView";
 import { Event } from "@/types/schedule";
+import Footer from "@/components/Footer";
 
 
 export default function SchedulePage() {
@@ -248,6 +249,7 @@ export default function SchedulePage() {
         </div>
 
       </div>
+      <Footer />
     </div>
   );
 }

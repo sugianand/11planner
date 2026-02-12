@@ -3,6 +3,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useNotification } from "@/contexts/NotificationContext";
+import Footer from "@/components/Footer";
 
 type Theme = "light" | "dark" | "auto";
 
@@ -449,6 +450,7 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }

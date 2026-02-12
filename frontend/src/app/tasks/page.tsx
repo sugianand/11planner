@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { usePlanner } from "@/contexts/PlannerContext";
 import { Task, TaskCreate } from "@/types";
+import Footer from "@/components/Footer";
 
 export default function TasksPage() {
   const {
@@ -122,10 +123,10 @@ export default function TasksPage() {
   );
 
   return (
-    <div className="min-h-screen relative">
+    <div className="min-h-screen relative flex flex-col">
       <div className="fixed inset-0 bg-focus-light dark:bg-focus-dark bg-cover bg-center -z-20"></div>
 
-      <div className="max-w-6xl mx-auto p-6 md:p-12">
+      <div className="max-w-6xl w-full mx-auto p-6 md:p-12 flex-1">
         <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-3xl p-8 shadow-sm border border-white/40 dark:border-slate-700/40">
           {/* Header */}
           <div className="flex justify-between items-center mb-8">
@@ -416,6 +417,7 @@ export default function TasksPage() {
           </div>
         </div>
       </div >
+      <Footer />
     </div >
   );
 }

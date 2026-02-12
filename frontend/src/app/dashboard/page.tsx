@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import FocusDashboardPanel from "@/components/FocusDashboardPanel";
+import Footer from "@/components/Footer";
 
 type FocusBackground = {
   id: string;
@@ -837,6 +838,7 @@ export default function Dashboard() {
           <FocusDashboardPanel atmospherePanel={atmospherePanel} />
         </div>
       )}
+      <Footer />
     </div>
   );
 }
