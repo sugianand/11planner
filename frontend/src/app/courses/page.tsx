@@ -102,6 +102,41 @@ export default function CoursesPage() {
     });
   };
 
+  const handleUploadSyllabus = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formDataToSend = new FormData();
+    formDataToSend.append("file", file);
+
+    try {
+      const response = await fetch("http://localhost:8000/api/syllabus/parse", {
+        method: "POST",
+        body: formDataToSend,
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.parsed) {
+        setFormData((prev) => ({
+          ...prev,
+          name: data.parsed.name || prev.name,
+          code: data.parsed.code || prev.code,
+          professor: data.parsed.professor || prev.professor,
+          description: data.parsed.description || prev.description,
+          courseDate: data.parsed.courseDate || prev.courseDate,
+          startTime: data.parsed.startTime || prev.startTime,
+          endTime: data.parsed.endTime || prev.endTime,
+        }));
+      } else {
+        alert("Failed to parse syllabus. Please fill in the details manually.");
+      }
+    } catch (err) {
+      console.error("Error uploading syllabus:", err);
+      alert("Error uploading syllabus. Please try again.");
+    }
+  };
+
   return (
     <div className="min-h-screen relative">
       <div className="fixed inset-0 bg-focus-light dark:bg-focus-dark bg-cover bg-center -z-20"></div>
@@ -152,6 +187,29 @@ export default function CoursesPage() {
                 {editingId ? "Edit Course" : "Create New Course"}
               </h2>
               <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Upload Syllabus Section */}
+                <div className="border-b border-slate-200 dark:border-slate-700 pb-6 mb-6">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-3">
+                    Upload a syllabus PDF to auto-fill information (optional)
+                  </label>
+                  <label className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg cursor-pointer hover:border-blue-500 dark:hover:border-blue-400 transition bg-slate-50 dark:bg-slate-900/30">
+                    <div className="flex flex-col items-center justify-center">
+                      <span className="material-symbols-outlined text-slate-600 dark:text-slate-300 mb-2">
+                        cloud_upload
+                      </span>
+                      <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                        Upload Syllabus PDF
+                      </span>
+                    </div>
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      onChange={handleUploadSyllabus}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">

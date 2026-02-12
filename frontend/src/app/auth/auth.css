@@ -9,31 +9,20 @@
 }
 
 body {
-  height: 100%;
   margin: 0;
-  background: radial-gradient(
-    circle at top,
-    #1e3a8a,
-    #020617
-  );
   color: var(--foreground);
   font-family: var(--font-manrope), Arial, Helvetica, sans-serif;
+  background-image: url('https://images.unsplash.com/photo-1481627834876-b7833e8f5570?auto=format&fit=crop&q=80&w=2000');
+
 }
 
 .page {
-  height: 100vh;            
-  width: 100vw;
+  min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  overflow: hidden;        
-
-  background: radial-gradient(
-    circle at top,
-    #1e3a8a,
-    #020617
-  );
 }
+
 
 .auth-card {
   width: 100%;
@@ -81,6 +70,31 @@ body {
   background: white;
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.field-hint {
+  margin: -8px 2px 2px;
+  font-size: 12px;
+  color: var(--text-light);
+}
+
+.error-card {
+  border: 1px solid #fecaca;
+  background: #fff1f2;
+  color: #991b1b;
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.error-title {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.error-text {
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 .btn {
