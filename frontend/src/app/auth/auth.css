@@ -12,8 +12,10 @@ body {
   margin: 0;
   color: var(--foreground);
   font-family: var(--font-manrope), Arial, Helvetica, sans-serif;
-  background-image: url('https://images.unsplash.com/photo-1481627834876-b7833e8f5570?auto=format&fit=crop&q=80&w=2000');
-
+  background-image: url('/images/background.png?v=2');
+  background-size: cover;
+  background-position: center center;
+  background-attachment: fixed;
 }
 
 .page {
@@ -56,7 +58,7 @@ body {
   border-radius: 14px;
   border: 1px solid var(--border);
   background: #f9fafb;
-  color: #0f172a;         
+  color: #0f172a;
   font-weight: 500;
   text-align: left;
 }
@@ -164,6 +166,7 @@ body {
     opacity: 0;
     transform: translateY(12px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
