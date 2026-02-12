@@ -24,7 +24,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen">
-      <div className="fixed inset-0 bg-focus-light dark:bg-focus-dark bg-cover bg-center -z-20"></div>
+      <div className="fixed inset-0 bg-focus-light dark:bg-focus-dark -z-20"></div>
 
       <main className="w-full max-w-[1200px] mx-auto px-6 mt-16 md:mt-24 mb-32 relative">
         <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-3xl p-8 md:p-12 text-center relative overflow-hidden shadow-2xl dark:border dark:border-slate-700/50 max-w-4xl mx-auto">
