@@ -5,6 +5,7 @@ import { usePlanner } from "@/contexts/PlannerContext";
 import { CourseCreate, Course } from "@/types";
 
 export default function CoursesPage() {
+  const weekDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
   const {
     userId,
     courses,
@@ -17,6 +18,7 @@ export default function CoursesPage() {
   } = usePlanner();
 
   const [showForm, setShowForm] = useState(false);
+  const [showDaysDropdown, setShowDaysDropdown] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<CourseCreate>>({
     name: "",
@@ -24,6 +26,9 @@ export default function CoursesPage() {
     professor: "",
     description: "",
     user_id: userId,
+    courseDate: "",
+    startTime: "",
+    endTime: "",
   });
 
   useEffect(() => {
@@ -51,6 +56,9 @@ export default function CoursesPage() {
         professor: "",
         description: "",
         user_id: userId,
+        courseDate: "",
+        startTime: "",
+        endTime: "",
       });
       setShowForm(false);
     } catch (err) {
@@ -65,6 +73,9 @@ export default function CoursesPage() {
       professor: course.professor,
       description: course.description,
       user_id: course.user_id,
+      courseDate: course.courseDate,
+      startTime: course.startTime,
+      endTime: course.endTime,
     });
     setEditingId(course.id);
     setShowForm(true);
@@ -76,195 +87,344 @@ export default function CoursesPage() {
     }
   };
 
+  const selectedDays = (formData.courseDate || "")
+    .split(" ")
+    .filter(Boolean);
+
+  const toggleDay = (day: string, checked: boolean) => {
+    const nextDays = checked
+      ? [...new Set([...selectedDays, day])]
+      : selectedDays.filter((d) => d !== day);
+
+    setFormData({
+      ...formData,
+      courseDate: nextDays.join(" "),
+    });
+  };
+
+  const handleUploadSyllabus = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formDataToSend = new FormData();
+    formDataToSend.append("file", file);
+
+    try {
+      const response = await fetch("http://localhost:8000/api/syllabus/parse", {
+        method: "POST",
+        body: formDataToSend,
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.parsed) {
+        setFormData((prev) => ({
+          ...prev,
+          name: data.parsed.name || prev.name,
+          code: data.parsed.code || prev.code,
+          professor: data.parsed.professor || prev.professor,
+          description: data.parsed.description || prev.description,
+          courseDate: data.parsed.courseDate || prev.courseDate,
+          startTime: data.parsed.startTime || prev.startTime,
+          endTime: data.parsed.endTime || prev.endTime,
+        }));
+      } else {
+        alert("Failed to parse syllabus. Please fill in the details manually.");
+      }
+    } catch (err) {
+      console.error("Error uploading syllabus:", err);
+      alert("Error uploading syllabus. Please try again.");
+    }
+  };
+
   return (
-    <div className="min-h-screen relative overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors duration-500 p-6 lg:p-10">
-      <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute -top-32 -left-24 h-[32rem] w-[32rem] rounded-full bg-emerald-200/40 blur-[120px]" />
-        <div className="absolute top-1/3 -right-32 h-[28rem] w-[28rem] rounded-full bg-amber-200/40 blur-[120px]" />
-        <div className="absolute bottom-[-10%] left-1/2 h-[26rem] w-[26rem] -translate-x-1/2 rounded-full bg-sky-200/40 blur-[120px]" />
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.08)_1px,transparent_1px)] bg-[size:48px_48px]" />
-        <div className="absolute inset-0 dark:bg-[radial-gradient(circle_at_top,rgba(15,23,42,0.2),transparent_55%)]" />
-      </div>
+    <div className="min-h-screen relative">
+      <div className="fixed inset-0 bg-focus-light dark:bg-focus-dark bg-cover bg-center -z-20"></div>
 
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Courses</h1>
-            <p className="text-slate-600 dark:text-slate-300 mt-2 font-medium">
-              Manage your courses and class information
-            </p>
-          </div>
-          <button
-            onClick={() => {
-              setShowForm(!showForm);
-              setEditingId(null);
-              setFormData({
-                name: "",
-                code: "",
-                professor: "",
-                description: "",
-                user_id: userId,
-              });
-            }}
-            className="bg-[#306844] hover:bg-[#255236] text-white font-semibold py-3 px-6 rounded-xl transition shadow-lg shadow-green-900/10"
-          >
-            {showForm ? "Cancel" : "+ New Course"}
-          </button>
-        </div>
-
-        {/* Error Message */}
-        {error && (
-          <div className="bg-rose-50/80 dark:bg-rose-900/20 border border-rose-200/60 dark:border-rose-800/60 text-rose-700 dark:text-rose-200 px-4 py-3 rounded-2xl mb-6">
-            {error}
-          </div>
-        )}
-
-        {/* Form */}
-        {showForm && (
-          <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl p-6 mb-8 border border-white/50 dark:border-slate-700/50 shadow-sm">
-            <h2 className="text-xl font-bold mb-4 text-slate-900 dark:text-white">
-              {editingId ? "Edit Course" : "Create New Course"}
-            </h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
-                    Course Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.name || ""}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    placeholder="e.g., Calculus II"
-                    className="w-full px-3 py-2 border border-slate-200/80 dark:border-slate-700/80 rounded-xl bg-white/70 dark:bg-slate-900/80 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
-                    Course Code *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.code || ""}
-                    onChange={(e) =>
-                      setFormData({ ...formData, code: e.target.value })
-                    }
-                    placeholder="e.g., MATH 241"
-                    className="w-full px-3 py-2 border border-slate-200/80 dark:border-slate-700/80 rounded-xl bg-white/70 dark:bg-slate-900/80 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
-                    Professor
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.professor || ""}
-                    onChange={(e) =>
-                      setFormData({ ...formData, professor: e.target.value })
-                    }
-                    placeholder="e.g., Dr. Smith"
-                    className="w-full px-3 py-2 border border-slate-200/80 dark:border-slate-700/80 rounded-xl bg-white/70 dark:bg-slate-900/80 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
-                  Description
-                </label>
-                <textarea
-                  value={formData.description || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                  placeholder="Course details and notes"
-                  rows={3}
-                  className="w-full px-3 py-2 border border-slate-200/80 dark:border-slate-700/80 rounded-xl bg-white/70 dark:bg-slate-900/80 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="bg-[#306844] hover:bg-[#255236] text-white font-semibold py-2.5 px-6 rounded-xl transition shadow-lg shadow-green-900/10 disabled:opacity-50"
-                >
-                  {loading ? "Saving..." : editingId ? "Update Course" : "Create Course"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowForm(false);
-                    setEditingId(null);
-                  }}
-                  className="bg-white/70 dark:bg-slate-800/70 hover:bg-white text-slate-700 dark:text-slate-200 font-semibold py-2.5 px-6 rounded-xl transition border border-slate-200/80 dark:border-slate-700/80"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-
-        {/* Courses Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {loading && courses.length === 0 ? (
-            <div className="col-span-full text-center py-12">
-              <p className="text-slate-600 dark:text-slate-300 text-lg">Loading courses...</p>
+      <div className="max-w-6xl mx-auto p-6 md:p-12">
+        <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-3xl p-8 shadow-sm border border-white/40 dark:border-slate-700/40">
+          {/* Header */}
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <h1 className="text-4xl font-bold text-slate-900 dark:text-white">Courses</h1>
+              <p className="text-slate-600 dark:text-slate-300 mt-2">Manage your courses and class information</p>
             </div>
-          ) : courses.length === 0 ? (
-            <div className="col-span-full bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl p-8 text-center border border-white/50 dark:border-slate-700/50">
-              <p className="text-slate-600 dark:text-slate-300 text-lg">
-                No courses yet. Create one to get started!
-              </p>
+                {!showForm && (
+                  <button
+                    onClick={() => {
+                      setShowForm(true);
+                      setEditingId(null);
+                      setFormData({
+                        name: "",
+                        code: "",
+                        professor: "",
+                        description: "",
+                        user_id: userId,
+                        courseDate: "",
+                        startTime: "",
+                        endTime: "",
+                      });
+                    }}
+                    className="bg-[#306844] hover:bg-[#255236] text-white font-bold py-2.5 px-6 rounded-xl transition shadow-lg shadow-green-900/10 flex items-center gap-2"
+                  >
+                    <span className="material-symbols-outlined text-sm">add</span>
+                    New Course
+                  </button>
+                )}
+          </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="bg-red-50/80 dark:bg-red-900/20 border border-red-200/60 dark:border-red-800/60 text-red-700 dark:text-red-200 px-4 py-3 rounded-lg mb-6">
+              {error}
             </div>
-          ) : (
-            courses.map((course) => (
-              <div
-                key={course.id}
-                className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl p-6 border border-white/40 dark:border-slate-700/40 shadow-sm hover:bg-white/80 dark:hover:bg-slate-800/80 transition"
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                  {course.name}
-                  </h3>
-                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 bg-emerald-50/80 dark:bg-emerald-900/30 px-2 py-1 rounded-full">
-                    {course.code}
-                  </span>
-                </div>
-                {course.professor && (
-                  <p className="text-sm text-slate-700 dark:text-slate-300 mb-2">
-                    <span className="font-medium">Professor:</span> {course.professor}
-                  </p>
-                )}
-                {course.description && (
-                  <p className="text-sm text-slate-600 dark:text-slate-300 mb-4 line-clamp-2">
-                    {course.description}
-                  </p>
-                )}
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleEdit(course)}
-                    className="flex-1 bg-emerald-50/80 hover:bg-emerald-100 text-emerald-700 font-medium py-2 rounded-xl transition"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(course.id)}
-                    className="flex-1 bg-rose-50/80 hover:bg-rose-100 text-rose-700 font-medium py-2 rounded-xl transition"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))
           )}
+
+          {/* Form */}
+          {showForm && (
+            <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-lg shadow-md p-6 mb-8 border border-slate-200 dark:border-slate-700/40">
+              <h2 className="text-xl font-bold mb-4 text-slate-900 dark:text-white">
+                {editingId ? "Edit Course" : "Create New Course"}
+              </h2>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Upload Syllabus Section */}
+                <div className="border-b border-slate-200 dark:border-slate-700 pb-6 mb-6">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-3">
+                    Upload a syllabus PDF to auto-fill information (optional)
+                  </label>
+                  <label className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg cursor-pointer hover:border-blue-500 dark:hover:border-blue-400 transition bg-slate-50 dark:bg-slate-900/30">
+                    <div className="flex flex-col items-center justify-center">
+                      <span className="material-symbols-outlined text-slate-600 dark:text-slate-300 mb-2">
+                        cloud_upload
+                      </span>
+                      <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                        Upload Syllabus PDF
+                      </span>
+                    </div>
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      onChange={handleUploadSyllabus}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+                      Course Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.name || ""}
+                      onChange={(e) =>
+                        setFormData({ ...formData, name: e.target.value })
+                      }
+                      placeholder="e.g., Calculus II"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800"
+                    />
+                  </div>
+
+
+                  
+
+                    <div className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+                        Course Days *
+                      </label>
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setShowDaysDropdown((prev) => !prev)}
+                          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-left focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white bg-white dark:bg-slate-800"
+                        >
+                          {selectedDays.length > 0
+                            ? selectedDays.join(", ")
+                            : "Select course days"}
+                        </button>
+
+                        {showDaysDropdown && (
+                          <div className="absolute z-10 mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg p-3 space-y-2">
+                            {weekDays.map((day) => (
+                              <label key={day} className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedDays.includes(day)}
+                                  onChange={(e) => toggleDay(day, e.target.checked)}
+                                  className="form-checkbox h-4 w-4 text-blue-600"
+                                />
+                                <span className="text-sm text-slate-700 dark:text-slate-200">{day}</span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+
+                  <div>
+
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+                      Start Time*
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.startTime || ""}
+                      onChange={(e) =>
+                        setFormData({ ...formData, startTime: e.target.value })
+                      }
+                      placeholder="e.g., 9:00 AM"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800"
+                    />
+                  </div>
+
+
+                  <div>
+
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+                      End Time*
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.endTime || ""}
+                      onChange={(e) =>
+                        setFormData({ ...formData, endTime: e.target.value })
+                      }
+                      placeholder="e.g., 10:00 AM"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800"
+                    />
+                  </div>
+
+
+
+
+
+
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+                      Course Code *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.code || ""}
+                      onChange={(e) =>
+                        setFormData({ ...formData, code: e.target.value })
+                      }
+                      placeholder="e.g., MATH 241"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+                      Professor
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.professor || ""}
+                      onChange={(e) =>
+                        setFormData({ ...formData, professor: e.target.value })
+                      }
+                      placeholder="e.g., Dr. Smith"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+                    Description
+                  </label>
+                  <textarea
+                    value={formData.description || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
+                    placeholder="Course details and notes"
+                    rows={3}
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800"
+                  />
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="bg-[#306844] hover:bg-[#255236] text-white font-bold py-2.5 px-6 rounded-xl transition shadow-md disabled:opacity-50"
+                  >
+                    {loading ? "Saving..." : editingId ? "Update Course" : "Create Course"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowForm(false);
+                      setEditingId(null);
+                    }}
+                    className="bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-700 dark:text-white font-semibold py-2.5 px-6 rounded-xl transition border border-slate-200 dark:border-slate-600"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* Courses Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {loading && courses.length === 0 ? (
+              <div className="col-span-full text-center py-12">
+                <p className="text-slate-600 text-lg">Loading courses...</p>
+              </div>
+            ) : courses.length === 0 ? (
+              <div className="col-span-full bg-white/70 dark:bg-slate-900/70 rounded-lg p-8 text-center border border-slate-200 dark:border-slate-700/40">
+                <p className="text-slate-600 dark:text-slate-300 text-lg">
+                  No courses yet. Create one to get started!
+                </p>
+              </div>
+            ) : (
+              courses.map((course) => (
+                <div
+                  key={course.id}
+                  className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-2xl shadow-sm p-6 border border-white/40 dark:border-slate-700/40 hover:bg-white/70 dark:hover:bg-slate-800/70 transition group relative overflow-hidden"
+                >
+                  <div className="absolute top-0 left-0 w-1 h-full bg-[#306844]"></div>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
+                    {course.name}
+                  </h3>
+                  <p className="text-sm font-bold uppercase tracking-wider text-[#306844] dark:text-green-400 mb-4">
+                    {course.code}
+                  </p>
+                  {course.professor && (
+                    <div className="flex items-center gap-2 mb-2 text-slate-700 dark:text-slate-300">
+                      <span className="material-symbols-outlined text-sm opacity-60">person</span>
+                      <p className="text-sm font-medium">{course.professor}</p>
+                    </div>
+                  )}
+                  {course.description && (
+                    <p className="text-sm text-slate-600 dark:text-slate-300 mb-4 line-clamp-2 pl-6 border-l-2 border-slate-200 dark:border-slate-600 ml-1">
+                      {course.description}
+                    </p>
+                  )}
+                  <div className="flex gap-2 mt-4 pt-4 border-t border-slate-200/50 dark:border-slate-700/50">
+                    <button
+                      onClick={() => handleEdit(course)}
+                      className="flex-1 text-slate-600 dark:text-slate-400 hover:text-[#002966] dark:hover:text-blue-300 font-medium py-1.5 px-3 rounded-lg transition hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(course.id)}
+                      className="flex-1 text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 font-medium py-1.5 px-3 rounded-lg transition hover:bg-red-50 dark:hover:bg-red-900/20"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
     </div>

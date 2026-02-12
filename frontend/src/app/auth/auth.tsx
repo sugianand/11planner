@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./auth.css";
-import { supabase } from "../supabaseClient";
+import { supabase } from "@/lib/supabaseClient";
 
 type Mode = "login" | "register";
 
@@ -54,19 +54,19 @@ export default function AuthPage() {
     return () => subscription.unsubscribe();
   }, []);
 
-function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
-  const name = e.target.name;
-  const value = e.target.value;
+  function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const name = e.target.name;
+    const value = e.target.value;
 
-  setForm((prevForm) => {
-    const updatedForm = {
-      ...prevForm,
-    };
+    setForm((prevForm) => {
+      const updatedForm = {
+        ...prevForm,
+      };
 
-    updatedForm[name as keyof FormState] = value;
-    return updatedForm;
-  });
-}
+      updatedForm[name as keyof FormState] = value;
+      return updatedForm;
+    });
+  }
 
 
 
@@ -102,7 +102,7 @@ function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
 
 
     await supabase.from("profiles").insert({
-      id: data.user.id, 
+      id: data.user.id,
       username, dob
     })
 
@@ -139,11 +139,13 @@ function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
   }
 
   return (
+   <div className="auth-shell">
     <div className="page">
       <div className="auth-card">
         <div className="auth-title">Welcome to 11Planner</div>
 
-        <h2>{mode === "login" ? "Login" : "Register"}</h2>
+         {mode === "login" ? "Login" : "Register"}
+
 
         {mode === "login" ? (
           <>
@@ -240,6 +242,7 @@ function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
           </>
         )}
       </div>
+    </div>
     </div>
   );
 }

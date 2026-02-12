@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import "./auth.css";
-import { supabase } from "./supabaseClient";
+import { supabase } from "@/lib/supabaseClient";
 
 type Mode = "login" | "register";
 
@@ -32,6 +32,11 @@ const initialForm: FormState = {
 export default function AuthPage() {
   const [mode, setMode] = useState<Mode>("login");
   const [form, setForm] = useState<FormState>(initialForm);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const goToNextPage = (): void => {
+    window.location.href = "/profile";
+  };
 
   useEffect(() => {
     async function checkSession() {
@@ -59,36 +64,41 @@ export default function AuthPage() {
     return () => subscription.unsubscribe();
   }, []);
 
-function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
-  const name = e.target.name;
-  const value = e.target.value;
+  function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const name = e.target.name;
+    const value = e.target.value;
+    setErrorMessage("");
 
-  setForm((prevForm) => {
-    const updatedForm = {
-      ...prevForm,
-    };
+    setForm((prevForm) => {
+      const updatedForm = {
+        ...prevForm,
+      };
 
-    updatedForm[name as keyof FormState] = value;
-    return updatedForm;
-  });
-}
-
-
-
-  function goToNextPage(): void {
-    window.location.href = "/profile";
+      updatedForm[name as keyof FormState] = value;
+      return updatedForm;
+    });
   }
-
   async function registerUser(): Promise<void> {
     const { firstname, lastname, email, password, confirmPassword, university, major } = form;
+    const hasSpecialCharacter = /[^A-Za-z0-9]/.test(password);
 
-    if ( !email || !password || !confirmPassword) {
-      alert("Please enter all fields.");
+    if (!email || !password || !confirmPassword) {
+      setErrorMessage("Please enter all required fields.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setErrorMessage("Password must be at least 6 characters.");
+      return;
+    }
+
+    if (!hasSpecialCharacter) {
+      setErrorMessage("Password must include at least one special character.");
       return;
     }
 
     if (password !== confirmPassword) {
-      alert("Passwords do not match.");
+      setErrorMessage("Passwords do not match.");
       return;
     }
 
@@ -98,21 +108,32 @@ function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
     });
 
     if (error || !data.user) {
-      alert(error?.message ?? "Registration failed");
+      setErrorMessage(error?.message ?? "Registration failed");
       return;
     }
 
 
-    await supabase.from("profiles").insert({
-      id: data.user.id, 
+    const { error: profileError } = await supabase.from("profiles").insert({
+      id: data.user.id,
       firstname: firstname || null,
-      lastname  : lastname || null,
-      university : university || null,
-      major : major || null,
-    })
+      lastname: lastname || null,
+      university: university || null,
+      major: major || null,
+    });
+
+    if (profileError) {
+      setErrorMessage(profileError.message);
+      return;
+    }
 
 
-    await supabase.auth.signInWithPassword({ email, password });
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    if (signInError) {
+      setErrorMessage(signInError.message);
+      return;
+    }
+
+    setErrorMessage("");
     goToNextPage();
 
   }
@@ -122,7 +143,7 @@ function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
     const password = form.loginPassword;
 
     if (!email || !password) {
-      alert("Please enter all fields.");
+      setErrorMessage("Please enter all fields.");
       return;
     }
 
@@ -131,23 +152,19 @@ function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
       password,
     });
 
-  if (error) {
-    console.error("LOGIN ERROR:", error);
-    alert(error.message);
-    return;
-  }
+    if (error) {
+      console.error("LOGIN ERROR:", error);
+      setErrorMessage(error.message);
+      return;
+    }
 
-  if (!authData.user) {
-    alert("Login failed");
-    return;
-  }
+    if (!authData.user) {
+      setErrorMessage("Login failed.");
+      return;
+    }
 
+    setErrorMessage("");
     goToNextPage();
-  }
-
-  async function logout(): Promise<void> {
-    await supabase.auth.signOut();
-    window.location.href = "/login";
   }
 
   return (
@@ -156,6 +173,13 @@ function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
         <div className="auth-title">Welcome to 11Planner</div>
 
         <h2>{mode === "login" ? "Login" : "Register"}</h2>
+
+        {errorMessage && (
+          <div className="error-card" role="alert">
+            <div className="error-title">Please fix the following:</div>
+            <div className="error-text">{errorMessage}</div>
+          </div>
+        )}
 
         {mode === "login" ? (
           <>
@@ -187,6 +211,7 @@ function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
                 onClick={() => {
                   setMode("register");
                   setForm(initialForm);
+                  setErrorMessage("");
                 }}
               >
                 Register
@@ -243,8 +268,10 @@ function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
               name="password"
               placeholder="Password (required)"
               value={form.password}
+              minLength={6}
               onChange={handleInputChange}
             />
+            <p className="field-hint">Password must be at least 6 characters and include 1 special character.</p>
 
             <input
               type="password"
@@ -265,6 +292,7 @@ function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
                 onClick={() => {
                   setMode("login");
                   setForm(initialForm);
+                  setErrorMessage("");
                 }}
               >
                 Log in

@@ -1,6 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.tasks import router as tasks_router
+from app.api.courses import router as courses_router
+from app.api.assignments import router as assignments_router
+from app.api.schedule_blocks import router as schedule_blocks_router
+from app.api.syllabus import router as syllabus_router
 
 app = FastAPI(
     title="11Planner API",
@@ -11,7 +15,7 @@ app = FastAPI(
 # Enable CORS for frontend communication
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify exact origins
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -19,6 +23,10 @@ app.add_middleware(
 
 # Include routers
 app.include_router(tasks_router)
+app.include_router(courses_router)
+app.include_router(assignments_router)
+app.include_router(schedule_blocks_router)
+app.include_router(syllabus_router)
 
 # Health check endpoint
 @app.get("/health")

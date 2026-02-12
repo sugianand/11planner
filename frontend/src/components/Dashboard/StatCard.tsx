@@ -17,10 +17,10 @@ export default function StatCard({
 }: StatCardProps) {
 
     const colorMap = {
-        blue: "text-[#002966]",
-        green: "text-green-600",
-        grey: "text-slate-600",
-        red: "text-red-600",
+        blue: "text-[#002966] dark:text-white",
+        green: "text-[#306844] dark:text-[#3d8658]",
+        grey: "text-slate-600 dark:text-white",
+        red: "text-red-600 dark:text-white",
     };
 
     return (

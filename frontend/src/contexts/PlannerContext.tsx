@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
 import {
   Course,
   CourseCreate,
@@ -54,6 +54,8 @@ interface PlannerContextType {
 
 const PlannerContext = createContext<PlannerContextType | undefined>(undefined);
 
+import { supabase } from "@/lib/supabaseClient";
+
 export function PlannerProvider({ children }: { children: React.ReactNode }) {
   const [userId, setUserId] = useState<string>("user_demo");
   const [courses, setCourses] = useState<Course[]>([]);
@@ -62,6 +64,29 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
   const [scheduleBlocks, setScheduleBlocks] = useState<ScheduleBlock[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Sync with Supabase Auth
+  useEffect(() => {
+    // Check active session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUserId(session.user.id);
+      } else {
+        setUserId("user_demo");
+      }
+    });
+
+    // Listen for changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUserId(session.user.id);
+      } else {
+        setUserId("user_demo");
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   // ========== Courses ==========
   const loadCourses = useCallback(async () => {
