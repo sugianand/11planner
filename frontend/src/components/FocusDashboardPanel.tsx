@@ -1,12 +1,16 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, ReactNode } from "react";
 import { usePlanner } from "@/contexts/PlannerContext";
 import Link from "next/link";
 import Timer from "@/components/Dashboard/Timer";
 import StatCard from "@/components/Dashboard/StatCard";
 
-export default function FocusDashboardPanel() {
+type FocusDashboardPanelProps = {
+  atmospherePanel?: ReactNode;
+};
+
+export default function FocusDashboardPanel({ atmospherePanel }: FocusDashboardPanelProps) {
   const {
     userId,
     tasks,
@@ -41,7 +45,7 @@ export default function FocusDashboardPanel() {
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-        <div>
+        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-2xl px-6 py-4 shadow-sm border border-white/60 dark:border-slate-700/60">
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
             Focus Dashboard
           </h1>
@@ -140,6 +144,12 @@ export default function FocusDashboardPanel() {
           </div>
         </div>
       </div>
+
+      {atmospherePanel && (
+        <div className="w-full">
+          {atmospherePanel}
+        </div>
+      )}
     </div>
   );
 }
