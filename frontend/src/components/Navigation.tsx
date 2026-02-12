@@ -45,8 +45,12 @@ export default function Navigation() {
         <div className="flex items-center justify-between">
           {/* Logo */}
           <div>
-            <Link href="/" className="text-2xl md:text-4xl font-bold text-emerald-700 dark:text-emerald-500 flex-shrink-0">
-              11PLANNER
+            <Link href="/" className="flex items-center flex-shrink-0">
+              <img
+                src="/images/logo.png"
+                alt="11Planner Logo"
+                className="h-20 md:h-24 w-auto"
+              />
             </Link>
           </div>
 
