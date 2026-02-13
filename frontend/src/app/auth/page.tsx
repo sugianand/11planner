@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import "./auth.css";
 import { supabase } from "@/lib/supabaseClient";
+import Footer from "@/components/Footer";
 
 type Mode = "login" | "register";
 
@@ -198,176 +199,179 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="page">
-      <div className="auth-card">
-        <div className="auth-title">Welcome to 11Planner</div>
+    <>
+      <div className="page">
+        <div className="auth-card">
+          <div className="auth-title">Welcome to 11Planner</div>
 
-        <h2>{mode === "login" ? "Login" : "Register"}</h2>
+          <h2>{mode === "login" ? "Login" : "Register"}</h2>
 
-        {errorMessage && (
-          <div className="error-card" role="alert">
-            <div className="error-title">Please fix the following:</div>
-            <div className="error-text">{errorMessage}</div>
-          </div>
-        )}
-        {successMessage && (
-          <div className="success-card" role="status">
-            <div className="success-text">{successMessage}</div>
-          </div>
-        )}
+          {errorMessage && (
+            <div className="error-card" role="alert">
+              <div className="error-title">Please fix the following:</div>
+              <div className="error-text">{errorMessage}</div>
+            </div>
+          )}
+          {successMessage && (
+            <div className="success-card" role="status">
+              <div className="success-text">{successMessage}</div>
+            </div>
+          )}
 
-        {mode === "login" ? (
-          <>
+          {mode === "login" ? (
+            <>
 
-            <input
-              type="email"
-              name="loginEmail"
-              placeholder="Email"
-              value={form.loginEmail}
-              onChange={handleInputChange}
-            />
-
-            <div className="password-field">
               <input
-                type={showLoginPassword ? "text" : "password"}
-                name="loginPassword"
-                placeholder="Password"
-                value={form.loginPassword}
+                type="email"
+                name="loginEmail"
+                placeholder="Email"
+                value={form.loginEmail}
                 onChange={handleInputChange}
               />
-              <button
-                type="button"
-                className="toggle-password-btn"
-                onClick={() => setShowLoginPassword((prev) => !prev)}
-              >
-                {showLoginPassword ? "Hide" : "Show"}
+
+              <div className="password-field">
+                <input
+                  type={showLoginPassword ? "text" : "password"}
+                  name="loginPassword"
+                  placeholder="Password"
+                  value={form.loginPassword}
+                  onChange={handleInputChange}
+                />
+                <button
+                  type="button"
+                  className="toggle-password-btn"
+                  onClick={() => setShowLoginPassword((prev) => !prev)}
+                >
+                  {showLoginPassword ? "Hide" : "Show"}
+                </button>
+              </div>
+              <button type="button" className="forgot-password-btn" onClick={forgotPassword}>
+                Forgot your password?
               </button>
-            </div>
-            <button type="button" className="forgot-password-btn" onClick={forgotPassword}>
-              Forgot your password?
-            </button>
 
-            <button className="btn" onClick={loginUser}>
-              Log in
-            </button>
-
-            <div className="auth-footer">
-              <span>Don’t have an account?</span>
-              <button
-                className="link-btn"
-                onClick={() => {
-                  setMode("register");
-                  setForm(initialForm);
-                  setErrorMessage("");
-                  setSuccessMessage("");
-                }}
-              >
-                Register
-              </button>
-            </div>
-          </>
-        ) : (
-          <>
-            <input
-              type="text"
-              name="firstname"
-              placeholder="First Name (required)"
-              value={form.firstname}
-              onChange={handleInputChange}
-            />
-
-
-            <input
-              type="text"
-              name="lastname"
-              placeholder="Last Name (required)"
-              value={form.lastname}
-              onChange={handleInputChange}
-            />
-
-            <input
-              type="email"
-              name="email"
-              placeholder="Email (required)"
-              value={form.email}
-              onChange={handleInputChange}
-            />
-
-
-            <input
-              type="text"
-              name="university"
-              placeholder="University"
-              value={form.university}
-              onChange={handleInputChange}
-            />
-
-            <input
-              type="text"
-              name="major"
-              placeholder="Major"
-              value={form.major}
-              onChange={handleInputChange}
-            />
-
-
-            <div className="password-field">
-              <input
-                type={showRegisterPassword ? "text" : "password"}
-                name="password"
-                placeholder="Password (required)"
-                value={form.password}
-                minLength={6}
-                onChange={handleInputChange}
-              />
-              <button
-                type="button"
-                className="toggle-password-btn"
-                onClick={() => setShowRegisterPassword((prev) => !prev)}
-              >
-                {showRegisterPassword ? "Hide" : "Show"}
-              </button>
-            </div>
-            <p className="field-hint">Password must be at least 6 characters and include 1 special character.</p>
-
-            <div className="password-field">
-              <input
-                type={showConfirmPassword ? "text" : "password"}
-                name="confirmPassword"
-                placeholder="Confirm Password (required)"
-                value={form.confirmPassword}
-                onChange={handleInputChange}
-              />
-              <button
-                type="button"
-                className="toggle-password-btn"
-                onClick={() => setShowConfirmPassword((prev) => !prev)}
-              >
-                {showConfirmPassword ? "Hide" : "Show"}
-              </button>
-            </div>
-
-            <button className="btn" onClick={registerUser}>
-              Register
-            </button>
-
-            <div className="auth-footer">
-              <span>Already have an account?</span>
-              <button
-                className="link-btn"
-                onClick={() => {
-                  setMode("login");
-                  setForm(initialForm);
-                  setErrorMessage("");
-                  setSuccessMessage("");
-                }}
-              >
+              <button className="btn" onClick={loginUser}>
                 Log in
               </button>
-            </div>
-          </>
-        )}
+
+              <div className="auth-footer">
+                <span>Don’t have an account?</span>
+                <button
+                  className="link-btn"
+                  onClick={() => {
+                    setMode("register");
+                    setForm(initialForm);
+                    setErrorMessage("");
+                    setSuccessMessage("");
+                  }}
+                >
+                  Register
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <input
+                type="text"
+                name="firstname"
+                placeholder="First Name (required)"
+                value={form.firstname}
+                onChange={handleInputChange}
+              />
+
+
+              <input
+                type="text"
+                name="lastname"
+                placeholder="Last Name (required)"
+                value={form.lastname}
+                onChange={handleInputChange}
+              />
+
+              <input
+                type="email"
+                name="email"
+                placeholder="Email (required)"
+                value={form.email}
+                onChange={handleInputChange}
+              />
+
+
+              <input
+                type="text"
+                name="university"
+                placeholder="University"
+                value={form.university}
+                onChange={handleInputChange}
+              />
+
+              <input
+                type="text"
+                name="major"
+                placeholder="Major"
+                value={form.major}
+                onChange={handleInputChange}
+              />
+
+
+              <div className="password-field">
+                <input
+                  type={showRegisterPassword ? "text" : "password"}
+                  name="password"
+                  placeholder="Password (required)"
+                  value={form.password}
+                  minLength={6}
+                  onChange={handleInputChange}
+                />
+                <button
+                  type="button"
+                  className="toggle-password-btn"
+                  onClick={() => setShowRegisterPassword((prev) => !prev)}
+                >
+                  {showRegisterPassword ? "Hide" : "Show"}
+                </button>
+              </div>
+              <p className="field-hint">Password must be at least 6 characters and include 1 special character.</p>
+
+              <div className="password-field">
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  name="confirmPassword"
+                  placeholder="Confirm Password (required)"
+                  value={form.confirmPassword}
+                  onChange={handleInputChange}
+                />
+                <button
+                  type="button"
+                  className="toggle-password-btn"
+                  onClick={() => setShowConfirmPassword((prev) => !prev)}
+                >
+                  {showConfirmPassword ? "Hide" : "Show"}
+                </button>
+              </div>
+
+              <button className="btn" onClick={registerUser}>
+                Register
+              </button>
+
+              <div className="auth-footer">
+                <span>Already have an account?</span>
+                <button
+                  className="link-btn"
+                  onClick={() => {
+                    setMode("login");
+                    setForm(initialForm);
+                    setErrorMessage("");
+                    setSuccessMessage("");
+                  }}
+                >
+                  Log in
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
-    </div>
+      <Footer />
+    </>
   );
 }

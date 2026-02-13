@@ -87,9 +87,11 @@ export default function Home() {
       <footer className="w-full bg-white/60 dark:bg-slate-800/60 backdrop-blur-3xl py-16 px-6 border-t border-white/40 dark:border-slate-700/40">
         <div className="max-w-[1200px] mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-slate-900 dark:bg-slate-700 flex items-center justify-center">
-              <span className="material-symbols-outlined text-white text-sm">calendar_today</span>
-            </div>
+            <img
+              src="/images/logo.png"
+              alt="11Planner Logo"
+              className="h-28 md:h-28 w-auto"
+            />
             <h2 className="text-slate-900 dark:text-white text-xl font-bold tracking-tight">11 Planner</h2>
           </div>
           <div className="flex gap-8 text-sm font-semibold text-slate-900 dark:text-white">
