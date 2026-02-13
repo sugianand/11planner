@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
+import Footer from "@/components/Footer";
 
 export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -84,28 +85,7 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className="w-full bg-white/60 dark:bg-slate-800/60 backdrop-blur-3xl py-16 px-6 border-t border-white/40 dark:border-slate-700/40">
-        <div className="max-w-[1200px] mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
-          <div className="flex items-center gap-3">
-            <img
-              src="/images/logo.png"
-              alt="11Planner Logo"
-              className="h-28 md:h-28 w-auto"
-            />
-            <h2 className="text-slate-900 dark:text-white text-xl font-bold tracking-tight">11 Planner</h2>
-          </div>
-          <div className="flex gap-8 text-sm font-semibold text-slate-900 dark:text-white">
-            <a className="hover:text-blue-600 dark:hover:text-blue-400 transition" href="/privacy">Privacy</a>
-            <a className="hover:text-blue-600 dark:hover:text-blue-400 transition" href="/terms">Terms</a>
-            <a className="hover:text-blue-600 dark:hover:text-blue-400 transition" href="/about">About Us</a>
-            <a className="hover:text-blue-600 dark:hover:text-blue-400 transition" href="/support">Support</a>
-          </div>
-          <div className="flex flex-col items-center md:items-end gap-2">
-            <p className="text-slate-900 dark:text-white text-sm font-semibold">© 2026 11 Planner. All copyright rights reserved.</p>
-            <p className="text-slate-700 dark:text-slate-200 text-sm italic">Work smarter, not harder.</p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

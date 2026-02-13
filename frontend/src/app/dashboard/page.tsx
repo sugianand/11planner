@@ -508,12 +508,14 @@ export default function Dashboard() {
   const hasAudio = Boolean(activeSound?.audioUrl);
 
   return (
-    <div className="min-h-screen relative overflow-hidden transition-colors duration-500 p-6 lg:p-10 flex flex-col gap-8">
+    <div className="min-h-screen flex flex-col relative overflow-hidden transition-colors duration-500">
       <div className="fixed inset-0 bg-focus-light dark:bg-focus-dark -z-20"></div>
       <div className="fixed inset-0 -z-10 bg-white/15 dark:bg-slate-950/55" />
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(148,163,184,0.15)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.15)_1px,transparent_1px)] bg-[size:64px_64px] opacity-40" />
       </div>
+
+      <div className="flex-1 p-6 lg:p-10 flex flex-col gap-8">
 
       {videoError && (
         <div className="fixed bottom-6 right-6 z-20 bg-white/90 dark:bg-slate-900/90 text-slate-700 dark:text-slate-200 text-xs px-3 py-2 rounded-full shadow">
@@ -611,6 +613,7 @@ export default function Dashboard() {
           <FocusDashboardPanel />
         </div>
       )}
+      </div>
       <Footer />
     </div>
   );
