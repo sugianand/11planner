@@ -85,6 +85,27 @@ export default function AuthPage() {
       return updatedForm;
     });
   }
+
+  async function ensureProfileExists(
+    userId: string,
+    metadata?: { firstname?: string; lastname?: string; university?: string; major?: string },
+    fallback?: { firstname?: string; lastname?: string; university?: string; major?: string },
+  ): Promise<string | null> {
+    const { error: insertError } = await supabase.from("profiles").insert({
+      id: userId,
+      firstname: fallback?.firstname ?? metadata?.firstname ?? null,
+      lastname: fallback?.lastname ?? metadata?.lastname ?? null,
+      university: fallback?.university ?? metadata?.university ?? null,
+      major: fallback?.major ?? metadata?.major ?? null,
+    });
+
+    if (insertError?.code === "23505") {
+      return null;
+    }
+
+    return insertError?.message ?? null;
+  }
+
   async function registerUser(): Promise<void> {
     const { firstname, lastname, email, password, confirmPassword, university, major } = form;
     const hasSpecialCharacter = /[^A-Za-z0-9]/.test(password);
@@ -114,6 +135,14 @@ export default function AuthPage() {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        data: {
+          firstname: first,
+          lastname: last,
+          university: university || null,
+          major: major || null,
+        },
+      },
     });
 
     if (error || !data.user) {
@@ -121,29 +150,37 @@ export default function AuthPage() {
       return;
     }
 
-
-    const { error: profileError } = await supabase.from("profiles").insert({
-      id: data.user.id,
-      firstname: first,
-      lastname: last,
-      university: university || null,
-      major: major || null,
-    });
-
-    if (profileError) {
-      setErrorMessage(profileError.message);
-      return;
-    }
-
-
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-    if (signInError) {
-      setErrorMessage(signInError.message);
-      return;
-    }
-
     setErrorMessage("");
-    goToNextPage();
+
+    if (data.session) {
+      const profileError = await ensureProfileExists(
+        data.user.id,
+        data.user.user_metadata as
+          | { firstname?: string; lastname?: string; university?: string; major?: string }
+          | undefined,
+        {
+          firstname: first,
+          lastname: last,
+          university,
+          major,
+        },
+      );
+
+      if (profileError) {
+        setErrorMessage(profileError);
+        return;
+      }
+
+      goToNextPage();
+      return;
+    }
+
+    setMode("login");
+    setForm({
+      ...initialForm,
+      loginEmail: email,
+    });
+    setSuccessMessage("Check your email to verify your account, then log in.");
 
   }
 
@@ -169,6 +206,17 @@ export default function AuthPage() {
 
     if (!authData.user) {
       setErrorMessage("Login failed.");
+      return;
+    }
+
+    const profileError = await ensureProfileExists(
+      authData.user.id,
+      authData.user.user_metadata as
+        | { firstname?: string; lastname?: string; university?: string; major?: string }
+        | undefined,
+    );
+    if (profileError) {
+      setErrorMessage(profileError);
       return;
     }
 
