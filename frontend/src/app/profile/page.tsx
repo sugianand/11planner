@@ -4,24 +4,19 @@ import { usePlanner } from "@/contexts/PlannerContext";
 import { supabase } from "@/lib/supabaseClient";
 import { useEffect, useState } from "react";
 import Footer from "@/components/Footer";
+import Link from "next/link";
 
 
 type ProfileData = {
   firstname: string;
   lastname: string;
-  university: string;
-  major: string;
-
-}
+};
 
 
 export default function ProfilePage() {
   const { tasks, courses } = usePlanner();
-  const [userId, setUserId] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
   const [profile, setProfile] = useState<ProfileData | null>(null);
-  const [editing, setEditing] = useState(false);
-  const [editProfile, setEditProfile] = useState<ProfileData | null>(null);
 
   useEffect(() => {
 
@@ -33,17 +28,14 @@ export default function ProfilePage() {
         } = await supabase.auth.getUser();
 
         if (authError || !user) {
-          // Guest user - not an error, just no auth session
           console.debug("No authenticated user, showing guest profile");
           return;
         }
 
         setEmail(user.email);
-        setUserId(user.id);
-
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
-          .select("firstname, lastname, university, major")
+          .select("firstname, lastname")
           .eq("id", user.id)
           .single();
 
@@ -53,39 +45,13 @@ export default function ProfilePage() {
         }
 
         setProfile(profileData);
-        setEditProfile(profileData);
       } catch (err) {
-        // Suppress auth errors for guest users
         console.debug("Profile fetch error (guest mode):", err);
       }
     }
 
     fetchProfile();
   }, []);
-
-  async function saveProfile() {
-    if (!editProfile || !userId) return;
-
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        firstname: editProfile.firstname,
-        lastname: editProfile.lastname,
-        university: editProfile.university,
-        major: editProfile.major,
-      })
-      .eq("id", userId);
-
-    if (error) {
-      console.error("Error updating profile:", error);
-      alert("Failed to update profile.");
-      return;
-    }
-    setProfile(editProfile);
-    setEditing(false);
-  }
-
-
 
 
   const completedTasks = tasks.filter((t) => t.completed).length;
@@ -145,61 +111,13 @@ export default function ProfilePage() {
                 <p className="text-slate-900 dark:text-white font-medium">{email || "Not logged in"}</p>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">
-                  University
-                </label>
-
-                {editing ? (
-                  <input
-                    className="border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2 w-full bg-white/80 dark:bg-slate-800/80 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition"
-                    value={editProfile?.university ?? ""}
-                    onChange={(e) =>
-                      setEditProfile((prev) =>
-                        prev ? { ...prev, university: e.target.value } : prev
-                      )
-                    }
-                  />
-                ) : (
-                  <p className="text-slate-900 dark:text-white font-medium">{profile?.university || "Not set"}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">
-                  Major
-                </label>
-
-                {editing ? (
-                  <input
-                    className="border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2 w-full bg-white/80 dark:bg-slate-800/80 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition"
-                    value={editProfile?.major ?? ""}
-                    onChange={(e) =>
-                      setEditProfile((prev) =>
-                        prev ? { ...prev, major: e.target.value } : prev
-                      )
-                    }
-                  />
-                ) : (
-                  <p className="text-slate-900 dark:text-white font-medium">{profile?.major || "Not set"}</p>
-                )}
-              </div>
-
-
-              <div className="pt-6 border-t border-slate-200 dark:border-slate-600">
-                <button
-                  onClick={() => {
-                    if (editing) {
-                      saveProfile();
-                    } else {
-                      setEditing(true);
-                    }
-                  }}
-                  className="bg-[#306844] hover:bg-[#255236] text-white font-semibold py-2.5 px-6 rounded-lg transition shadow-md hover:shadow-lg"
+              <div className="pt-2">
+                <Link
+                  href="/profile/quiz"
+                  className="inline-block bg-[#306844] hover:bg-[#255236] text-white font-semibold py-2.5 px-6 rounded-lg transition shadow-md hover:shadow-lg"
                 >
-                  {editing ? "Save Profile" : "Edit Profile"}
-                </button>
-
+                  Take Preference Quiz
+                </Link>
               </div>
             </div>
           </div>
@@ -214,7 +132,7 @@ export default function ProfilePage() {
               />
             </div>
             <p className="text-slate-600 dark:text-slate-300 text-sm mt-3 font-medium">
-              You've completed <span className="text-slate-900 dark:text-white font-bold">{completedTasks}</span> out of {totalTasks} tasks
+              You have completed <span className="text-slate-900 dark:text-white font-bold">{completedTasks}</span> out of {totalTasks} tasks
             </p>
           </div>
 

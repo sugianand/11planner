@@ -12,8 +12,6 @@ type FormState = {
   loginEmail: string;
   loginPassword: string;
   email: string;
-  university: string;
-  major: string;
   password: string;
   confirmPassword: string;
 };
@@ -24,8 +22,6 @@ const initialForm: FormState = {
   loginEmail: "",
   loginPassword: "",
   email: "",
-  university: "",
-  major: "",
   password: "",
   confirmPassword: "",
 };
@@ -88,15 +84,13 @@ export default function AuthPage() {
 
   async function ensureProfileExists(
     userId: string,
-    metadata?: { firstname?: string; lastname?: string; university?: string; major?: string },
-    fallback?: { firstname?: string; lastname?: string; university?: string; major?: string },
+    metadata?: { firstname?: string; lastname?: string },
+    fallback?: { firstname?: string; lastname?: string },
   ): Promise<string | null> {
     const { error: insertError } = await supabase.from("profiles").insert({
       id: userId,
       firstname: fallback?.firstname ?? metadata?.firstname ?? null,
       lastname: fallback?.lastname ?? metadata?.lastname ?? null,
-      university: fallback?.university ?? metadata?.university ?? null,
-      major: fallback?.major ?? metadata?.major ?? null,
     });
 
     if (insertError?.code === "23505") {
@@ -107,7 +101,7 @@ export default function AuthPage() {
   }
 
   async function registerUser(): Promise<void> {
-    const { firstname, lastname, email, password, confirmPassword, university, major } = form;
+    const { firstname, lastname, email, password, confirmPassword } = form;
     const hasSpecialCharacter = /[^A-Za-z0-9]/.test(password);
     const first = firstname.trim();
     const last = lastname.trim();
@@ -139,8 +133,6 @@ export default function AuthPage() {
         data: {
           firstname: first,
           lastname: last,
-          university: university || null,
-          major: major || null,
         },
       },
     });
@@ -156,13 +148,11 @@ export default function AuthPage() {
       const profileError = await ensureProfileExists(
         data.user.id,
         data.user.user_metadata as
-          | { firstname?: string; lastname?: string; university?: string; major?: string }
+          | { firstname?: string; lastname?: string }
           | undefined,
         {
           firstname: first,
           lastname: last,
-          university,
-          major,
         },
       );
 
@@ -212,7 +202,7 @@ export default function AuthPage() {
     const profileError = await ensureProfileExists(
       authData.user.id,
       authData.user.user_metadata as
-        | { firstname?: string; lastname?: string; university?: string; major?: string }
+        | { firstname?: string; lastname?: string }
         | undefined,
     );
     if (profileError) {
@@ -340,23 +330,6 @@ export default function AuthPage() {
                 name="email"
                 placeholder="Email (required)"
                 value={form.email}
-                onChange={handleInputChange}
-              />
-
-
-              <input
-                type="text"
-                name="university"
-                placeholder="University"
-                value={form.university}
-                onChange={handleInputChange}
-              />
-
-              <input
-                type="text"
-                name="major"
-                placeholder="Major"
-                value={form.major}
                 onChange={handleInputChange}
               />
 

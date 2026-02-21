@@ -39,7 +39,6 @@ export default function AuthPage() {
           goToNextPage();
         }
       } catch (err) {
-        // Suppress session check errors on auth page
         console.debug("No active session on auth page:", err);
       }
     }
