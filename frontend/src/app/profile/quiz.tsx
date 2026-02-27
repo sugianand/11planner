@@ -1,9 +1,10 @@
 "use client";
 
 import Footer from "@/components/Footer";
+import { usePlanner } from "@/contexts/PlannerContext";
 import { supabase } from "@/lib/supabaseClient";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type Preferences = {
   worktime: string;
@@ -20,6 +21,7 @@ const inputClassName =
   "w-full border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2.5 bg-white/80 dark:bg-slate-800/80 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#306844] outline-none transition";
 
 export default function Quiz() {
+  const { preferences: savedPreferences, loadPreferences } = usePlanner();
   const [step, setStep] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -31,6 +33,22 @@ export default function Quiz() {
     assignmentplan: "",
     additionalInfo: "",
   });
+  const [hasEdited, setHasEdited] = useState(false);
+
+  useEffect(() => {
+    loadPreferences();
+  }, [loadPreferences]);
+
+  const currentPreferences: Preferences =
+    !hasEdited && savedPreferences
+      ? {
+        worktime: savedPreferences.worktime,
+        workdays: savedPreferences.workdays,
+        workstyle: savedPreferences.workstyle,
+        assignmentplan: savedPreferences.assignmentplan,
+        additionalInfo: savedPreferences.additionalInfo,
+      }
+      : preferences;
 
   function nextStep() {
     setStep((prev) => Math.min(prev + 1, TOTAL_STEPS));
@@ -41,6 +59,7 @@ export default function Quiz() {
   }
 
   function toggleWorkday(day: string, checked: boolean) {
+    setHasEdited(true);
     setPreferences((prev) => ({
       ...prev,
       workdays: checked ? [...prev.workdays, day] : prev.workdays.filter((d) => d !== day),
@@ -51,7 +70,7 @@ export default function Quiz() {
     setErrorMessage("");
     setSuccessMessage("");
 
-    if (!preferences.worktime || preferences.workdays.length === 0 || !preferences.workstyle || !preferences.assignmentplan) {
+    if (!currentPreferences.worktime || currentPreferences.workdays.length === 0 || !currentPreferences.workstyle || !currentPreferences.assignmentplan) {
       setErrorMessage("Please complete all required quiz fields before submitting.");
       return;
     }
@@ -70,11 +89,11 @@ export default function Quiz() {
     const { error } = await supabase
       .from("profiles")
       .update({
-        worktime: preferences.worktime,
-        workdays: preferences.workdays,
-        workstyle: preferences.workstyle,
-        assignmentplan: preferences.assignmentplan,
-        additional_info: preferences.additionalInfo,
+        worktime: currentPreferences.worktime,
+        workdays: currentPreferences.workdays,
+        workstyle: currentPreferences.workstyle,
+        assignmentplan: currentPreferences.assignmentplan,
+        additional_info: currentPreferences.additionalInfo,
       })
       .eq("id", user.id);
     setIsSaving(false);
@@ -85,6 +104,7 @@ export default function Quiz() {
     }
 
     setSuccessMessage("Preferences saved.");
+    await loadPreferences();
   }
 
   const progress = Math.round((step / TOTAL_STEPS) * 100);
@@ -133,8 +153,11 @@ export default function Quiz() {
                 <p className="text-slate-600 dark:text-slate-300 mb-5">When do you feel most productive?</p>
                 <select
                   className={inputClassName}
-                  value={preferences.worktime}
-                  onChange={(e) => setPreferences({ ...preferences, worktime: e.target.value })}
+                  value={currentPreferences.worktime}
+                  onChange={(e) => {
+                    setHasEdited(true);
+                    setPreferences({ ...currentPreferences, worktime: e.target.value });
+                  }}
                 >
                   <option value="">Select</option>
                   <option value="morning">Morning (6am-12pm)</option>
@@ -157,7 +180,7 @@ export default function Quiz() {
                       <input
                         type="checkbox"
                         value={day}
-                        checked={preferences.workdays.includes(day)}
+                        checked={currentPreferences.workdays.includes(day)}
                         onChange={(e) => toggleWorkday(day, e.target.checked)}
                         className="accent-[#306844]"
                       />
@@ -174,8 +197,11 @@ export default function Quiz() {
                 <p className="text-slate-600 dark:text-slate-300 mb-5">How long can you focus before taking a break?</p>
                 <select
                   className={inputClassName}
-                  value={preferences.workstyle}
-                  onChange={(e) => setPreferences({ ...preferences, workstyle: e.target.value })}
+                  value={currentPreferences.workstyle}
+                  onChange={(e) => {
+                    setHasEdited(true);
+                    setPreferences({ ...currentPreferences, workstyle: e.target.value });
+                  }}
                 >
                   <option value="">Select</option>
                   <option value="short">15-20 minutes (short bursts)</option>
@@ -192,8 +218,11 @@ export default function Quiz() {
                 <p className="text-slate-600 dark:text-slate-300 mb-5">How do you prefer to approach assignments?</p>
                 <select
                   className={inputClassName}
-                  value={preferences.assignmentplan}
-                  onChange={(e) => setPreferences({ ...preferences, assignmentplan: e.target.value })}
+                  value={currentPreferences.assignmentplan}
+                  onChange={(e) => {
+                    setHasEdited(true);
+                    setPreferences({ ...currentPreferences, assignmentplan: e.target.value });
+                  }}
                 >
                   <option value="">How do you prefer to do assignments?</option>
                   <option value="early">Start early and do a little each day</option>
@@ -210,8 +239,11 @@ export default function Quiz() {
                 <textarea
                   className={inputClassName}
                   rows={6}
-                  value={preferences.additionalInfo}
-                  onChange={(e) => setPreferences({ ...preferences, additionalInfo: e.target.value })}
+                  value={currentPreferences.additionalInfo}
+                  onChange={(e) => {
+                    setHasEdited(true);
+                    setPreferences({ ...currentPreferences, additionalInfo: e.target.value });
+                  }}
                   placeholder="Anything else you'd like us to know? (Optional)"
                 />
               </div>

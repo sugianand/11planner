@@ -117,3 +117,11 @@ export interface PlannerState {
   scheduleBlocks: ScheduleBlock[];
   ui: UIState;
 }
+
+export interface UserPreferences {
+  worktime: string;
+  workdays: string[];
+  workstyle: string;
+  assignmentplan: string;
+  additionalInfo: string;
+}

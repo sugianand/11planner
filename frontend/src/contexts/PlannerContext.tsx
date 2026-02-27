@@ -9,11 +9,10 @@ import {
   Task,
   TaskCreate,
   ScheduleBlock,
+  UserPreferences,
 } from "@/types";
 import {
-  courseAPI,
   assignmentAPI,
-  taskAPI,
   scheduleAPI,
 } from "@/lib/api";
 
@@ -50,11 +49,113 @@ interface PlannerContextType {
   // Loading state
   loading: boolean;
   error: string | null;
+
+  // Profile preferences
+  preferences: UserPreferences | null;
+  loadPreferences: () => Promise<void>;
 }
 
 const PlannerContext = createContext<PlannerContextType | undefined>(undefined);
 
 import { supabase } from "@/lib/supabaseClient";
+
+type SupabaseCourseRow = {
+  id: string;
+  user_id: string;
+  course_name: string;
+  course_days: string[] | null;
+  start_time: string | null;
+  end_time: string | null;
+  course_code: string;
+  professor: string | null;
+  description: string | null;
+  created_at: string;
+};
+
+type SupabaseTaskRow = {
+  id: string;
+  user_id: string;
+  task_title: string;
+  course_id: string | null;
+  deadline_at: string;
+  estimated_hours: number | null;
+  priority_level: number | null;
+  description: string | null;
+  status: string;
+  created_at: string;
+};
+
+function parseCourseDays(value: string): string[] {
+  return value
+    .split(/[,\s]+/)
+    .map((d) => d.trim())
+    .filter(Boolean);
+}
+
+function normalizeTimeForDb(value: string): string {
+  const trimmed = value.trim();
+  const match = trimmed.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(am|pm)?$/i);
+  if (!match) {
+    throw new Error("Time must be in HH:MM or HH:MM AM/PM format.");
+  }
+
+  let hour = Number(match[1]);
+  const minute = Number(match[2]);
+  const second = Number(match[3] || "0");
+  const meridiem = match[4]?.toLowerCase();
+
+  if (minute > 59 || second > 59) {
+    throw new Error("Invalid time value.");
+  }
+
+  if (meridiem) {
+    if (hour < 1 || hour > 12) throw new Error("Invalid 12-hour time.");
+    if (meridiem === "pm" && hour !== 12) hour += 12;
+    if (meridiem === "am" && hour === 12) hour = 0;
+  } else if (hour > 23) {
+    throw new Error("Invalid 24-hour time.");
+  }
+
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:${String(second).padStart(2, "0")}`;
+}
+
+function normalizeDeadlineForDb(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    throw new Error("Invalid deadline date/time.");
+  }
+  return date.toISOString();
+}
+
+function mapCourseRowToModel(row: SupabaseCourseRow): Course {
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    name: row.course_name,
+    code: row.course_code,
+    courseDate: (row.course_days || []).join(" "),
+    startTime: row.start_time || "",
+    endTime: row.end_time || "",
+    professor: row.professor || "",
+    description: row.description || "",
+    created_at: row.created_at,
+  };
+}
+
+function mapTaskRowToModel(row: SupabaseTaskRow): Task {
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    title: row.task_title,
+    course_id: row.course_id || undefined,
+    deadline: row.deadline_at,
+    estimated_hours: row.estimated_hours ?? 0,
+    priority: row.priority_level ?? 2,
+    description: row.description || "",
+    completed: row.status === "completed",
+    created_at: row.created_at,
+  };
+}
 
 export function PlannerProvider({ children }: { children: React.ReactNode }) {
   const [userId, setUserId] = useState<string>("user_demo");
@@ -64,6 +165,7 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
   const [scheduleBlocks, setScheduleBlocks] = useState<ScheduleBlock[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [preferences, setPreferences] = useState<UserPreferences | null>(null);
 
   // Sync with Supabase Auth
   useEffect(() => {
@@ -97,10 +199,20 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
   // ========== Courses ==========
   const loadCourses = useCallback(async () => {
     try {
+      if (userId === "user_demo") {
+        setCourses([]);
+        return;
+      }
       setLoading(true);
       setError(null);
-      const data = await courseAPI.getByUser(userId);
-      setCourses(data);
+      const { data, error: queryError } = await supabase
+        .from("courses")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+
+      if (queryError) throw queryError;
+      setCourses((data as SupabaseCourseRow[]).map(mapCourseRowToModel));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load courses");
     } finally {
@@ -108,11 +220,64 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     }
   }, [userId]);
 
+
+  const loadPreferences = useCallback(async () => {
+    try {
+      if (userId === "user_demo") {
+        setPreferences(null);
+        return;
+      }
+
+      const { data, error: queryError } = await supabase
+        .from("profiles")
+        .select("worktime, workdays, workstyle, assignmentplan, additional_info")
+        .eq("id", userId)
+        .single();
+
+      if (queryError) throw queryError;
+
+      setPreferences({
+        worktime: data.worktime || "",
+        workdays: data.workdays || [],
+        workstyle: data.workstyle || "",
+        assignmentplan: data.assignmentplan || "",
+        additionalInfo: data.additional_info || "",
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load preferences");
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    loadPreferences();
+  }, [loadPreferences]);
+
   const createCourse = useCallback(
     async (course: CourseCreate) => {
       try {
+        if (userId === "user_demo") {
+          throw new Error("Please sign in to save courses.");
+        }
         setLoading(true);
-        const newCourse = await courseAPI.create(course);
+        const payload = {
+          user_id: course.user_id || userId,
+          course_name: course.name,
+          course_days: parseCourseDays(course.courseDate),
+          start_time: normalizeTimeForDb(course.startTime),
+          end_time: normalizeTimeForDb(course.endTime),
+          course_code: course.code,
+          professor: course.professor || null,
+          description: course.description || null,
+        };
+
+        const { data, error: insertError } = await supabase
+          .from("courses")
+          .insert(payload)
+          .select("*")
+          .single();
+
+        if (insertError) throw insertError;
+        const newCourse = mapCourseRowToModel(data as SupabaseCourseRow);
         setCourses((prev) => [...prev, newCourse]);
         return newCourse;
       } catch (err) {
@@ -122,13 +287,31 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
       }
     },
-    []
+    [userId]
   );
 
   const updateCourse = useCallback(async (id: string, course: Partial<Course>) => {
     try {
+      if (userId === "user_demo") {
+        throw new Error("Please sign in to update courses.");
+      }
       setLoading(true);
-      await courseAPI.update(id, course);
+      const updatePayload: Record<string, unknown> = {};
+      if (course.name !== undefined) updatePayload.course_name = course.name;
+      if (course.code !== undefined) updatePayload.course_code = course.code;
+      if (course.courseDate !== undefined) updatePayload.course_days = parseCourseDays(course.courseDate);
+      if (course.startTime !== undefined) updatePayload.start_time = normalizeTimeForDb(course.startTime);
+      if (course.endTime !== undefined) updatePayload.end_time = normalizeTimeForDb(course.endTime);
+      if (course.professor !== undefined) updatePayload.professor = course.professor || null;
+      if (course.description !== undefined) updatePayload.description = course.description || null;
+
+      const { error: updateError } = await supabase
+        .from("courses")
+        .update(updatePayload)
+        .eq("id", id)
+        .eq("user_id", userId);
+
+      if (updateError) throw updateError;
       setCourses((prev) =>
         prev.map((c) => (c.id === id ? { ...c, ...course } : c))
       );
@@ -138,12 +321,21 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   const deleteCourse = useCallback(async (id: string) => {
     try {
+      if (userId === "user_demo") {
+        throw new Error("Please sign in to delete courses.");
+      }
       setLoading(true);
-      await courseAPI.delete(id);
+      const { error: deleteError } = await supabase
+        .from("courses")
+        .delete()
+        .eq("id", id)
+        .eq("user_id", userId);
+
+      if (deleteError) throw deleteError;
       setCourses((prev) => prev.filter((c) => c.id !== id));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete course");
@@ -151,7 +343,7 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   // ========== Assignments ==========
   const loadAssignments = useCallback(async () => {
@@ -218,10 +410,20 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
   // ========== Tasks ==========
   const loadTasks = useCallback(async () => {
     try {
+      if (userId === "user_demo") {
+        setTasks([]);
+        return;
+      }
       setLoading(true);
       setError(null);
-      const data = await taskAPI.getByUser(userId);
-      setTasks(data);
+      const { data, error: queryError } = await supabase
+        .from("tasks")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+
+      if (queryError) throw queryError;
+      setTasks((data as SupabaseTaskRow[]).map(mapTaskRowToModel));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load tasks");
     } finally {
@@ -232,8 +434,29 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
   const createTask = useCallback(
     async (task: TaskCreate) => {
       try {
+        if (userId === "user_demo") {
+          throw new Error("Please sign in to save tasks.");
+        }
         setLoading(true);
-        const newTask = await taskAPI.create(task);
+        const payload = {
+          user_id: task.user_id || userId,
+          task_title: task.title,
+          course_id: task.course_id || null,
+          deadline_at: normalizeDeadlineForDb(task.deadline),
+          estimated_hours: task.estimated_hours ?? 0,
+          priority_level: task.priority ?? 2,
+          description: task.description || null,
+          status: "pending",
+        };
+
+        const { data, error: insertError } = await supabase
+          .from("tasks")
+          .insert(payload)
+          .select("*")
+          .single();
+
+        if (insertError) throw insertError;
+        const newTask = mapTaskRowToModel(data as SupabaseTaskRow);
         setTasks((prev) => [...prev, newTask]);
         return newTask;
       } catch (err) {
@@ -243,13 +466,31 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
       }
     },
-    []
+    [userId]
   );
 
   const updateTask = useCallback(async (id: string, task: Partial<Task>) => {
     try {
+      if (userId === "user_demo") {
+        throw new Error("Please sign in to update tasks.");
+      }
       setLoading(true);
-      await taskAPI.update(id, task);
+      const updatePayload: Record<string, unknown> = {};
+      if (task.title !== undefined) updatePayload.task_title = task.title;
+      if (task.course_id !== undefined) updatePayload.course_id = task.course_id || null;
+      if (task.deadline !== undefined) updatePayload.deadline_at = normalizeDeadlineForDb(task.deadline);
+      if (task.estimated_hours !== undefined) updatePayload.estimated_hours = task.estimated_hours;
+      if (task.priority !== undefined) updatePayload.priority_level = task.priority;
+      if (task.description !== undefined) updatePayload.description = task.description || null;
+      if (task.completed !== undefined) updatePayload.status = task.completed ? "completed" : "pending";
+
+      const { error: updateError } = await supabase
+        .from("tasks")
+        .update(updatePayload)
+        .eq("id", id)
+        .eq("user_id", userId);
+
+      if (updateError) throw updateError;
       setTasks((prev) =>
         prev.map((t) => (t.id === id ? { ...t, ...task } : t))
       );
@@ -259,12 +500,21 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   const deleteTask = useCallback(async (id: string) => {
     try {
+      if (userId === "user_demo") {
+        throw new Error("Please sign in to delete tasks.");
+      }
       setLoading(true);
-      await taskAPI.delete(id);
+      const { error: deleteError } = await supabase
+        .from("tasks")
+        .delete()
+        .eq("id", id)
+        .eq("user_id", userId);
+
+      if (deleteError) throw deleteError;
       setTasks((prev) => prev.filter((t) => t.id !== id));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete task");
@@ -272,7 +522,7 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   // ========== Schedule Blocks ==========
   const loadScheduleBlocks = useCallback(async () => {
@@ -326,6 +576,8 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     updateScheduleBlock,
     loading,
     error,
+    preferences,
+    loadPreferences,
   };
 
   return (
