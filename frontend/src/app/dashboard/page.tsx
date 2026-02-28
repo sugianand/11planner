@@ -1,23 +1,47 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import FocusDashboardPanel from "@/components/FocusDashboardPanel";
 import Footer from "@/components/Footer";
+
+type AtmosphereCategory = "All" | "Anime" | "Nature" | "Cafe" | "City" | "Abstract";
 
 type FocusBackground = {
   id: string;
   label: string;
   description: string;
-  category: "All" | "Anime" | "Nature" | "Cafe" | "City" | "Abstract";
+  category: AtmosphereCategory;
   videoUrl?: string;
   imageUrl?: string;
 };
+
+type SoundCategory =
+  | "All"
+  | "Ambiance"
+  | "Workspace"
+  | "Nature Sounds"
+  | "Weather"
+  | "Urban"
+  | "Brainwaves"
+  | "Noise";
 
 type Soundscape = {
   id: string;
   label: string;
   description: string;
-  category: "All" | "Nature" | "Cafe" | "City" | "Anime" | "Abstract";
+  category: SoundCategory;
+  engine:
+    | "none"
+    | "rain"
+    | "cafe"
+    | "forest"
+    | "city"
+    | "cinematic"
+    | "lofi"
+    | "abstract"
+    | "whiteNoise"
+    | "pinkNoise"
+    | "brownNoise";
   audioUrl?: string;
 };
 
@@ -272,7 +296,7 @@ const focusBackgrounds: FocusBackground[] = [
   },
 ];
 
-const backgroundCategories: FocusBackground["category"][] = [
+const atmosphereCategories: AtmosphereCategory[] = [
   "All",
   "Nature",
   "Cafe",
@@ -280,58 +304,377 @@ const backgroundCategories: FocusBackground["category"][] = [
   "Anime",
   "Abstract",
 ];
+
+const backgroundCategories: FocusBackground["category"][] = atmosphereCategories;
 
 const soundscapes: Soundscape[] = [
   {
-    id: "rain",
-    label: "Soft Rain",
-    description: "Calming rain with distant thunder.",
+    id: "no-sound",
+    label: "No Sound",
+    description: "Silence mode. Stops any currently playing audio.",
     category: "All",
-    audioUrl: "",
+    engine: "none",
+  },
+  {
+    id: "delta-waves",
+    label: "Delta Waves",
+    description: "Deep slow pulse intended for calm grounding.",
+    category: "Brainwaves",
+    engine: "cinematic",
+  },
+  {
+    id: "rain",
+    label: "Rain",
+    description: "Steady rain with soft broadband masking.",
+    category: "Weather",
+    engine: "rain",
+    audioUrl: "/sounds/weather/rain.mp3",
+  },
+  {
+    id: "theta-waves",
+    label: "Theta Waves",
+    description: "Soft low-frequency flow for reflective work blocks.",
+    category: "Brainwaves",
+    engine: "cinematic",
+    audioUrl: "/sounds/brainwaves/theta-waves.mp3",
   },
   {
     id: "cafe",
-    label: "Cafe Hum",
-    description: "Low chatter and espresso steam.",
-    category: "Cafe",
-    audioUrl: "",
+    label: "Cafe",
+    description: "Coffeehouse crowd and espresso-room energy.",
+    category: "Ambiance",
+    engine: "cafe",
+    audioUrl: "/sounds/ambiance/cafe.mp3",
   },
   {
-    id: "forest",
-    label: "Forest Night",
-    description: "Crickets and light wind.",
-    category: "Nature",
-    audioUrl: "",
+    id: "fireplace",
+    label: "Fireplace",
+    description: "Warm crackle-like bed with low cozy warmth.",
+    category: "Ambiance",
+    engine: "brownNoise",
+    audioUrl: "/sounds/ambiance/fireplace.mp3",
   },
   {
-    id: "city-rumble",
-    label: "City Rumble",
-    description: "Distant traffic and night air.",
-    category: "City",
-    audioUrl: "",
+    id: "lava",
+    label: "Lava",
+    description: "Dense molten-style drone with slow motion.",
+    category: "Ambiance",
+    engine: "abstract",
+    audioUrl: "/sounds/ambiance/lava.mp3",
   },
   {
-    id: "cinematic-drone",
-    label: "Cinematic Drone",
-    description: "Low strings with soft tension.",
-    category: "Movies",
-    audioUrl: "",
+    id: "ocean",
+    label: "Ocean",
+    description: "Wide surf-like wash with soft rolling highs.",
+    category: "Nature Sounds",
+    engine: "rain",
+    audioUrl: "/sounds/nature/ocean-waves-richard.mp3",
+  },
+  {
+    id: "keyboard-typing",
+    label: "Keyboard Typing",
+    description: "Office typing layer blended with subtle room tone.",
+    category: "Workspace",
+    engine: "cafe",
+    audioUrl: "/sounds/workspace/keyboard-typing.mp3",
+  },
+  {
+    id: "design-lab",
+    label: "Design Lab",
+    description: "Modern studio-like ambience with light synth focus.",
+    category: "Workspace",
+    engine: "lofi",
+    audioUrl: "/sounds/workspace/design-lab.mp3",
+  },
+  {
+    id: "office",
+    label: "Office",
+    description: "Low office hum and conversational room texture.",
+    category: "Workspace",
+    engine: "cafe",
+    audioUrl: "/sounds/workspace/office.mp3",
+  },
+  {
+    id: "wind-chimes",
+    label: "Wind Chimes",
+    description: "Delicate bright tones with gentle airy motion.",
+    category: "Nature Sounds",
+    engine: "abstract",
+    audioUrl: "/sounds/nature/wind-chimes.mp3",
+  },
+  {
+    id: "city-rooftop",
+    label: "City Rooftop",
+    description: "Distant skyline rumble from above street level.",
+    category: "Urban",
+    engine: "city",
+  },
+  {
+    id: "restaurant",
+    label: "Restaurant",
+    description: "Soft dinner-room chatter and table ambience.",
+    category: "Ambiance",
+    engine: "cafe",
+    audioUrl: "/sounds/ambiance/restaurant.mp3",
+  },
+  {
+    id: "street",
+    label: "Street",
+    description: "Open-air road noise with passing movement.",
+    category: "Urban",
+    engine: "city",
+  },
+  {
+    id: "park",
+    label: "Park",
+    description: "Open green-space ambience with light natural movement.",
+    category: "Nature Sounds",
+    engine: "forest",
+  },
+  {
+    id: "jungle",
+    label: "Jungle",
+    description: "Dense forest atmosphere with layered natural texture.",
+    category: "Nature Sounds",
+    engine: "forest",
+    audioUrl: "/sounds/nature/jungle.mp3",
+  },
+  {
+    id: "lake-pier",
+    label: "Lake Pier",
+    description: "Still-water mood with faint wind and soft wildlife.",
+    category: "Nature Sounds",
+    engine: "forest",
+    audioUrl: "/sounds/nature/lake-pier.mp3",
+  },
+  {
+    id: "rain-car-roof",
+    label: "Rain Car Roof",
+    description: "Closer rain texture with enclosed-space dampening.",
+    category: "Weather",
+    engine: "rain",
+    audioUrl: "/sounds/weather/rain-car-roof.mp3",
+  },
+  {
+    id: "splatty-rain",
+    label: "Splatty Rain",
+    description: "Sharper droplet impacts mixed into rainfall noise.",
+    category: "Weather",
+    engine: "rain",
+    audioUrl: "/sounds/weather/splatty-rain.mp3",
+  },
+  {
+    id: "outer-space",
+    label: "Outer Space",
+    description: "Wide sparse tonal bed with sci-fi ambience.",
+    category: "Ambiance",
+    engine: "abstract",
+    audioUrl: "/sounds/ambiance/outer-space.mp3",
+  },
+  {
+    id: "birds-chirping",
+    label: "Birds Chirping",
+    description: "Light high chirp-like texture over natural bed.",
+    category: "Nature Sounds",
+    engine: "forest",
+    audioUrl: "/sounds/nature/birds-chirping.mp3",
+  },
+  {
+    id: "white-noise",
+    label: "White Noise",
+    description: "Flat-spectrum masking noise for concentration.",
+    category: "Noise",
+    engine: "whiteNoise",
+    audioUrl: "/sounds/noise/white-noise.mp3",
+  },
+  {
+    id: "beta-waves",
+    label: "Beta Waves",
+    description: "Slightly brighter pulse for alert, active focus.",
+    category: "Brainwaves",
+    engine: "lofi",
+    audioUrl: "/sounds/brainwaves/beta-waves.mp3",
+  },
+  {
+    id: "brown-noise",
+    label: "Brown Noise",
+    description: "Deep low-frequency weighted noise bed.",
+    category: "Noise",
+    engine: "brownNoise",
+    audioUrl: "/sounds/noise/brown-noise.mp3",
+  },
+  {
+    id: "pink-noise",
+    label: "Pink Noise",
+    description: "Balanced low-high shaped noise for long sessions.",
+    category: "Noise",
+    engine: "pinkNoise",
+    audioUrl: "/sounds/noise/pink-noise.mp3",
+  },
+  {
+    id: "gray-noise",
+    label: "Gray Noise",
+    description: "Equal-loudness style masking profile across frequencies.",
+    category: "Noise",
+    engine: "pinkNoise",
+    audioUrl: "/sounds/noise/gray-noise.mp3",
+  },
+  {
+    id: "blue-noise",
+    label: "Blue Noise",
+    description: "Higher-frequency weighted hiss for crisp masking.",
+    category: "Noise",
+    engine: "whiteNoise",
+    audioUrl: "/sounds/noise/blue-noise.mp3",
+  },
+  {
+    id: "alpha-waves",
+    label: "Alpha Waves",
+    description: "Relaxed mid-range pulse for steady concentration.",
+    category: "Brainwaves",
+    engine: "lofi",
+    audioUrl: "/sounds/brainwaves/alpha-waves.mp3",
+  },
+  {
+    id: "gamma-waves",
+    label: "Gamma Waves",
+    description: "Higher-energy tonal bed for intensive focus bursts.",
+    category: "Brainwaves",
+    engine: "cinematic",
+    audioUrl: "/sounds/brainwaves/gamma-waves.mp3",
+  },
+  {
+    id: "thunderstorm",
+    label: "Thunderstorm",
+    description: "Heavy storm atmosphere with deeper rumble feel.",
+    category: "Weather",
+    engine: "rain",
+    audioUrl: "/sounds/weather/thunderstorm.mp3",
   },
 ];
 
-const soundCategories: Soundscape["category"][] = [
+const soundCategories: SoundCategory[] = [
   "All",
-  "Nature",
-  "Cafe",
-  "City",
-  "Anime",
-  "Abstract",
+  "Ambiance",
+  "Workspace",
+  "Nature Sounds",
+  "Weather",
+  "Urban",
+  "Brainwaves",
+  "Noise",
 ];
+
+const soundCategoryIcons: Record<SoundCategory, string> = {
+  All: "\u{1F3A7}",
+  Ambiance: "\u2728",
+  Workspace: "\u{1F4BB}",
+  "Nature Sounds": "\u{1F33F}",
+  Weather: "\u{1F327}\uFE0F",
+  Urban: "\u{1F3D9}\uFE0F",
+  Brainwaves: "\u{1F9E0}",
+  Noise: "\u3030\uFE0F",
+};
+
+const soundIconsById: Record<string, string> = {
+  "no-sound": "\u{1F507}",
+  "delta-waves": "\u{1F30A}",
+  rain: "\u{1F327}\uFE0F",
+  "theta-waves": "\u{1F9E0}",
+  cafe: "\u2615",
+  fireplace: "\u{1F525}",
+  lava: "\u{1F30B}",
+  ocean: "\u{1F30A}",
+  "keyboard-typing": "\u2328\uFE0F",
+  "design-lab": "\u{1F9EA}",
+  office: "\u{1F3E2}",
+  "wind-chimes": "\u{1F390}",
+  "city-rooftop": "\u{1F3D9}\uFE0F",
+  restaurant: "\u{1F37D}\uFE0F",
+  street: "\u{1F695}",
+  park: "\u{1F333}",
+  jungle: "\u{1F334}",
+  "lake-pier": "\u{1F6F6}",
+  "rain-car-roof": "\u{1F697}",
+  "splatty-rain": "\u26C8\uFE0F",
+  "outer-space": "\u{1F680}",
+  "birds-chirping": "\u{1F426}",
+  "white-noise": "\u{1F90D}",
+  "gray-noise": "\u25FD",
+  "blue-noise": "\u{1F499}",
+  "beta-waves": "\u{1F30A}",
+  "brown-noise": "\u{1F90E}",
+  "pink-noise": "\u{1F497}",
+  "alpha-waves": "\u{1F30A}",
+  "gamma-waves": "\u{1F30A}",
+  thunderstorm: "\u26C8\uFE0F",
+};
+
+const timerModes = {
+  pomodoro: { label: "Focus", minutes: 25 },
+  shortBreak: { label: "Short Break", minutes: 5 },
+  longBreak: { label: "Long Break", minutes: 15 },
+} as const;
+
+type TimerMode = keyof typeof timerModes;
+
+const getInitialTimerPosition = () => ({
+  x: 32,
+  y: typeof window === "undefined" ? 100 : Math.max(24, window.innerHeight - 400),
+});
+
+const createNoiseBuffer = (
+  audioContext: AudioContext,
+  color: "white" | "pink" | "brown"
+): AudioBuffer => {
+  const sampleRate = audioContext.sampleRate;
+  const length = sampleRate * 2;
+  const noiseBuffer = audioContext.createBuffer(1, length, sampleRate);
+  const data = noiseBuffer.getChannelData(0);
+
+  if (color === "white") {
+    for (let i = 0; i < length; i += 1) {
+      data[i] = Math.random() * 2 - 1;
+    }
+    return noiseBuffer;
+  }
+
+  if (color === "brown") {
+    let lastOut = 0;
+    for (let i = 0; i < length; i += 1) {
+      const white = Math.random() * 2 - 1;
+      lastOut = (lastOut + 0.02 * white) / 1.02;
+      data[i] = lastOut * 3.5;
+    }
+    return noiseBuffer;
+  }
+
+  let b0 = 0;
+  let b1 = 0;
+  let b2 = 0;
+  let b3 = 0;
+  let b4 = 0;
+  let b5 = 0;
+  let b6 = 0;
+  for (let i = 0; i < length; i += 1) {
+    const white = Math.random() * 2 - 1;
+    b0 = 0.99886 * b0 + white * 0.0555179;
+    b1 = 0.99332 * b1 + white * 0.0750759;
+    b2 = 0.969 * b2 + white * 0.153852;
+    b3 = 0.8665 * b3 + white * 0.3104856;
+    b4 = 0.55 * b4 + white * 0.5329522;
+    b5 = -0.7616 * b5 - white * 0.016898;
+    data[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
+    b6 = white * 0.115926;
+  }
+  return noiseBuffer;
+};
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<"backgrounds" | "sounds">("backgrounds");
   const [backgroundId, setBackgroundId] = useState(focusBackgrounds[0]?.id ?? "");
-  const [soundId, setSoundId] = useState(soundscapes[0]?.id ?? "");
+  const [soundId, setSoundId] = useState(
+    soundscapes.find((scene) => scene.id === "ambiance")?.id ?? soundscapes[0]?.id ?? ""
+  );
   const [activeBackgroundCategory, setActiveBackgroundCategory] = useState<FocusBackground["category"]>(
     "All"
   );
@@ -342,17 +685,22 @@ export default function Dashboard() {
   const [isUiHidden, setIsUiHidden] = useState(false);
   const [isUiTransparent, setIsUiTransparent] = useState(false);
   const [showMiniTimer, setShowMiniTimer] = useState(false);
-  const [timerPosition, setTimerPosition] = useState({ x: 32, y: 100 });
+  const [timerPosition, setTimerPosition] = useState(getInitialTimerPosition);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const [timerMode, setTimerMode] = useState<"pomodoro" | "shortBreak" | "longBreak">("pomodoro");
-  const [timeLeft, setTimeLeft] = useState(25 * 60);
+  const [timerMode, setTimerMode] = useState<TimerMode>("pomodoro");
+  const [timeLeft, setTimeLeft] = useState(timerModes.pomodoro.minutes * 60);
   const [isTimerActive, setIsTimerActive] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(0.6);
   const [videoError, setVideoError] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const generatedAudioRef = useRef<{
+    context: AudioContext;
+    masterGain: GainNode;
+    stop: () => void;
+  } | null>(null);
+  const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     setIsDragging(true);
@@ -361,10 +709,6 @@ export default function Dashboard() {
       y: e.clientY - timerPosition.y,
     });
   };
-
-  useEffect(() => {
-    setTimerPosition({ x: 32, y: window.innerHeight - 400 });
-  }, []);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -391,35 +735,282 @@ export default function Dashboard() {
     };
   }, [isDragging, dragOffset]);
 
-  const timerModes = {
-    pomodoro: { label: "Focus", minutes: 25 },
-    shortBreak: { label: "Short Break", minutes: 5 },
-    longBreak: { label: "Long Break", minutes: 15 },
-  };
+  const clearTimerInterval = useCallback(() => {
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
-    setTimeLeft(timerModes[timerMode].minutes * 60);
-    setIsTimerActive(false);
-    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-  }, [timerMode]);
-
-  useEffect(() => {
-    if (isTimerActive && timeLeft > 0) {
-      timerIntervalRef.current = setInterval(() => {
-        setTimeLeft((prev) => prev - 1);
-      }, 1000);
-    } else if (timeLeft === 0) {
-      setIsTimerActive(false);
-      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    if (!isTimerActive) {
+      return;
     }
 
-    return () => {
-      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-    };
-  }, [isTimerActive, timeLeft]);
+    timerIntervalRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearTimerInterval();
+          setIsTimerActive(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
 
-  const toggleMiniTimer = () => setIsTimerActive(!isTimerActive);
+    return () => {
+      clearTimerInterval();
+    };
+  }, [clearTimerInterval, isTimerActive]);
+
+  const stopPlayback = useCallback(async (syncState: boolean = true) => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = "";
+      audioRef.current = null;
+    }
+
+    if (generatedAudioRef.current) {
+      generatedAudioRef.current.stop();
+      await generatedAudioRef.current.context.close().catch(() => undefined);
+      generatedAudioRef.current = null;
+    }
+
+    if (syncState) {
+      setIsPlaying(false);
+    }
+  }, []);
+
+  const createGeneratedSound = useCallback(
+    (engine: Soundscape["engine"], nextVolume: number) => {
+      const AudioContextCtor =
+        window.AudioContext
+        ?? (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioContextCtor) {
+        return null;
+      }
+
+      const context = new AudioContextCtor();
+      const masterGain = context.createGain();
+      masterGain.gain.value = nextVolume;
+      masterGain.connect(context.destination);
+      const stopCallbacks: Array<() => void> = [];
+
+      const addNoiseLayer = (
+        color: "white" | "pink" | "brown",
+        gainValue: number,
+        filterType?: BiquadFilterType,
+        filterFrequency?: number
+      ) => {
+        const source = context.createBufferSource();
+        source.buffer = createNoiseBuffer(context, color);
+        source.loop = true;
+
+        const gainNode = context.createGain();
+        gainNode.gain.value = gainValue;
+        source.connect(gainNode);
+
+        let finalNode: AudioNode = gainNode;
+        let filterNode: BiquadFilterNode | null = null;
+
+        if (filterType && filterFrequency) {
+          filterNode = context.createBiquadFilter();
+          filterNode.type = filterType;
+          filterNode.frequency.value = filterFrequency;
+          gainNode.connect(filterNode);
+          finalNode = filterNode;
+        }
+
+        finalNode.connect(masterGain);
+        source.start();
+
+        stopCallbacks.push(() => {
+          try {
+            source.stop();
+          } catch {
+            // no-op: source may already be stopped
+          }
+          source.disconnect();
+          gainNode.disconnect();
+          filterNode?.disconnect();
+        });
+      };
+
+      const addToneLayer = (
+        type: OscillatorType,
+        frequency: number,
+        gainValue: number,
+        detune: number = 0
+      ) => {
+        const oscillator = context.createOscillator();
+        oscillator.type = type;
+        oscillator.frequency.value = frequency;
+        oscillator.detune.value = detune;
+
+        const gainNode = context.createGain();
+        gainNode.gain.value = gainValue;
+
+        oscillator.connect(gainNode);
+        gainNode.connect(masterGain);
+        oscillator.start();
+
+        stopCallbacks.push(() => {
+          try {
+            oscillator.stop();
+          } catch {
+            // no-op: source may already be stopped
+          }
+          oscillator.disconnect();
+          gainNode.disconnect();
+        });
+
+        return oscillator;
+      };
+
+      switch (engine) {
+        case "rain":
+          addNoiseLayer("pink", 0.3, "lowpass", 1200);
+          addNoiseLayer("white", 0.05, "highpass", 2500);
+          break;
+        case "cafe":
+          addNoiseLayer("brown", 0.12, "lowpass", 900);
+          addNoiseLayer("white", 0.03, "bandpass", 1800);
+          addToneLayer("sine", 140, 0.01);
+          break;
+        case "forest": {
+          addNoiseLayer("pink", 0.16, "highpass", 550);
+          const chirp = addToneLayer("sine", 1150, 0.003);
+          const chirpLfo = context.createOscillator();
+          const chirpDepth = context.createGain();
+          chirpLfo.frequency.value = 0.25;
+          chirpDepth.gain.value = 120;
+          chirpLfo.connect(chirpDepth);
+          chirpDepth.connect(chirp.frequency);
+          chirpLfo.start();
+          stopCallbacks.push(() => {
+            try {
+              chirpLfo.stop();
+            } catch {
+              // no-op: source may already be stopped
+            }
+            chirpLfo.disconnect();
+            chirpDepth.disconnect();
+          });
+          break;
+        }
+        case "city":
+          addNoiseLayer("brown", 0.2, "lowpass", 280);
+          addToneLayer("sawtooth", 55, 0.016);
+          addToneLayer("sine", 85, 0.01);
+          break;
+        case "cinematic": {
+          addToneLayer("sawtooth", 48, 0.03);
+          addToneLayer("sine", 72, 0.018);
+          const swellLfo = context.createOscillator();
+          const swellDepth = context.createGain();
+          swellLfo.frequency.value = 0.08;
+          swellDepth.gain.value = 0.04;
+          swellLfo.connect(swellDepth);
+          swellDepth.connect(masterGain.gain);
+          swellLfo.start();
+          stopCallbacks.push(() => {
+            try {
+              swellLfo.stop();
+            } catch {
+              // no-op: source may already be stopped
+            }
+            swellLfo.disconnect();
+            swellDepth.disconnect();
+          });
+          break;
+        }
+        case "lofi":
+          addNoiseLayer("brown", 0.08, "highpass", 320);
+          addToneLayer("triangle", 220, 0.012);
+          addToneLayer("sine", 440, 0.006);
+          break;
+        case "abstract":
+          addToneLayer("sine", 320, 0.02);
+          addToneLayer("triangle", 640, 0.01);
+          addNoiseLayer("white", 0.015, "highpass", 1800);
+          break;
+        case "whiteNoise":
+          addNoiseLayer("white", 0.22, "highpass", 60);
+          break;
+        case "pinkNoise":
+          addNoiseLayer("pink", 0.22, "lowpass", 2400);
+          break;
+        case "brownNoise":
+          addNoiseLayer("brown", 0.25, "lowpass", 800);
+          break;
+      }
+
+      return {
+        context,
+        masterGain,
+        stop: () => {
+          stopCallbacks.forEach((stopLayer) => stopLayer());
+        },
+      };
+    },
+    []
+  );
+
+  const startPlayback = useCallback(
+    async (scene: Soundscape) => {
+      await stopPlayback(false);
+
+      if (scene.engine === "none") {
+        return false;
+      }
+
+      if (scene.audioUrl) {
+        const audio = new Audio(scene.audioUrl);
+        audio.loop = true;
+        audio.volume = volume;
+        try {
+          await audio.play();
+          audioRef.current = audio;
+          return true;
+        } catch {
+          audio.pause();
+          return false;
+        }
+      }
+
+      const generatedSound = createGeneratedSound(scene.engine, volume);
+      if (!generatedSound) {
+        return false;
+      }
+
+      generatedAudioRef.current = generatedSound;
+      return true;
+    },
+    [createGeneratedSound, stopPlayback, volume]
+  );
+
+  const toggleMiniTimer = () => {
+    if (isTimerActive) {
+      clearTimerInterval();
+      setIsTimerActive(false);
+      return;
+    }
+
+    if (timeLeft === 0) {
+      setTimeLeft(timerModes[timerMode].minutes * 60);
+    }
+    setIsTimerActive(true);
+  };
+
+  const handleTimerModeChange = (mode: TimerMode) => {
+    clearTimerInterval();
+    setTimerMode(mode);
+    setIsTimerActive(false);
+    setTimeLeft(timerModes[mode].minutes * 60);
+  };
+
   const resetMiniTimer = () => {
+    clearTimerInterval();
     setIsTimerActive(false);
     setTimeLeft(timerModes[timerMode].minutes * 60);
   };
@@ -454,68 +1045,285 @@ export default function Dashboard() {
     return soundscapes.filter((scene) => scene.category === activeSoundCategory);
   }, [activeSoundCategory]);
 
-  useEffect(() => {
+  const handleBackgroundSelect = (sceneId: string) => {
     setVideoError(false);
-  }, [activeBackground?.id]);
+    setBackgroundId(sceneId);
+  };
 
-  useEffect(() => {
+  const handleVolumeChange = (nextVolume: number) => {
+    setVolume(nextVolume);
+
     if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
+      audioRef.current.volume = nextVolume;
     }
 
-    if (!activeSound?.audioUrl) {
-      setIsPlaying(false);
-      return;
-    }
-
-    const audio = new Audio(activeSound.audioUrl);
-    audio.loop = true;
-    audio.volume = volume;
-    audioRef.current = audio;
-    setIsPlaying(false);
-
-    return () => {
-      audio.pause();
-    };
-  }, [activeSound?.audioUrl, volume]);
-
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = volume;
-    }
-  }, [volume]);
-
-  const togglePlayback = async () => {
-    if (!audioRef.current) {
-      return;
-    }
-
-    if (isPlaying) {
-      audioRef.current.pause();
-      setIsPlaying(false);
-      return;
-    }
-
-    try {
-      await audioRef.current.play();
-      setIsPlaying(true);
-    } catch {
-      setIsPlaying(false);
+    if (generatedAudioRef.current) {
+      generatedAudioRef.current.masterGain.gain.value = nextVolume;
     }
   };
 
-  const hasAudio = Boolean(activeSound?.audioUrl);
+  const handleSoundSelect = async (sceneId: string) => {
+    setSoundId(sceneId);
+
+    const scene = soundscapes.find((item) => item.id === sceneId);
+    if (!scene) {
+      return;
+    }
+
+    const isStarted = await startPlayback(scene);
+    setIsPlaying(isStarted);
+  };
+
+  useEffect(() => {
+    return () => {
+      clearTimerInterval();
+      void stopPlayback(false);
+    };
+  }, [clearTimerInterval, stopPlayback]);
+
+  const atmospherePanel = (
+    <div
+      className={`${isUiTransparent
+        ? "bg-white/30 dark:bg-slate-900/30 border-white/20 dark:border-slate-700/20"
+        : "bg-white/75 dark:bg-slate-900/70 border-white/40 dark:border-slate-700/40"
+        } backdrop-blur-xl rounded-3xl border p-6 shadow-sm transition-colors relative`}
+    >
+      <div className="absolute top-6 right-6 flex items-center gap-2 flex-wrap">
+        <button
+          onClick={() => setIsAtmosphereOpen((prev) => !prev)}
+          className="px-4 py-2 rounded-full text-sm font-semibold border border-slate-200/80 dark:border-slate-700/80 text-slate-600 dark:text-slate-300 hover:bg-white/80 dark:hover:bg-slate-800/80 transition"
+        >
+          {isAtmosphereOpen ? "Hide" : "Show"}
+        </button>
+        <button
+          onClick={() => setIsUiTransparent((prev) => !prev)}
+          className="px-4 py-2 rounded-full text-sm font-semibold border border-slate-200/80 dark:border-slate-700/80 text-slate-600 dark:text-slate-300 hover:bg-white/80 dark:hover:bg-slate-800/80 transition"
+        >
+          {isUiTransparent ? "Solid" : "Glass"}
+        </button>
+        <button
+          onClick={() => setIsUiHidden(true)}
+          className="px-4 py-2 rounded-full text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition"
+        >
+          Hide All UI
+        </button>
+      </div>
+
+      <div className="flex flex-col gap-4 items-center text-center">
+        <div className="flex flex-col items-center gap-3">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Focus Atmosphere</h2>
+            <p className="text-sm text-slate-600 dark:text-slate-300">
+              Pick a live background and a soundscape to match your focus.
+            </p>
+          </div>
+        </div>
+
+        {isAtmosphereOpen && (
+          <div className="w-full flex flex-col items-center gap-6">
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <button
+                onClick={() => setActiveTab("backgrounds")}
+                className={`px-4 py-2 rounded-full text-sm font-semibold transition border ${activeTab === "backgrounds"
+                  ? "bg-emerald-600 text-white border-emerald-600"
+                  : "bg-white/80 dark:bg-slate-900/70 text-slate-700 dark:text-slate-200 border-white/40 dark:border-slate-700/40 hover:bg-white"
+                  }`}
+              >
+                Live Backgrounds
+              </button>
+              <button
+                onClick={() => setActiveTab("sounds")}
+                className={`px-4 py-2 rounded-full text-sm font-semibold transition border ${activeTab === "sounds"
+                  ? "bg-emerald-600 text-white border-emerald-600"
+                  : "bg-white/80 dark:bg-slate-900/70 text-slate-700 dark:text-slate-200 border-white/40 dark:border-slate-700/40 hover:bg-white"
+                  }`}
+              >
+                Sounds
+              </button>
+            </div>
+
+            {activeTab === "backgrounds" && (
+              <div className="w-full flex flex-col items-center gap-4">
+                <div className="flex flex-wrap justify-center gap-2">
+                  {backgroundCategories.map((category) => (
+                    <button
+                      key={category}
+                      onClick={() => setActiveBackgroundCategory(category)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold transition border ${category === activeBackgroundCategory
+                        ? "bg-emerald-600 text-white border-emerald-600"
+                        : "bg-white/80 dark:bg-slate-900/70 text-slate-700 dark:text-slate-200 border-white/40 dark:border-slate-700/40 hover:bg-white"
+                        }`}
+                    >
+                      {category}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="grid w-full gap-4 [grid-template-columns:repeat(auto-fit,minmax(260px,1fr))]">
+                  {filteredBackgrounds.map((scene) => (
+                    <button
+                      key={scene.id}
+                      onClick={() => handleBackgroundSelect(scene.id)}
+                      className={`text-center rounded-2xl border p-4 transition shadow-sm ${scene.id === activeBackground?.id
+                        ? "border-emerald-500 bg-emerald-50/80"
+                        : "border-white/40 bg-white/70 hover:bg-white"
+                        }`}
+                    >
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="h-20 w-32 rounded-xl bg-slate-200/70 overflow-hidden">
+                          {scene.videoUrl ? (
+                            <video
+                              className="h-full w-full object-cover"
+                              src={scene.videoUrl}
+                              muted
+                              loop
+                              playsInline
+                              autoPlay
+                              preload="metadata"
+                            />
+                          ) : scene.imageUrl ? (
+                            <div
+                              className="h-full w-full bg-cover bg-center"
+                              style={{ backgroundImage: `url(${scene.imageUrl})` }}
+                            />
+                          ) : (
+                            <div className="h-full w-full bg-[radial-gradient(circle_at_top,#bbf7d0,transparent_60%),radial-gradient(circle_at_30%_60%,#fde68a,transparent_55%),radial-gradient(circle_at_80%_20%,#bae6fd,transparent_55%)]" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">{scene.label}</p>
+                          <p className="text-xs text-slate-600 mt-1">{scene.description}</p>
+                          {!scene.videoUrl && !scene.imageUrl && scene.id !== "default" && (
+                            <p className="text-[11px] text-amber-600 mt-2">
+                              Add a video or image URL to enable a live background.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeTab === "sounds" && (
+              <div className="w-full flex flex-col items-center gap-4">
+                <div className="flex flex-wrap justify-center gap-2">
+                  {soundCategories.map((category) => (
+                    <button
+                      key={category}
+                      onClick={() => setActiveSoundCategory(category)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold transition border ${category === activeSoundCategory
+                        ? "bg-emerald-600 text-white border-emerald-600"
+                        : "bg-white/80 dark:bg-slate-900/70 text-slate-700 dark:text-slate-200 border-white/40 dark:border-slate-700/40 hover:bg-white"
+                        }`}
+                    >
+                      {category}
+                    </button>
+                  ))}
+                </div>
+                <div className="w-full overflow-x-auto pb-2">
+                  <div className="flex w-max min-w-full justify-center gap-3 px-1">
+                    {filteredSoundscapes.map((scene) => {
+                      const isActive = scene.id === activeSound?.id;
+                      const icon = soundIconsById[scene.id] ?? soundCategoryIcons[scene.category];
+
+                      return (
+                        <button
+                          key={scene.id}
+                          onClick={() => {
+                            void handleSoundSelect(scene.id);
+                          }}
+                          className={`min-w-[220px] rounded-2xl border px-4 py-3 text-left transition ${isActive
+                            ? "border-emerald-500 bg-emerald-50/90 dark:bg-emerald-900/30"
+                            : "border-white/40 bg-white/75 dark:bg-slate-900/70 hover:bg-white dark:hover:bg-slate-800"
+                            }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-base leading-none">{icon}</span>
+                            <span className={`text-sm font-semibold ${isActive ? "text-emerald-800 dark:text-emerald-200" : "text-slate-800 dark:text-slate-100"}`}>
+                              {scene.label}
+                            </span>
+                          </div>
+                          <div className="mt-2 flex items-center gap-2">
+                            <span className={`material-symbols-outlined text-base ${isActive && isPlaying ? "text-emerald-600" : "text-slate-400 dark:text-slate-500"}`}>
+                              {isActive && isPlaying ? "volume_up" : "volume_off"}
+                            </span>
+                            <span className={`h-px flex-1 ${isActive ? "bg-emerald-400/80" : "bg-slate-400/50 dark:bg-slate-600/70"}`} />
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="flex flex-col items-center gap-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+                      {isPlaying ? "Now Playing" : "Select a sound to play"}
+                    </span>
+                    <span className="text-sm text-slate-600 dark:text-slate-300">
+                      {activeSound?.description}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      Volume
+                    </label>
+                    <input
+                      type="range"
+                      min={0}
+                      max={1}
+                      step={0.01}
+                      value={volume}
+                      onChange={(event) => handleVolumeChange(Number(event.target.value))}
+                      className="w-40 accent-emerald-600"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen flex flex-col relative overflow-hidden transition-colors duration-500">
-      <div className="fixed inset-0 bg-focus-light dark:bg-focus-dark -z-20"></div>
+    <div className="min-h-screen relative overflow-hidden bg-transparent transition-colors duration-500 p-6 lg:p-10 flex flex-col gap-8">
+      <div className="fixed inset-0 -z-20">
+        {activeBackground?.videoUrl ? (
+          <video
+            key={activeBackground.id}
+            className="h-full w-full object-cover"
+            src={activeBackground.videoUrl}
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="auto"
+            onLoadStart={() => setVideoError(false)}
+            onError={() => setVideoError(true)}
+          />
+        ) : (
+          <div
+            className="h-full w-full"
+            style={{
+              backgroundImage: activeBackground?.imageUrl
+                ? `url(${activeBackground.imageUrl})`
+                : activeBackground?.id === "default"
+                  ? "none"
+                  : "radial-gradient(circle at top, rgba(34, 197, 94, 0.35), transparent 55%), radial-gradient(circle at 30% 40%, rgba(251, 191, 36, 0.3), transparent 45%), radial-gradient(circle at 80% 20%, rgba(56, 189, 248, 0.25), transparent 45%)",
+              backgroundColor: activeBackground?.id === "default" ? "#f8fafc" : undefined,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }}
+          />
+        )}
+      </div>
       <div className="fixed inset-0 -z-10 bg-white/15 dark:bg-slate-950/55" />
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(148,163,184,0.15)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.15)_1px,transparent_1px)] bg-[size:64px_64px] opacity-40" />
       </div>
-
-      <div className="flex-1 p-6 lg:p-10 flex flex-col gap-8">
 
       {videoError && (
         <div className="fixed bottom-6 right-6 z-20 bg-white/90 dark:bg-slate-900/90 text-slate-700 dark:text-slate-200 text-xs px-3 py-2 rounded-full shadow">
@@ -581,21 +1389,21 @@ export default function Dashboard() {
                 </div>
                 <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-full p-1">
                   <button
-                    onClick={() => setTimerMode("pomodoro")}
+                    onClick={() => handleTimerModeChange("pomodoro")}
                     onMouseDown={(e) => e.stopPropagation()}
                     className={`px-2 py-1 text-[10px] font-semibold rounded-full transition ${timerMode === "pomodoro" ? "bg-emerald-600 text-white" : "text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700"}`}
                   >
                     Focus
                   </button>
                   <button
-                    onClick={() => setTimerMode("shortBreak")}
+                    onClick={() => handleTimerModeChange("shortBreak")}
                     onMouseDown={(e) => e.stopPropagation()}
                     className={`px-2 py-1 text-[10px] font-semibold rounded-full transition ${timerMode === "shortBreak" ? "bg-emerald-600 text-white" : "text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700"}`}
                   >
                     Short
                   </button>
                   <button
-                    onClick={() => setTimerMode("longBreak")}
+                    onClick={() => handleTimerModeChange("longBreak")}
                     onMouseDown={(e) => e.stopPropagation()}
                     className={`px-2 py-1 text-[10px] font-semibold rounded-full transition ${timerMode === "longBreak" ? "bg-emerald-600 text-white" : "text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700"}`}
                   >
@@ -610,10 +1418,9 @@ export default function Dashboard() {
 
       {!isUiHidden && (
         <div className={`${isUiTransparent ? "opacity-70" : "opacity-100"} transition-opacity duration-300`}>
-          <FocusDashboardPanel />
+          <FocusDashboardPanel atmospherePanel={atmospherePanel} />
         </div>
       )}
-      </div>
       <Footer />
     </div>
   );
