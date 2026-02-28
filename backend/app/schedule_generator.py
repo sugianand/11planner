@@ -1,7 +1,29 @@
 from datetime import datetime, timedelta
-from typing import List
+from typing import List, Optional
 from app.models import Task, ScheduleBlock
+import uuid 
 import math
+from dataclasses import dataclass
+from datetime import datetime, timedelta, time
+
+
+# using dataclass for structure when building out schedule generator 
+@dataclass
+class Preferences:
+    workdays: List[str]
+    work_start: time
+    work_end: time
+    study_limit_hours: float
+    workstyle: Optional[str] = None  
+    additional_info: Optional[str] = None
+
+@dataclass 
+class BusyBlock:
+    start: datetime
+    end: datetime
+    title: str
+
+
 
 class ScheduleGenerator:
     """
@@ -17,8 +39,54 @@ class ScheduleGenerator:
         self.max_hours_per_day = max_hours_per_day
         self.focus_block_hours = focus_block_hours
         self.break_minutes = 15
+
+    def day_name(self, dt: datetime) -> str:
+        return dt.strftime("%A") # returns day names like mon, tues, etc.
+    
+    def is_workday(self, dt:datetime, pref: Preferences) -> bool:
+        return self.day_name(dt) in pref.workdays
+    
+    def set_time(self, dt: datetime, t: time) -> datetime:
+        return dt.replace(hour=t.hour, minute =t.minute, second = 0, microsecond=0)
+    
+    def move_to_next_work_start(self, dt: datetime, pref: Preferences) -> datetime:
+        while not self.is_workday(dt, pref):
+            dt += timedelta(days=1)
+        return self.set_time(dt, pref.work_start)
+    
+    def work_window_end(self, dt: datetime, pref: Preferences) -> datetime:
+        return self.set_time(dt, pref.work_end)
+    
+    def overlaps(self, a_start: datetime, a_end: datetime, b_start: datetime, b_end: datetime) -> bool:
+        return a_start < b_end and b_start < a_end #checks if time ranges overlap
+    
+    def overlaps_busy(self, start: datetime, end: datetime, busy_blocks: List[BusyBlock]) -> bool:
+        for block in busy_blocks:
+            if self.overlaps(start, end, block.start, block.end):
+                return True
+        return False
+    #checks to see if proposed schedule block overlaps with any busy blocks 
+
+    def skip_if_busy(self, dt: datetime, busy_blocks: List[BusyBlock]) -> datetime:
+        for block in busy_blocks:
+            if block.start <= dt < block.end:
+                return block.end
+        return dt
+    #if current time is in busy block, jump to end of that block
+
+    def next_day_start(self, dt: datetime, pref: Preferences) -> datetime:
+        dt += timedelta(days=1)
+        return self.move_to_next_work_start(dt, pref)
+    #move to next day and set to work start time, used when current day time ends and you want to go to the next day 
+
         
-    def generate_schedule(self, tasks: List[Task], start_date: datetime = None) -> List[ScheduleBlock]:
+    def generate_schedule(self, 
+                          tasks: List[Task],
+                          prefs: Preferences,
+                          start_date: datetime = None,
+                          busy: Optional[List[BusyBlock]] = None,
+                            ) -> List[ScheduleBlock]:
+                          
         """
         Generate optimal schedule for given tasks.
         
@@ -50,6 +118,9 @@ class ScheduleGenerator:
             return days_until / hours_needed
         
         sorted_tasks = sorted(pending_tasks, key=urgency_score)
+
+        current_dt = self.move_to_next_work_start(start_date, prefs)
+        current_dt = self.skip_if_busy(current_dt, busy)
         
         schedule_blocks = []
         current_date = start_date.replace(hour=9, minute=0, second=0, microsecond=0)
