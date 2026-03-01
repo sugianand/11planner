@@ -12,7 +12,7 @@ body {
   margin: 0;
   color: var(--foreground);
   font-family: var(--font-manrope), Arial, Helvetica, sans-serif;
-  background-image: url('/images/background.png?v=2');
+  background-image: url('/images/background.png?v=3');
   background-size: cover;
   background-position: center center;
   background-attachment: fixed;

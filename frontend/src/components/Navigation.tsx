@@ -82,8 +82,8 @@ export default function Navigation() {
                 <Link
                   href="/about"
                   className={`font-medium transition ${isActive("/about")
-                    ? "text-blue-600 dark:text-blue-400 border-b-2 border-b-blue-600 dark:border-b-blue-400"
-                    : "text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400"
+                    ? "text-emerald-600 dark:text-emerald-400 border-b-2 border-b-emerald-600 dark:border-b-emerald-400"
+                    : "text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400"
                     }`}
                 >
                   About Us
@@ -181,12 +181,12 @@ export default function Navigation() {
 
         {/* Mobile Menu */}
         {isMenuOpen && (
-          <div className="md:hidden mt-4 pb-4 border-t border-white/20 dark:border-slate-700/40">
-            <div className="flex flex-col gap-3 pt-4">
+          <div className="md:hidden mt-4 pb-4 bg-white/70 dark:bg-slate-800/70 border-t border-white/40 dark:border-slate-700/40 rounded-b-lg">
+            <div className="flex flex-col gap-3 pt-4 px-3">
               <Link
                 href="/"
                 className={`block font-medium py-2 px-3 rounded transition ${isActive("/")
-                  ? "text-blue-600 dark:text-blue-400 bg-emerald-50 dark:bg-emerald-900/20"
+                  ? "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20"
                   : "text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-700/30"
                   }`}
                 onClick={() => setIsMenuOpen(false)}
@@ -199,7 +199,7 @@ export default function Navigation() {
                   <Link
                     href="/dashboard"
                     className={`block font-medium py-2 px-3 rounded transition ${isActive("/dashboard")
-                      ? "text-blue-600 dark:text-blue-400 bg-emerald-50 dark:bg-emerald-900/20"
+                      ? "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20"
                       : "text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-700/30"
                       }`}
                     onClick={() => setIsMenuOpen(false)}
@@ -210,7 +210,7 @@ export default function Navigation() {
                   <Link
                     href="/tasks"
                     className={`block font-medium py-2 px-3 rounded transition ${isActive("/tasks")
-                      ? "text-blue-600 dark:text-blue-400 bg-emerald-50 dark:bg-emerald-900/20"
+                      ? "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20"
                       : "text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-700/30"
                       }`}
                     onClick={() => setIsMenuOpen(false)}
@@ -221,7 +221,7 @@ export default function Navigation() {
                   <Link
                     href="/courses"
                     className={`block font-medium py-2 px-3 rounded transition ${isActive("/courses")
-                      ? "text-blue-600 dark:text-blue-400 bg-emerald-50 dark:bg-emerald-900/20"
+                      ? "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20"
                       : "text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-700/30"
                       }`}
                     onClick={() => setIsMenuOpen(false)}
@@ -232,7 +232,7 @@ export default function Navigation() {
                   <Link
                     href="/schedule"
                     className={`block font-medium py-2 px-3 rounded transition ${isActive("/schedule")
-                      ? "text-blue-600 dark:text-blue-400 bg-emerald-50 dark:bg-emerald-900/20"
+                      ? "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20"
                       : "text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-700/30"
                       }`}
                     onClick={() => setIsMenuOpen(false)}
@@ -243,7 +243,7 @@ export default function Navigation() {
                   <Link
                     href="/profile"
                     className={`block font-medium py-2 px-3 rounded transition ${isActive("/profile")
-                      ? "text-blue-600 dark:text-blue-400 bg-emerald-50 dark:bg-emerald-900/20"
+                      ? "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20"
                       : "text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-700/30"
                       }`}
                     onClick={() => setIsMenuOpen(false)}
@@ -254,7 +254,7 @@ export default function Navigation() {
                   <Link
                     href="/settings"
                     className={`block font-medium py-2 px-3 rounded transition ${isActive("/settings")
-                      ? "text-blue-600 dark:text-blue-400 bg-emerald-50 dark:bg-emerald-900/20"
+                      ? "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20"
                       : "text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-700/30"
                       }`}
                     onClick={() => setIsMenuOpen(false)}

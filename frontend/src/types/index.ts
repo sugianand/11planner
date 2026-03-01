@@ -10,6 +10,12 @@ export interface Course {
   courseDate: string;
   startTime: string;
   endTime: string;
+  isOnline?: boolean;
+  hasLab?: boolean;
+  labDay?: string;
+  labStartTime?: string;
+  labEndTime?: string;
+  labIsOnline?: boolean;
 }
 
 export interface CourseCreate {
@@ -21,6 +27,12 @@ export interface CourseCreate {
   courseDate: string;
   startTime: string;
   endTime: string;
+  isOnline?: boolean;
+  hasLab?: boolean;
+  labDay?: string;
+  labStartTime?: string;
+  labEndTime?: string;
+  labIsOnline?: boolean;
 }
 
 // ========== Assignment Types ==========

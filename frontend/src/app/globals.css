@@ -19,7 +19,7 @@
 .bg-focus-light {
   background-image:
     linear-gradient(to bottom, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.05)),
-    url('/images/background.png?v=2');
+    url('/images/background.png?v=3');
   background-size: cover;
   background-position: center center;
   background-attachment: fixed;
@@ -29,7 +29,7 @@
 .bg-focus-dark {
   background-image:
     linear-gradient(to right, rgba(5, 5, 10, 0.85), rgba(5, 5, 10, 0.7)),
-    url('/images/background.png?v=2');
+    url('/images/background.png?v=3');
   background-size: cover;
   background-position: center center;
   background-attachment: fixed;

@@ -13,10 +13,10 @@ export default function Footer() {
           <h2 className="text-slate-900 dark:text-white text-xl font-bold tracking-tight">11 Planner</h2>
         </div>
         <div className="flex flex-wrap justify-center gap-8 text-sm font-semibold text-slate-900 dark:text-white">
-          <Link className="hover:text-blue-600 dark:hover:text-blue-400 transition" href="/privacy">Privacy</Link>
-          <Link className="hover:text-blue-600 dark:hover:text-blue-400 transition" href="/terms">Terms</Link>
-          <Link className="hover:text-blue-600 dark:hover:text-blue-400 transition" href="/about">About Us</Link>
-          <Link className="hover:text-blue-600 dark:hover:text-blue-400 transition" href="/support">Support</Link>
+          <Link className="hover:text-emerald-600 dark:hover:text-emerald-400 transition" href="/privacy">Privacy</Link>
+          <Link className="hover:text-emerald-600 dark:hover:text-emerald-400 transition" href="/terms">Terms</Link>
+          <Link className="hover:text-emerald-600 dark:hover:text-emerald-400 transition" href="/about">About Us</Link>
+          <Link className="hover:text-emerald-600 dark:hover:text-emerald-400 transition" href="/support">Support</Link>
         </div>
         <div className="flex flex-col items-center lg:items-end gap-1">
           <p className="text-slate-900 dark:text-white text-sm font-semibold">© 2026 11 Planner. All rights reserved.</p>

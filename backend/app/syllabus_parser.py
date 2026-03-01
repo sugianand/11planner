@@ -1,7 +1,6 @@
 import io
 import re
 from typing import Optional
-
 from pypdf import PdfReader
 
 COURSE_CODE_RE = re.compile(r"\b([A-Z]{2,6})\s?-?\s?(\d{3,4}[A-Z]?)\b", re.IGNORECASE)
@@ -68,11 +67,16 @@ def _extract_professor_name(value: str) -> Optional[str]:
     name_part = re.sub(r"\s*\(.*?@.*?\)", "", value)
     name_part = re.sub(r"\s+[\w\.-]+@[\w\.-]+\.\w+", "", name_part)
     
+    # Remove office information and location
+    name_part = re.sub(r"\s+(?:Office|office|OFFICE):\s*[^\n]*", "", name_part)
+    name_part = re.sub(r"\s+(?:Location|location|LOCATION):\s*[^\n]*", "", name_part)
+    name_part = re.sub(r"\s+(?:Remote|remote|REMOTE)", "", name_part)
+    
     # Remove bullet points and common prefixes
     name_part = re.sub(r"^[•\-*]\s*", "", name_part)
     
     # Split by common delimiters to get just the name
-    parts = re.split(r"[;/,]\s*(?:phone|email|office|ext|extension|room|office hours)", name_part, flags=re.IGNORECASE)
+    parts = re.split(r"[;/,]\s*(?:phone|email|office|ext|extension|room|office hours|by appointment)", name_part, flags=re.IGNORECASE)
     name_part = parts[0].strip()
     
     # Remove leading labels (Instructor:, Professor:, etc.)
@@ -88,8 +92,8 @@ def _extract_professor_name(value: str) -> Optional[str]:
     # Clean up whitespace
     name_part = re.sub(r"\s+", " ", name_part).strip()
     
-    # Only return if it looks like a name
-    if name_part and len(name_part) > 2 and len(name_part) < 100:
+    # Only return if it looks like a name (typically 2-3 words, no numbers)
+    if name_part and len(name_part) > 2 and len(name_part) < 100 and not re.search(r"\d{4,}", name_part):
         return name_part
     
     return None
@@ -111,6 +115,144 @@ def _is_valid_professor_line(line: str) -> bool:
         if re.search(pattern, line_lower):
             return True
     return False
+
+
+def _extract_lab_times(lines: list[str]) -> tuple[bool, Optional[str], Optional[str], Optional[str]]:
+    """Extract lab meeting day and times from syllabus lines.
+    Returns: (has_lab, lab_day, lab_start_time, lab_end_time)
+    """
+    days_of_week = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    day_abbreviations = {
+        "Mon": "Monday", "Tue": "Tuesday", "Wed": "Wednesday", 
+        "Thu": "Thursday", "Fri": "Friday", "Sat": "Saturday", "Sun": "Sunday",
+        "M": "Monday", "T": "Tuesday", "W": "Wednesday", 
+        "R": "Thursday", "F": "Friday", "S": "Saturday", "U": "Sunday"
+    }
+    
+    has_lab = False
+    lab_day = None
+    lab_start_time = None
+    lab_end_time = None
+    
+    # Keywords indicating EXPLICIT lab/recitation sessions
+    # Be specific about what constitutes a "lab" - must have actual session marker
+    lab_session_keywords = [
+        "lab - ", "lab:", "lab", "laboratory",
+        "lab session", "lab meeting", "lab section", "laboratory session",
+        "recitation", "recitation meeting", "recitation session",
+        "practical session", "hands-on session", "discussion", "discussion section"
+    ]
+    
+    # Search first 80 lines for lab info
+    for idx, line in enumerate(lines[:80]):
+        line_lower = line.lower()
+        
+        # Step 1: Check for EXPLICIT lab/recitation keywords
+        has_explicit_lab_keyword = any(keyword in line_lower for keyword in lab_session_keywords)
+        
+        if not has_explicit_lab_keyword:
+            continue
+        
+        # Step 2: If we have an explicit lab keyword, look for day and times in the SAME line
+        # Extract times first
+        time_patterns = [
+            r'(\d{1,2}):(\d{2})\s*(?:am|pm|a\.m\.|p\.m\.)?\s*[-–—]\s*(\d{1,2}):(\d{2})\s*(?:am|pm|a\.m\.|p\.m\.)?',
+            r'(\d{1,2}):(\d{2})\s*[-–—]\s*(\d{1,2}):(\d{2})',
+        ]
+        
+        time_match = None
+        for pattern in time_patterns:
+            time_match = re.search(pattern, line, re.IGNORECASE)
+            if time_match:
+                break
+        
+        # Only continue if we found times on this line
+        if not time_match:
+            continue
+        
+        groups = time_match.groups()
+        if len(groups) >= 4:
+            start_hour = groups[0]
+            start_min = groups[1]
+            end_hour = groups[2]
+            end_min = groups[3]
+            
+            # Detect am/pm from line context
+            meridiem = "am"
+            if "pm" in line_lower or "p.m" in line_lower:
+                meridiem = "pm"
+            
+            lab_start_time = f"{start_hour}:{start_min} {meridiem}"
+            lab_end_time = f"{end_hour}:{end_min} {meridiem}"
+        
+        # Step 3: Look for day of week on same line
+        for day in days_of_week:
+            if day.lower() in line_lower:
+                lab_day = day
+                break
+        
+        # Try 3-letter abbreviations
+        if not lab_day:
+            abbrev_3 = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+            for abbr in abbrev_3:
+                if re.search(rf"\b{abbr}\b", line, re.IGNORECASE):
+                    lab_day = day_abbreviations.get(abbr, abbr)
+                    break
+        
+        # Try 1-letter abbreviations (R=Thursday, etc.)
+        if not lab_day:
+            for abbr, full_day in day_abbreviations.items():
+                if len(abbr) == 1 and re.search(rf"\b{abbr}\b", line):
+                    lab_day = full_day
+                    break
+        
+        # Only mark has_lab=True if we found BOTH day AND times on this line
+        if lab_day and lab_start_time and lab_end_time:
+            has_lab = True
+            break
+    
+    return has_lab, lab_day, lab_start_time, lab_end_time
+
+
+def _detect_online_course(lines: list[str]) -> tuple[bool, bool]:
+    """Detect if course is fully online/asynchronous or hybrid.
+    Returns: (is_course_online, is_lab_online)
+    
+    Detects: "asynchronous", "fully online", "completely online", "online only",
+    "hybrid" (implies some online component), "on-line lecture", "web-based course", "distance education"
+    Ignores negations like "not online" or "not on-line"
+    """
+    # Strong indicators of online/async course format
+    online_keywords = [
+        "asynchronous", "fully online", "completely online", "online only",
+        "web-based course", "distance education", "distance course",
+        "hybrid", "on-line lecture", "online lecture"
+    ]
+    
+    is_course_online = False
+    is_lab_online = False
+    
+    # Search first 80 lines for course format detection
+    for line in lines[:80]:
+        line_lower = line.lower()
+        
+        # Skip lines with negation (NOT online)
+        if re.search(r'\bnot\s+(?:an\s+)?on[-]?line\b', line_lower):
+            continue
+        if re.search(r'\bnot\s+(?:an\s+)?online\b', line_lower):
+            continue
+        
+        # Check for online indicators
+        for keyword in online_keywords:
+            if keyword in line_lower:
+                # Check if it mentions lab in same line (might mean lab is online)
+                if "lab" in line_lower or "laboratory" in line_lower:
+                    is_lab_online = True
+                else:
+                    is_course_online = True
+                return is_course_online, is_lab_online
+    
+    return is_course_online, is_lab_online
 
 
 def _extract_meeting_times(lines: list[str]) -> tuple[Optional[str], Optional[str], Optional[str]]:
@@ -136,10 +278,69 @@ def _extract_meeting_times(lines: list[str]) -> tuple[Optional[str], Optional[st
     start_time = None
     end_time = None
     
+    # First pass: look for explicit "Meeting Days:" and "Meeting Time:" labels
+    for idx, line in enumerate(lines[:60]):
+        line_lower = line.lower()
+        
+        # Look for explicit meeting day label
+        if "meeting day" in line_lower and ":" in line:
+            parts = line.split(":", 1)
+            if len(parts) == 2:
+                day_str = parts[1].strip()
+                found_days = []
+                
+                # Extract full day names first (to avoid issues with abbreviations)
+                for full_day in days_of_week:
+                    if re.search(rf'\b{full_day}\b', day_str, re.IGNORECASE):
+                        found_days.append(full_day)
+                
+                # Also check for 3-letter abbreviations with word boundaries
+                if not found_days or len(found_days) < 2:  # If not all days found yet
+                    for abbr in ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]:
+                        if re.search(rf'\b{abbr}\b', day_str, re.IGNORECASE):
+                            full_day = day_abbreviations.get(abbr, abbr)
+                            if full_day not in found_days:
+                                found_days.append(full_day)
+                
+                if found_days:
+                    course_date = " ".join(found_days)
+        
+        # Look for explicit meeting time label
+        if "meeting time" in line_lower and ":" in line:
+            parts = line.split(":", 1)
+            if len(parts) == 2:
+                time_str = parts[1].strip()
+                # Extract time range
+                time_patterns = [
+                    r'(\d{1,2}):(\d{2})\s*(?:am|pm|a\.m\.|p\.m\.)?\s*[-–—]\s*(\d{1,2}):(\d{2})\s*(?:am|pm|a\.m\.|p\.m\.)?',
+                    r'(\d{1,2}):(\d{2})\s*[-–—]\s*(\d{1,2}):(\d{2})',
+                ]
+                for pattern in time_patterns:
+                    time_match = re.search(pattern, time_str, re.IGNORECASE)
+                    if time_match:
+                        groups = time_match.groups()
+                        if len(groups) >= 4:
+                            start_hour = groups[0]
+                            start_min = groups[1]
+                            end_hour = groups[2]
+                            end_min = groups[3]
+                            
+                            # Detect am/pm
+                            meridiem = "am"
+                            if "pm" in time_str.lower() or "p.m" in time_str.lower():
+                                meridiem = "pm"
+                            
+                            start_time = f"{start_hour}:{start_min} {meridiem}"
+                            end_time = f"{end_hour}:{end_min} {meridiem}"
+                        break
+    
+    # If we found meeting info from explicit labels, return early
+    if course_date and start_time and end_time:
+        return course_date, start_time, end_time
+    
     # First pass: look for lines with strong class time indicators
     class_time_keywords = [
-        "class time", "class times", "meeting time", "meeting times",
-        "lecture", "lectures", "meets", "session times"
+        "class time", "class times", "lecture", "lectures", "meets", "session times"
     ]
     
     # Search in first 60 lines for meeting info
@@ -308,14 +509,27 @@ def _extract_course_info(lines: list[str]) -> dict:
 
         return None, None
 
-    # Extract meeting times and days early so we have them available
-    extracted_course_date, extracted_start_time, extracted_end_time = _extract_meeting_times(candidate_lines)
-    if extracted_course_date:
-        course_date = extracted_course_date
-    if extracted_start_time:
-        start_time = extracted_start_time
-    if extracted_end_time:
-        end_time = extracted_end_time
+    # Detect online/asynchronous courses FIRST
+    is_online, is_lab_online = _detect_online_course(candidate_lines)
+
+    # Extract meeting times and days only if course is NOT online
+    if not is_online:
+        extracted_course_date, extracted_start_time, extracted_end_time = _extract_meeting_times(candidate_lines)
+        if extracted_course_date:
+            course_date = extracted_course_date
+        if extracted_start_time:
+            start_time = extracted_start_time
+        if extracted_end_time:
+            end_time = extracted_end_time
+
+    # Extract lab information
+    has_lab, lab_day, lab_start_time, lab_end_time = _extract_lab_times(candidate_lines)
+    
+    # Only use lab times if lab is not online
+    if is_lab_online:
+        lab_day = None
+        lab_start_time = None
+        lab_end_time = None
 
     # Check first line for code and name
     if len(candidate_lines) > 0:
@@ -332,6 +546,12 @@ def _extract_course_info(lines: list[str]) -> dict:
         detected_code, detected_name = extract_code_and_name_from_line(first_line)
         if detected_code:
             course_code = detected_code
+        
+        # Check for parenthetical code which might override the main code
+        paren_code = _extract_course_code_from_parens(first_line)
+        if paren_code:
+            course_code = paren_code
+        
         if detected_name:
             course_name = detected_name
         if course_code and course_name:
@@ -372,6 +592,12 @@ def _extract_course_info(lines: list[str]) -> dict:
                 "courseDate": course_date,
                 "startTime": start_time,
                 "endTime": end_time,
+                "isOnline": is_online,
+                "hasLab": has_lab,
+                "labDay": lab_day,
+                "labStartTime": lab_start_time,
+                "labEndTime": lab_end_time,
+                "labIsOnline": is_lab_online,
             }
 
     # Look for professor and description
@@ -409,6 +635,11 @@ def _extract_course_info(lines: list[str]) -> dict:
             detected_code = extract_code_from_line(line)
             if detected_code:
                 course_code = detected_code
+            else:
+                # Try to extract from parentheses
+                paren_code = _extract_course_code_from_parens(line)
+                if paren_code:
+                    course_code = paren_code
 
         if not course_name:
             detected_code = extract_code_from_line(line)
@@ -434,6 +665,12 @@ def _extract_course_info(lines: list[str]) -> dict:
         "courseDate": course_date,
         "startTime": start_time,
         "endTime": end_time,
+        "isOnline": is_online,
+        "hasLab": has_lab,
+        "labDay": lab_day,
+        "labStartTime": lab_start_time,
+        "labEndTime": lab_end_time,
+        "labIsOnline": is_lab_online,
     }
 
 
@@ -450,4 +687,10 @@ def parse_syllabus_text(text: str) -> dict:
         "courseDate": course.get("courseDate"),
         "startTime": course.get("startTime"),
         "endTime": course.get("endTime"),
+        "isOnline": course.get("isOnline", False),
+        "hasLab": course.get("hasLab", False),
+        "labDay": course.get("labDay"),
+        "labStartTime": course.get("labStartTime"),
+        "labEndTime": course.get("labEndTime"),
+        "labIsOnline": course.get("labIsOnline", False),
     }

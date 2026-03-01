@@ -30,11 +30,17 @@ export default function CoursesPage() {
     courseDate: "",
     startTime: "",
     endTime: "",
+    isOnline: false,
+    hasLab: false,
+    labDay: "",
+    labStartTime: "",
+    labEndTime: "",
+    labIsOnline: false,
   });
 
   useEffect(() => {
     loadCourses();
-  }, [userId]);
+  }, [userId, loadCourses]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,6 +66,12 @@ export default function CoursesPage() {
         courseDate: "",
         startTime: "",
         endTime: "",
+        isOnline: false,
+        hasLab: false,
+        labDay: "",
+        labStartTime: "",
+        labEndTime: "",
+        labIsOnline: false,
       });
       setShowForm(false);
     } catch (err) {
@@ -77,6 +89,12 @@ export default function CoursesPage() {
       courseDate: course.courseDate,
       startTime: course.startTime,
       endTime: course.endTime,
+      isOnline: course.isOnline || false,
+      hasLab: course.hasLab || false,
+      labDay: course.labDay || "",
+      labStartTime: course.labStartTime || "",
+      labEndTime: course.labEndTime || "",
+      labIsOnline: course.labIsOnline || false,
     });
     setEditingId(course.id);
     setShowForm(true);
@@ -128,6 +146,12 @@ export default function CoursesPage() {
           courseDate: data.parsed.courseDate || prev.courseDate,
           startTime: data.parsed.startTime || prev.startTime,
           endTime: data.parsed.endTime || prev.endTime,
+          isOnline: data.parsed.isOnline || prev.isOnline,
+          hasLab: data.parsed.hasLab || prev.hasLab,
+          labDay: data.parsed.labDay || prev.labDay,
+          labStartTime: data.parsed.labStartTime || prev.labStartTime,
+          labEndTime: data.parsed.labEndTime || prev.labEndTime,
+          labIsOnline: data.parsed.labIsOnline || prev.labIsOnline,
         }));
       } else {
         alert("Failed to parse syllabus. Please fill in the details manually.");
@@ -164,6 +188,10 @@ export default function CoursesPage() {
                         courseDate: "",
                         startTime: "",
                         endTime: "",
+                        hasLab: false,
+                        labDay: "",
+                        labStartTime: "",
+                        labEndTime: "",
                       });
                     }}
                     className="bg-[#306844] hover:bg-[#255236] text-white font-bold py-2.5 px-6 rounded-xl transition shadow-lg shadow-green-900/10 flex items-center gap-2"
@@ -227,82 +255,6 @@ export default function CoursesPage() {
                     />
                   </div>
 
-
-                  
-
-                    <div className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
-                        Course Days *
-                      </label>
-                      <div className="relative">
-                        <button
-                          type="button"
-                          onClick={() => setShowDaysDropdown((prev) => !prev)}
-                          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-left focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white bg-white dark:bg-slate-800"
-                        >
-                          {selectedDays.length > 0
-                            ? selectedDays.join(", ")
-                            : "Select course days"}
-                        </button>
-
-                        {showDaysDropdown && (
-                          <div className="absolute z-10 mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg p-3 space-y-2">
-                            {weekDays.map((day) => (
-                              <label key={day} className="flex items-center gap-2 cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={selectedDays.includes(day)}
-                                  onChange={(e) => toggleDay(day, e.target.checked)}
-                                  className="form-checkbox h-4 w-4 text-blue-600"
-                                />
-                                <span className="text-sm text-slate-700 dark:text-slate-200">{day}</span>
-                              </label>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-
-                  <div>
-
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
-                      Start Time*
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.startTime || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, startTime: e.target.value })
-                      }
-                      placeholder="e.g., 9:00 AM"
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800"
-                    />
-                  </div>
-
-
-                  <div>
-
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
-                      End Time*
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.endTime || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, endTime: e.target.value })
-                      }
-                      placeholder="e.g., 10:00 AM"
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800"
-                    />
-                  </div>
-
-
-
-
-
-
-
                   <div>
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
                       Course Code *
@@ -332,7 +284,182 @@ export default function CoursesPage() {
                       className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800"
                     />
                   </div>
+
+                  {!formData.isOnline && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+                        Course Days *
+                      </label>
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setShowDaysDropdown((prev) => !prev)}
+                          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-left focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white bg-white dark:bg-slate-800"
+                        >
+                          {selectedDays.length > 0
+                            ? selectedDays.join(", ")
+                            : "Select course days"}
+                        </button>
+
+                        {showDaysDropdown && (
+                          <div className="absolute z-10 mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg p-3 space-y-2">
+                            {weekDays.map((day) => (
+                            <label key={day} className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={selectedDays.includes(day)}
+                                onChange={(e) => toggleDay(day, e.target.checked)}
+                                className="form-checkbox h-4 w-4 text-blue-600"
+                              />
+                              <span className="text-sm text-slate-700 dark:text-slate-200">{day}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    </div>
+                  )}
+
+                  {!formData.isOnline && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+                          Start Time *
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.startTime || ""}
+                          onChange={(e) =>
+                            setFormData({ ...formData, startTime: e.target.value })
+                          }
+                          placeholder="e.g., 9:00 AM"
+                          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+                          End Time *
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.endTime || ""}
+                          onChange={(e) =>
+                            setFormData({ ...formData, endTime: e.target.value })
+                          }
+                          placeholder="e.g., 10:00 AM"
+                          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800"
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
+
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="isOnline"
+                    checked={formData.isOnline || false}
+                    onChange={(e) =>
+                      setFormData({ ...formData, isOnline: e.target.checked })
+                    }
+                    className="w-4 h-4 text-[#306844] rounded focus:ring-2 focus:ring-[#306844] cursor-pointer"
+                  />
+                  <label htmlFor="isOnline" className="ml-2 text-sm font-medium text-slate-700 dark:text-slate-200 cursor-pointer">
+                    This is an online/asynchronous class
+                  </label>
+                </div>
+
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="hasLab"
+                    checked={formData.hasLab || false}
+                    onChange={(e) =>
+                      setFormData({ ...formData, hasLab: e.target.checked })
+                    }
+                    className="w-4 h-4 text-[#306844] rounded focus:ring-2 focus:ring-[#306844] cursor-pointer"
+                  />
+                  <label htmlFor="hasLab" className="ml-2 text-sm font-medium text-slate-700 dark:text-slate-200 cursor-pointer">
+                    This course has a lab component
+                  </label>
+                </div>
+
+                {formData.hasLab && (
+                  <div className="border border-slate-200 dark:border-slate-700/40 rounded-lg p-4 space-y-4">
+                    <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Lab Information</h3>
+                    
+                    {!formData.labIsOnline && (
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+                          Lab Day *
+                        </label>
+                        <select
+                          value={formData.labDay || ""}
+                          onChange={(e) =>
+                            setFormData({ ...formData, labDay: e.target.value })
+                          }
+                          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800"
+                        >
+                          <option value="">Select lab day</option>
+                          <option value="Monday">Monday</option>
+                          <option value="Tuesday">Tuesday</option>
+                          <option value="Wednesday">Wednesday</option>
+                          <option value="Thursday">Thursday</option>
+                          <option value="Friday">Friday</option>
+                        </select>
+                      </div>
+                    )}
+
+                    {!formData.labIsOnline && (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+                            Lab Start Time *
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.labStartTime || ""}
+                            onChange={(e) =>
+                              setFormData({ ...formData, labStartTime: e.target.value })
+                            }
+                            placeholder="e.g., 1:00 PM"
+                            className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+                            Lab End Time *
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.labEndTime || ""}
+                            onChange={(e) =>
+                              setFormData({ ...formData, labEndTime: e.target.value })
+                            }
+                            placeholder="e.g., 3:00 PM"
+                            className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="labIsOnline"
+                        checked={formData.labIsOnline || false}
+                        onChange={(e) =>
+                          setFormData({ ...formData, labIsOnline: e.target.checked })
+                        }
+                        className="w-4 h-4 text-[#306844] rounded focus:ring-2 focus:ring-[#306844] cursor-pointer"
+                      />
+                      <label htmlFor="labIsOnline" className="ml-2 text-sm font-medium text-slate-700 dark:text-slate-200 cursor-pointer">
+                        Lab is online/asynchronous
+                      </label>
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
@@ -396,6 +523,7 @@ export default function CoursesPage() {
                   </h3>
                   <p className="text-sm font-bold uppercase tracking-wider text-[#306844] dark:text-green-400 mb-4">
                     {course.code}
+                    {course.hasLab && <span className="ml-2 inline-block bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-200 text-xs font-semibold px-2 py-0.5 rounded">Lab</span>}
                   </p>
                   {course.professor && (
                     <div className="flex items-center gap-2 mb-2 text-slate-700 dark:text-slate-300">
@@ -403,10 +531,33 @@ export default function CoursesPage() {
                       <p className="text-sm font-medium">{course.professor}</p>
                     </div>
                   )}
+                  {course.isOnline ? (
+                    <div className="flex items-center gap-2 mb-3 text-slate-700 dark:text-slate-300">
+                      <span className="material-symbols-outlined text-sm opacity-60">computer</span>
+                      <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">Online/Asynchronous</p>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 mb-3 text-slate-700 dark:text-slate-300">
+                      <span className="material-symbols-outlined text-sm opacity-60">schedule</span>
+                      <p className="text-sm font-medium">{course.courseDate} • {course.startTime} - {course.endTime}</p>
+                    </div>
+                  )}
                   {course.description && (
                     <p className="text-sm text-slate-600 dark:text-slate-300 mb-4 line-clamp-2 pl-6 border-l-2 border-slate-200 dark:border-slate-600 ml-1">
                       {course.description}
                     </p>
+                  )}
+                  {course.hasLab && (
+                    <div className="mb-4 p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/40 rounded-lg">
+                      <p className="text-xs font-semibold text-emerald-900 dark:text-emerald-100 mb-1">Lab</p>
+                      {course.labIsOnline ? (
+                        <p className="text-xs text-emerald-800 dark:text-emerald-200">Online/Asynchronous</p>
+                      ) : (
+                        <p className="text-xs text-emerald-800 dark:text-emerald-200">
+                          {course.labDay} • {course.labStartTime} - {course.labEndTime}
+                        </p>
+                      )}
+                    </div>
                   )}
                   <div className="flex gap-2 mt-4 pt-4 border-t border-slate-200/50 dark:border-slate-700/50">
                     <button

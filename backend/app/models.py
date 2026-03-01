@@ -9,6 +9,12 @@ class CourseBase(BaseModel):
     code: str
     professor: Optional[str] = None
     description: Optional[str] = None
+    isOnline: bool = False
+    hasLab: bool = False
+    labDay: Optional[str] = None
+    labStartTime: Optional[str] = None
+    labEndTime: Optional[str] = None
+    labIsOnline: bool = False
 
 class CourseCreate(CourseBase):
     user_id: str
