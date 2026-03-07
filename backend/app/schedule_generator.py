@@ -1,10 +1,8 @@
-from datetime import datetime, timedelta
-from typing import List, Optional
+from datetime import datetime, time, timedelta
+from typing import Any, Callable, Dict, List, Optional
 from app.models import Task, ScheduleBlock
-import uuid 
-import math
+import uuid
 from dataclasses import dataclass
-from datetime import datetime, timedelta, time
 
 
 # using dataclass for structure when building out schedule generator 
@@ -80,104 +78,148 @@ class ScheduleGenerator:
     #move to next day and set to work start time, used when current day time ends and you want to go to the next day 
 
         
-    def generate_schedule(self, 
-                          tasks: List[Task],
-                          prefs: Preferences,
-                          start_date: datetime = None,
-                          busy: Optional[List[BusyBlock]] = None,
-                            ) -> List[ScheduleBlock]:
-                          
-        """
-        Generate optimal schedule for given tasks.
-        
-        Algorithm:
-        1. Filter incomplete tasks
-        2. Sort by urgency (deadline - today) / estimated hours
-        3. Allocate time blocks respecting constraints
-        4. Add breaks between blocks
-        5. Avoid scheduling past 11 PM
-        """
-        
+    def generate_schedule(
+        self,
+        tasks: List[Task],
+        prefs: Preferences,
+        busy: Optional[List[BusyBlock]] = None,
+        start_date: Optional[datetime] = None,
+        ai_plan: Optional[Callable[[Dict[str, Any]], Dict[str, Any]]] = None,
+    ) -> List[ScheduleBlock]:
+        if busy is None:
+            busy = []
+
         if start_date is None:
             start_date = datetime.now()
-        
-        # Filter and sort tasks
+
         pending_tasks = [t for t in tasks if not t.completed]
         if not pending_tasks:
             return []
-        
-        # Calculate urgency score: (days until deadline) / hours needed
-        # Lower score = more urgent
+
         def urgency_score(task: Task):
             days_until = (task.deadline - start_date).days
-            hours_needed = task.estimated_hours
-            if hours_needed == 0:
-                hours_needed = 1
+            hours_needed = task.estimated_hours or 1
             if days_until <= 0:
-                return -999  # Overdue - highest priority
+                return -999
             return days_until / hours_needed
-        
+
         sorted_tasks = sorted(pending_tasks, key=urgency_score)
 
         current_dt = self.move_to_next_work_start(start_date, prefs)
         current_dt = self.skip_if_busy(current_dt, busy)
-        
-        schedule_blocks = []
-        current_date = start_date.replace(hour=9, minute=0, second=0, microsecond=0)
-        current_hours_today = 0
-        
+
+        max_hours_per_day = float(prefs.study_limit_hours)
+        hours_today = 0.0
+        scheduled_blocks: List[ScheduleBlock] = []
+
+        block_minutes_override: Dict[str, List[int]] = {}
+
+        if ai_plan:
+            context = {
+                "tasks": [
+                    {
+                        "id": t.id,
+                        "title": getattr(t, "title", None)
+                        or getattr(t, "task_title", None),
+                        "deadline": t.deadline.isoformat(),
+                        "estimated_hours": t.estimated_hours,
+                        "priority": getattr(t, "priority_level", None),
+                    }
+                    for t in sorted_tasks
+                ],
+                "prefs": {
+                    "workdays": prefs.workdays,
+                    "work_start": prefs.work_start.strftime("%H:%M"),
+                    "work_end": prefs.work_end.strftime("%H:%M"),
+                    "study_limit_hours": prefs.study_limit_hours,
+                    "workstyle": prefs.workstyle,
+                    "additional_info": prefs.additional_info,
+                },
+                "busy": [
+                    {
+                        "start": b.start.isoformat(),
+                        "end": b.end.isoformat(),
+                        "title": b.title,
+                    }
+                    for b in busy
+                ],
+            }
+
+            ai_result = ai_plan(context) or {}
+            block_minutes_override = ai_result.get("block_minutes_override", {}) or {}
+
         for task in sorted_tasks:
-            hours_needed = task.estimated_hours
-            hours_remaining = hours_needed
-            
+            hours_remaining = float(task.estimated_hours or 1)
+
+            override_list = block_minutes_override.get(str(task.id), [])
+            override_idx = 0
+
             while hours_remaining > 0:
-                # Check if we've exceeded max hours for today
-                if current_hours_today >= self.max_hours_per_day:
-                    # Move to next day, 9 AM
-                    current_date = current_date + timedelta(days=1)
-                    current_date = current_date.replace(hour=9, minute=0)
-                    current_hours_today = 0
-                
-                # Allocate focus block (2-4 hours or remaining, whichever is less)
-                block_hours = min(self.focus_block_hours, hours_remaining)
-                block_hours = min(block_hours, self.max_hours_per_day - current_hours_today)
-                
+                if hours_today >= max_hours_per_day:
+                    current_dt = self.next_day_start(current_dt, prefs)
+                    current_dt = self.skip_if_busy(current_dt, busy)
+                    hours_today = 0.0
+
+                day_end = self.work_window_end(current_dt, prefs)
+                if current_dt >= day_end:
+                    current_dt = self.next_day_start(current_dt, prefs)
+                    current_dt = self.skip_if_busy(current_dt, busy)
+                    hours_today = 0.0
+                    continue
+
+                if override_idx < len(override_list):
+                    block_hours = override_list[override_idx] / 60.0
+                    override_idx += 1
+                else:
+                    block_hours = min(self.focus_block_hours, hours_remaining)
+
+                block_hours = min(block_hours, max_hours_per_day - hours_today)
+
                 if block_hours <= 0:
                     break
-                
-                start_time = current_date
+
+                start_time = current_dt
                 end_time = start_time + timedelta(hours=block_hours)
-                
-                # Don't schedule past 11 PM
-                if end_time.hour > 23:
-                    # Move to next day instead
-                    current_date = current_date + timedelta(days=1)
-                    current_date = current_date.replace(hour=9, minute=0)
-                    current_hours_today = 0
+
+                if end_time > day_end:
+                    end_time = day_end
+                    block_hours = (end_time - start_time).total_seconds() / 3600.0
+
+                overlapping_block = None
+                for busy_block in busy:
+                    if self.overlaps(start_time, end_time, busy_block.start, busy_block.end):
+                        overlapping_block = busy_block
+                        break
+                if overlapping_block:
+                    current_dt = overlapping_block.end
                     continue
-                
-                # Create schedule block
+
                 block = ScheduleBlock(
-                    id=f"block_{len(schedule_blocks) + 1}",
+                    id=f"block_{uuid.uuid4().hex}",
                     task_id=task.id,
                     date=start_time,
                     start_time=start_time,
                     end_time=end_time,
-                    duration_minutes=int(block_hours * 60),
+                    duration_minutes=int(round(block_hours * 60)),
                     user_id=task.user_id,
-                    created_at=datetime.now()
+                    created_at=datetime.now(),
                 )
-                schedule_blocks.append(block)
-                
+
+                scheduled_blocks.append(block)
+
                 hours_remaining -= block_hours
-                current_hours_today += block_hours
-                current_date = end_time
-                
-                # Add break (15 minutes) unless this was the last block
+                hours_today += block_hours
+                current_dt = end_time
+
                 if hours_remaining > 0:
-                    current_date = current_date + timedelta(minutes=self.break_minutes)
+                    current_dt = current_dt + timedelta(minutes=self.break_minutes)
+                    current_dt = self.skip_if_busy(current_dt, busy)
+
+        return scheduled_blocks
         
-        return schedule_blocks
+
+
+       
     
     def validate_schedule(self, blocks: List[ScheduleBlock]) -> dict:
         """
@@ -202,18 +244,15 @@ class ScheduleGenerator:
         
         # Check for violations
         violations = []
-        
-        for i, block in enumerate(blocks):
-            # Check if block goes past 11 PM
-            if block.end_time.hour > 23:
-                violations.append(f"Block {i+1} extends past 11 PM")
+
             
-            # Check overlap with next block
+        # Check overlap with next block
+        for i, block in enumerate(blocks):
             if i < len(blocks) - 1:
                 next_block = blocks[i + 1]
                 if block.end_time > next_block.start_time:
                     violations.append(f"Block {i+1} overlaps with block {i+2}")
-        
+    
         stats["violations"] = violations
         stats["valid"] = len(violations) == 0
         

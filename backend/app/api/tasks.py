@@ -2,20 +2,171 @@ from fastapi import APIRouter, HTTPException
 from app.models import (
     CourseBase, CourseCreate, Course, 
     AssignmentBase, AssignmentCreate, Assignment,
-    TaskBase, TaskCreate, Task, 
-    ScheduleBlockBase, ScheduleBlockCreate, ScheduleBlock
+    TaskBase, TaskCreate, Task
 )
-from app.schedule_generator import ScheduleGenerator
+from app.schedule_generator import BusyBlock, Preferences, ScheduleGenerator
 from typing import List
-from datetime import datetime
+from datetime import date, datetime, time, timedelta
+import os
+from uuid import uuid4
+
+from supabase import Client, create_client
 
 router = APIRouter(prefix="/api", tags=["tasks"])
 
-# Mock database for now (will replace with real DB)
 courses_db = {}
 assignments_db = {}
 tasks_db = {}
-schedule_blocks_db = {}
+
+_supabase_client: Client | None = None
+
+
+def get_supabase() -> Client:
+    global _supabase_client
+    if _supabase_client is not None:
+        return _supabase_client
+
+    url = os.getenv("SUPABASE_URL") or os.getenv("NEXT_PUBLIC_SUPABASE_URL")
+    key = (
+        os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+        or os.getenv("SUPABASE_KEY")
+        or os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY")
+    )
+
+    if not url or not key:
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "Supabase credentials are missing. Set SUPABASE_URL and "
+                "SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_KEY)."
+            ),
+        )
+
+    _supabase_client = create_client(url, key)
+    return _supabase_client
+
+
+def parse_dt(value: str | datetime) -> datetime:
+    dt = value if isinstance(value, datetime) else datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if dt.tzinfo is not None:
+        return dt.astimezone().replace(tzinfo=None)
+    return dt
+
+
+def work_window_from_profile(worktime_value: str | None) -> tuple[time, time]:
+    value = (worktime_value or "").strip().lower()
+    if value == "morning":
+        return time(6, 0), time(12, 0)
+    if value == "afternoon":
+        return time(12, 0), time(18, 0)
+    if value == "evening":
+        return time(18, 0), time(23, 0)
+    return time(9, 0), time(17, 0)
+
+
+def focus_hours_from_workstyle(workstyle: str | None) -> float:
+    value = (workstyle or "").strip().lower()
+    if value == "short":
+        return 0.5
+    if value == "classic":
+        return 0.5
+    if value == "deep-work":
+        return 1.0
+    if value == "full-immersion":
+        return 2.0
+    return 2.0
+
+
+def map_schedule_block_row(row: dict) -> dict:
+    starts_at = parse_dt(row["starts_at"])
+    ends_at = parse_dt(row["ends_at"])
+    minutes = int((ends_at - starts_at).total_seconds() // 60)
+    return {
+        "id": row["id"],
+        "task_id": row.get("source_task_id"),
+        "date": starts_at,
+        "start_time": starts_at,
+        "end_time": ends_at,
+        "duration_minutes": max(minutes, 0),
+        "user_id": row["user_id"],
+        "created_at": parse_dt(row["created_at"]) if row.get("created_at") else datetime.now(),
+        "completed": False,
+    }
+
+
+def parse_course_weekday(day: str) -> int | None:
+    normalized = (day or "").strip().lower()
+    mapping = {
+        "monday": 0,
+        "mon": 0,
+        "tuesday": 1,
+        "tue": 1,
+        "tues": 1,
+        "wednesday": 2,
+        "wed": 2,
+        "thursday": 3,
+        "thu": 3,
+        "thurs": 3,
+        "friday": 4,
+        "fri": 4,
+        "saturday": 5,
+        "sat": 5,
+        "sunday": 6,
+        "sun": 6,
+    }
+    return mapping.get(normalized)
+
+
+def parse_clock(value: str | None) -> time | None:
+    if not value:
+        return None
+    text = value.strip()
+    try:
+        return time.fromisoformat(text)
+    except ValueError:
+        pass
+    for fmt in ("%H:%M", "%I:%M%p", "%I:%M %p"):
+        try:
+            return datetime.strptime(text, fmt).time()
+        except ValueError:
+            continue
+    return None
+
+
+def build_course_busy_blocks(course_rows: list[dict], window_start: datetime, window_end: datetime) -> list[BusyBlock]:
+    busy_blocks: list[BusyBlock] = []
+    start_day: date = window_start.date()
+    end_day: date = window_end.date()
+
+    for row in course_rows:
+        weekday_numbers = {
+            day_num
+            for day_num in (parse_course_weekday(day) for day in (row.get("course_days") or []))
+            if day_num is not None
+        }
+        start_t = parse_clock(row.get("start_time"))
+        end_t = parse_clock(row.get("end_time"))
+        if not weekday_numbers or start_t is None or end_t is None:
+            continue
+
+        cursor = start_day
+        while cursor <= end_day:
+            if cursor.weekday() in weekday_numbers:
+                start_dt = datetime.combine(cursor, start_t)
+                end_dt = datetime.combine(cursor, end_t)
+                if end_dt <= start_dt:
+                    end_dt += timedelta(days=1)
+                if end_dt > window_start and start_dt < window_end:
+                    busy_blocks.append(
+                        BusyBlock(
+                            start=start_dt,
+                            end=end_dt,
+                            title=row.get("course_name") or "Class",
+                        )
+                    )
+            cursor += timedelta(days=1)
+
+    return busy_blocks
 
 # ========== COURSE ENDPOINTS ==========
 
@@ -148,42 +299,6 @@ async def delete_task(task_id: str):
     del tasks_db[task_id]
     return {"message": "Task deleted"}
 
-# ========== SCHEDULE BLOCK ENDPOINTS ==========
-
-@router.post("/schedule-blocks", response_model=ScheduleBlock)
-async def create_schedule_block(block: ScheduleBlockCreate):
-    """Create a new schedule block"""
-    block_id = f"block_{len(schedule_blocks_db) + 1}"
-    block_data = {
-        "id": block_id,
-        **block.dict(),
-        "completed": False,
-        "created_at": datetime.now()
-    }
-    schedule_blocks_db[block_id] = block_data
-    return block_data
-
-@router.get("/schedule-blocks/{user_id}", response_model=List[ScheduleBlock])
-async def get_user_schedule_blocks(user_id: str):
-    """Get all schedule blocks for a user"""
-    user_blocks = [b for b in schedule_blocks_db.values() if b["user_id"] == user_id]
-    return sorted(user_blocks, key=lambda x: x["start_time"])
-
-@router.put("/schedule-blocks/{block_id}", response_model=ScheduleBlock)
-async def update_schedule_block(block_id: str, block: ScheduleBlockBase):
-    """Update a schedule block"""
-    if block_id not in schedule_blocks_db:
-        raise HTTPException(status_code=404, detail="Schedule block not found")
-    schedule_blocks_db[block_id].update(block.dict())
-    return schedule_blocks_db[block_id]
-
-@router.delete("/schedule-blocks/{block_id}")
-async def delete_schedule_block(block_id: str):
-    """Delete a schedule block"""
-    if block_id not in schedule_blocks_db:
-        raise HTTPException(status_code=404, detail="Schedule block not found")
-    del schedule_blocks_db[block_id]
-    return {"message": "Schedule block deleted"}
 # ========== SCHEDULE GENERATION ENDPOINTS ==========
 
 @router.post("/schedule/generate/{user_id}")
@@ -198,62 +313,178 @@ async def generate_schedule(user_id: str):
     - Break times (15 min between blocks)
     - Focus blocks (2-4 hours max)
     """
-    # Get user's pending tasks
-    user_tasks = [t for t in tasks_db.values() if t["user_id"] == user_id and not t["completed"]]
-    
-    if not user_tasks:
-        return {"message": "No pending tasks to schedule", "blocks": []}
-    
-    # Convert to Task objects
+    supabase = get_supabase()
+
+    tasks_result = (
+        supabase.table("tasks")
+        .select("*")
+        .eq("user_id", user_id)
+        .neq("status", "completed")
+        .execute()
+    )
+    task_rows = tasks_result.data or []
+    if not task_rows:
+        return {"message": "No pending tasks to schedule", "blocks": [], "stats": {"valid": True}}
+
+    profile_result = (
+        supabase.table("profiles")
+        .select("worktime, workdays, workstyle, additional_info")
+        .eq("id", user_id)
+        .limit(1)
+        .execute()
+    )
+    profile_row = (profile_result.data or [{}])[0]
+    work_start, work_end = work_window_from_profile(profile_row.get("worktime"))
+    prefs = Preferences(
+        workdays=profile_row.get("workdays") or [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+        ],
+        work_start=work_start,
+        work_end=work_end,
+        study_limit_hours=8,
+        workstyle=profile_row.get("workstyle"),
+        additional_info=profile_row.get("additional_info"),
+    )
+
     task_objects = [
         Task(
-            id=t["id"],
-            title=t["title"],
-            assignment_id=t.get("assignment_id"),
-            course_id=t.get("course_id"),
-            deadline=datetime.fromisoformat(t["deadline"].isoformat()) if isinstance(t["deadline"], datetime) else t["deadline"],
-            estimated_hours=t["estimated_hours"],
-            priority=t["priority"],
-            description=t.get("description"),
-            user_id=t["user_id"],
-            created_at=t["created_at"],
-            completed=t["completed"]
+            id=row["id"],
+            title=row.get("task_title") or "Untitled Task",
+            assignment_id=row.get("assignment_id"),
+            course_id=row.get("course_id"),
+            deadline=parse_dt(row["deadline_at"]),
+            estimated_hours=float(row.get("estimated_hours") or 1),
+            priority=int(row.get("priority_level") or 2),
+            description=row.get("description"),
+            user_id=row["user_id"],
+            created_at=parse_dt(row["created_at"]) if row.get("created_at") else datetime.now(),
+            completed=(row.get("status") == "completed"),
         )
-        for t in user_tasks
+        for row in task_rows
     ]
-    
-    # Generate schedule
-    generator = ScheduleGenerator(max_hours_per_day=8, focus_block_hours=2)
-    schedule_blocks = generator.generate_schedule(task_objects)
-    
-    # Validate schedule
-    validation = generator.validate_schedule(schedule_blocks)
-    
-    # Store generated blocks in database
-    for block in schedule_blocks:
-        schedule_blocks_db[block.id] = block.dict()
-    
+    task_title_by_id = {task.id: task.title for task in task_objects}
+
+    static_busy_result = (
+        supabase.table("schedule_blocks")
+        .select("id, starts_at, ends_at, title, source_task_id")
+        .eq("user_id", user_id)
+        .is_("source_task_id", "null")
+        .execute()
+    )
+    busy = [
+        BusyBlock(
+            start=parse_dt(row["starts_at"]),
+            end=parse_dt(row["ends_at"]),
+            title=row.get("title") or "Busy",
+        )
+        for row in (static_busy_result.data or [])
+        if row.get("starts_at") and row.get("ends_at")
+    ]
+
+    courses_result = (
+        supabase.table("courses")
+        .select("course_name, course_days, start_time, end_time")
+        .eq("user_id", user_id)
+        .execute()
+    )
+    now = datetime.now()
+    max_deadline = max((task.deadline for task in task_objects), default=now)
+    planning_end = max(max_deadline, now + timedelta(days=14))
+    busy.extend(build_course_busy_blocks(courses_result.data or [], now, planning_end))
+
+    generator = ScheduleGenerator(
+        max_hours_per_day=float(prefs.study_limit_hours),
+        focus_block_hours=focus_hours_from_workstyle(profile_row.get("workstyle")),
+    )
+    generated = generator.generate_schedule(task_objects, prefs, busy=busy)
+    validation = generator.validate_schedule(generated)
+
+
+    (
+        supabase.table("schedule_blocks")
+        .delete()
+        .eq("user_id", user_id)
+        .eq("block_type", "study")
+        .execute()
+    )
+
+    if not generated:
+        return {
+            "message": "No schedule blocks generated",
+            "blocks": [],
+            "stats": validation,
+        }
+
+    generation_id = str(uuid4())
+    insert_payload = [
+        {
+            "user_id": user_id,
+            "starts_at": block.start_time.isoformat(),
+            "ends_at": block.end_time.isoformat(),
+            "block_type": "study",
+            "title": task_title_by_id.get(block.task_id, "Study Session"),
+            "course_id": next((t.course_id for t in task_objects if t.id == block.task_id), None),
+            "source_task_id": block.task_id,
+            "generation_id": generation_id,
+        }
+        for block in generated
+    ]
+    insert_result = (
+        supabase.table("schedule_blocks")
+        .insert(insert_payload)
+        .execute()
+    )
+    inserted_rows = (
+        supabase.table("schedule_blocks")
+        .select("*")
+        .eq("user_id", user_id)
+        .eq("generation_id", generation_id)
+        .order("starts_at")
+        .execute()
+        .data
+        or []
+    )
+    response_blocks = [map_schedule_block_row(row) for row in inserted_rows]
+
     return {
         "message": "Schedule generated successfully",
-        "blocks": schedule_blocks,
-        "stats": validation
+        "blocks": response_blocks,
+        "stats": validation,
     }
 
 @router.get("/schedule/stats/{user_id}")
 async def get_schedule_stats(user_id: str):
     """Get statistics about user's schedule"""
-    user_blocks = [b for b in schedule_blocks_db.values() if b["user_id"] == user_id]
-    user_tasks = [t for t in tasks_db.values() if t["user_id"] == user_id]
-    
-    total_hours_scheduled = sum(b["duration_minutes"] for b in user_blocks) / 60
-    pending_hours = sum(t["estimated_hours"] for t in user_tasks if not t["completed"])
-    completed_tasks = len([t for t in user_tasks if t["completed"]])
-    
+    supabase = get_supabase()
+    tasks_result = supabase.table("tasks").select("estimated_hours, status").eq("user_id", user_id).execute()
+    blocks_result = (
+        supabase.table("schedule_blocks")
+        .select("starts_at, ends_at, block_type")
+        .eq("user_id", user_id)
+        .eq("block_type", "study")
+        .execute()
+    )
+
+    user_tasks = tasks_result.data or []
+    user_blocks = blocks_result.data or []
+
+    total_hours_scheduled = sum(
+        max((parse_dt(b["ends_at"]) - parse_dt(b["starts_at"])).total_seconds() / 3600.0, 0)
+        for b in user_blocks
+        if b.get("starts_at") and b.get("ends_at")
+    )
+    pending_hours = sum(float(t.get("estimated_hours") or 0) for t in user_tasks if t.get("status") != "completed")
+    completed_tasks = len([t for t in user_tasks if t.get("status") == "completed"])
+
     return {
         "total_tasks": len(user_tasks),
         "completed_tasks": completed_tasks,
         "pending_tasks": len(user_tasks) - completed_tasks,
-        "total_hours_needed": pending_hours,
+        "total_hours_needed": round(pending_hours, 2),
         "total_hours_scheduled": round(total_hours_scheduled, 2),
         "schedule_coverage": f"{round((total_hours_scheduled / pending_hours * 100), 1)}%" if pending_hours > 0 else "0%"
     }

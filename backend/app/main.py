@@ -1,10 +1,15 @@
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
 from app.api.tasks import router as tasks_router
 from app.api.courses import router as courses_router
 from app.api.assignments import router as assignments_router
 from app.api.schedule_blocks import router as schedule_blocks_router
 from app.api.syllabus import router as syllabus_router
+
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 app = FastAPI(
     title="11Planner API",
