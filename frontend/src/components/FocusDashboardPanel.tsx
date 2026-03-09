@@ -1,12 +1,16 @@
 ﻿"use client";
 
-import { useEffect } from "react";
+import { ReactNode, useEffect } from "react";
 import { usePlanner } from "@/contexts/PlannerContext";
 import Link from "next/link";
 import Timer from "@/components/Dashboard/Timer";
 import StatCard from "@/components/Dashboard/StatCard";
 
-export default function FocusDashboardPanel() {
+type FocusDashboardPanelProps = {
+  atmospherePanel?: ReactNode;
+};
+
+export default function FocusDashboardPanel({ atmospherePanel }: FocusDashboardPanelProps) {
   const {
     userId,
     tasks,
@@ -76,6 +80,12 @@ export default function FocusDashboardPanel() {
           )}
         </div>
       </div>
+
+      {atmospherePanel ? (
+        <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl rounded-3xl border border-white/40 dark:border-slate-700/40 p-4 md:p-6">
+          {atmospherePanel}
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         <div className="lg:col-span-3 flex flex-col gap-4">
