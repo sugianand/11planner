@@ -31,17 +31,17 @@ type Soundscape = {
   description: string;
   category: SoundCategory;
   engine:
-    | "none"
-    | "rain"
-    | "cafe"
-    | "forest"
-    | "city"
-    | "cinematic"
-    | "lofi"
-    | "abstract"
-    | "whiteNoise"
-    | "pinkNoise"
-    | "brownNoise";
+  | "none"
+  | "rain"
+  | "cafe"
+  | "forest"
+  | "city"
+  | "cinematic"
+  | "lofi"
+  | "abstract"
+  | "whiteNoise"
+  | "pinkNoise"
+  | "brownNoise";
   audioUrl?: string;
 };
 
@@ -1088,203 +1088,201 @@ export default function Dashboard() {
         : "bg-white/75 dark:bg-slate-900/70 border-white/40 dark:border-slate-700/40"
         } backdrop-blur-xl rounded-3xl border p-6 shadow-sm transition-colors relative`}
     >
-      <div className="absolute top-6 right-6 flex items-center gap-2 flex-wrap">
-        <button
-          onClick={() => setIsAtmosphereOpen((prev) => !prev)}
-          className="px-4 py-2 rounded-full text-sm font-semibold border border-slate-200/80 dark:border-slate-700/80 text-slate-600 dark:text-slate-300 hover:bg-white/80 dark:hover:bg-slate-800/80 transition"
-        >
-          {isAtmosphereOpen ? "Hide" : "Show"}
-        </button>
-        <button
-          onClick={() => setIsUiTransparent((prev) => !prev)}
-          className="px-4 py-2 rounded-full text-sm font-semibold border border-slate-200/80 dark:border-slate-700/80 text-slate-600 dark:text-slate-300 hover:bg-white/80 dark:hover:bg-slate-800/80 transition"
-        >
-          {isUiTransparent ? "Solid" : "Glass"}
-        </button>
-        <button
-          onClick={() => setIsUiHidden(true)}
-          className="px-4 py-2 rounded-full text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition"
-        >
-          Hide All UI
-        </button>
-      </div>
-
-      <div className="flex flex-col gap-4 items-center text-center">
-        <div className="flex flex-col items-center gap-3">
-          <div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Focus Atmosphere</h2>
-            <p className="text-sm text-slate-600 dark:text-slate-300">
-              Pick a live background and a soundscape to match your focus.
-            </p>
-          </div>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+        <div className="flex flex-col gap-1 text-left">
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white">Focus Atmosphere</h2>
+          <p className="text-sm text-slate-600 dark:text-slate-300">
+            Pick a live background and a soundscape to match your focus.
+          </p>
         </div>
 
-        {isAtmosphereOpen && (
-          <div className="w-full flex flex-col items-center gap-6">
-            <div className="flex flex-wrap items-center justify-center gap-3">
-              <button
-                onClick={() => setActiveTab("backgrounds")}
-                className={`px-4 py-2 rounded-full text-sm font-semibold transition border ${activeTab === "backgrounds"
-                  ? "bg-emerald-600 text-white border-emerald-600"
-                  : "bg-white/80 dark:bg-slate-900/70 text-slate-700 dark:text-slate-200 border-white/40 dark:border-slate-700/40 hover:bg-white"
-                  }`}
-              >
-                Live Backgrounds
-              </button>
-              <button
-                onClick={() => setActiveTab("sounds")}
-                className={`px-4 py-2 rounded-full text-sm font-semibold transition border ${activeTab === "sounds"
-                  ? "bg-emerald-600 text-white border-emerald-600"
-                  : "bg-white/80 dark:bg-slate-900/70 text-slate-700 dark:text-slate-200 border-white/40 dark:border-slate-700/40 hover:bg-white"
-                  }`}
-              >
-                Sounds
-              </button>
-            </div>
-
-            {activeTab === "backgrounds" && (
-              <div className="w-full flex flex-col items-center gap-4">
-                <div className="flex flex-wrap justify-center gap-2">
-                  {backgroundCategories.map((category) => (
-                    <button
-                      key={category}
-                      onClick={() => setActiveBackgroundCategory(category)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-semibold transition border ${category === activeBackgroundCategory
-                        ? "bg-emerald-600 text-white border-emerald-600"
-                        : "bg-white/80 dark:bg-slate-900/70 text-slate-700 dark:text-slate-200 border-white/40 dark:border-slate-700/40 hover:bg-white"
-                        }`}
-                    >
-                      {category}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="grid w-full gap-4 [grid-template-columns:repeat(auto-fit,minmax(260px,1fr))]">
-                  {filteredBackgrounds.map((scene) => (
-                    <button
-                      key={scene.id}
-                      onClick={() => handleBackgroundSelect(scene.id)}
-                      className={`text-center rounded-2xl border p-4 transition shadow-sm ${scene.id === activeBackground?.id
-                        ? "border-emerald-500 bg-emerald-50/80"
-                        : "border-white/40 bg-white/70 hover:bg-white"
-                        }`}
-                    >
-                      <div className="flex flex-col items-center gap-3">
-                        <div className="h-20 w-32 rounded-xl bg-slate-200/70 overflow-hidden">
-                          {scene.videoUrl ? (
-                            <video
-                              className="h-full w-full object-cover"
-                              src={scene.videoUrl}
-                              muted
-                              loop
-                              playsInline
-                              autoPlay
-                              preload="metadata"
-                            />
-                          ) : scene.imageUrl ? (
-                            <div
-                              className="h-full w-full bg-cover bg-center"
-                              style={{ backgroundImage: `url(${scene.imageUrl})` }}
-                            />
-                          ) : (
-                            <div className="h-full w-full bg-[radial-gradient(circle_at_top,#bbf7d0,transparent_60%),radial-gradient(circle_at_30%_60%,#fde68a,transparent_55%),radial-gradient(circle_at_80%_20%,#bae6fd,transparent_55%)]" />
-                          )}
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold text-slate-900">{scene.label}</p>
-                          <p className="text-xs text-slate-600 mt-1">{scene.description}</p>
-                          {!scene.videoUrl && !scene.imageUrl && scene.id !== "default" && (
-                            <p className="text-[11px] text-amber-600 mt-2">
-                              Add a video or image URL to enable a live background.
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {activeTab === "sounds" && (
-              <div className="w-full flex flex-col items-center gap-4">
-                <div className="flex flex-wrap justify-center gap-2">
-                  {soundCategories.map((category) => (
-                    <button
-                      key={category}
-                      onClick={() => setActiveSoundCategory(category)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-semibold transition border ${category === activeSoundCategory
-                        ? "bg-emerald-600 text-white border-emerald-600"
-                        : "bg-white/80 dark:bg-slate-900/70 text-slate-700 dark:text-slate-200 border-white/40 dark:border-slate-700/40 hover:bg-white"
-                        }`}
-                    >
-                      {category}
-                    </button>
-                  ))}
-                </div>
-                <div className="w-full overflow-x-auto pb-2">
-                  <div className="flex w-max min-w-full justify-center gap-3 px-1">
-                    {filteredSoundscapes.map((scene) => {
-                      const isActive = scene.id === activeSound?.id;
-                      const icon = soundIconsById[scene.id] ?? soundCategoryIcons[scene.category];
-
-                      return (
-                        <button
-                          key={scene.id}
-                          onClick={() => {
-                            void handleSoundSelect(scene.id);
-                          }}
-                          className={`min-w-[220px] rounded-2xl border px-4 py-3 text-left transition ${isActive
-                            ? "border-emerald-500 bg-emerald-50/90 dark:bg-emerald-900/30"
-                            : "border-white/40 bg-white/75 dark:bg-slate-900/70 hover:bg-white dark:hover:bg-slate-800"
-                            }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="text-base leading-none">{icon}</span>
-                            <span className={`text-sm font-semibold ${isActive ? "text-emerald-800 dark:text-emerald-200" : "text-slate-800 dark:text-slate-100"}`}>
-                              {scene.label}
-                            </span>
-                          </div>
-                          <div className="mt-2 flex items-center gap-2">
-                            <span className={`material-symbols-outlined text-base ${isActive && isPlaying ? "text-emerald-600" : "text-slate-400 dark:text-slate-500"}`}>
-                              {isActive && isPlaying ? "volume_up" : "volume_off"}
-                            </span>
-                            <span className={`h-px flex-1 ${isActive ? "bg-emerald-400/80" : "bg-slate-400/50 dark:bg-slate-600/70"}`} />
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-                <div className="flex flex-col items-center gap-3">
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
-                      {isPlaying ? "Now Playing" : "Select a sound to play"}
-                    </span>
-                    <span className="text-sm text-slate-600 dark:text-slate-300">
-                      {activeSound?.description}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                      Volume
-                    </label>
-                    <input
-                      type="range"
-                      min={0}
-                      max={1}
-                      step={0.01}
-                      value={volume}
-                      onChange={(event) => handleVolumeChange(Number(event.target.value))}
-                      className="w-40 accent-emerald-600"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setIsAtmosphereOpen((prev) => !prev)}
+            className="px-4 py-2 rounded-full text-sm font-semibold border border-slate-200/80 dark:border-slate-700/80 text-slate-600 dark:text-slate-300 hover:bg-white/80 dark:hover:bg-slate-800/80 transition"
+          >
+            {isAtmosphereOpen ? "Hide" : "Show"}
+          </button>
+          <button
+            onClick={() => setIsUiTransparent((prev) => !prev)}
+            className="px-4 py-2 rounded-full text-sm font-semibold border border-slate-200/80 dark:border-slate-700/80 text-slate-600 dark:text-slate-300 hover:bg-white/80 dark:hover:bg-slate-800/80 transition"
+          >
+            {isUiTransparent ? "Solid" : "Glass"}
+          </button>
+          <button
+            onClick={() => setIsUiHidden(true)}
+            className="px-4 py-2 rounded-full text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition"
+          >
+            Hide All UI
+          </button>
+        </div>
       </div>
+
+      {isAtmosphereOpen && (
+        <div className="w-full flex flex-col items-center gap-6">
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <button
+              onClick={() => setActiveTab("backgrounds")}
+              className={`px-4 py-2 rounded-full text-sm font-semibold transition border ${activeTab === "backgrounds"
+                ? "bg-emerald-600 text-white border-emerald-600"
+                : "bg-white/80 dark:bg-slate-900/70 text-slate-700 dark:text-slate-200 border-white/40 dark:border-slate-700/40 hover:bg-white"
+                }`}
+            >
+              Live Backgrounds
+            </button>
+            <button
+              onClick={() => setActiveTab("sounds")}
+              className={`px-4 py-2 rounded-full text-sm font-semibold transition border ${activeTab === "sounds"
+                ? "bg-emerald-600 text-white border-emerald-600"
+                : "bg-white/80 dark:bg-slate-900/70 text-slate-700 dark:text-slate-200 border-white/40 dark:border-slate-700/40 hover:bg-white"
+                }`}
+            >
+              Sounds
+            </button>
+          </div>
+
+          {activeTab === "backgrounds" && (
+            <div className="w-full flex flex-col items-center gap-4">
+              <div className="flex flex-wrap justify-center gap-2">
+                {backgroundCategories.map((category) => (
+                  <button
+                    key={category}
+                    onClick={() => setActiveBackgroundCategory(category)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold transition border ${category === activeBackgroundCategory
+                      ? "bg-emerald-600 text-white border-emerald-600"
+                      : "bg-white/80 dark:bg-slate-900/70 text-slate-700 dark:text-slate-200 border-white/40 dark:border-slate-700/40 hover:bg-white"
+                      }`}
+                  >
+                    {category}
+                  </button>
+                ))}
+              </div>
+
+              <div className="grid w-full gap-4 grid-cols-2 md:grid-cols-4 lg:grid-cols-5">
+                {filteredBackgrounds.map((scene) => (
+                  <button
+                    key={scene.id}
+                    onClick={() => handleBackgroundSelect(scene.id)}
+                    className={`text-center rounded-2xl border p-4 transition shadow-sm ${scene.id === activeBackground?.id
+                      ? "border-emerald-500 bg-emerald-50/80"
+                      : "border-white/40 bg-white/70 hover:bg-white"
+                      }`}
+                  >
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="h-20 w-32 rounded-xl bg-slate-200/70 overflow-hidden">
+                        {scene.videoUrl ? (
+                          <video
+                            className="h-full w-full object-cover"
+                            src={scene.videoUrl}
+                            muted
+                            loop
+                            playsInline
+                            autoPlay
+                            preload="metadata"
+                          />
+                        ) : scene.imageUrl ? (
+                          <div
+                            className="h-full w-full bg-cover bg-center"
+                            style={{ backgroundImage: `url(${scene.imageUrl})` }}
+                          />
+                        ) : (
+                          <div className="h-full w-full bg-[radial-gradient(circle_at_top,#bbf7d0,transparent_60%),radial-gradient(circle_at_30%_60%,#fde68a,transparent_55%),radial-gradient(circle_at_80%_20%,#bae6fd,transparent_55%)]" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">{scene.label}</p>
+                        <p className="text-xs text-slate-600 mt-1">{scene.description}</p>
+                        {!scene.videoUrl && !scene.imageUrl && scene.id !== "default" && (
+                          <p className="text-[11px] text-amber-600 mt-2">
+                            Add a video or image URL to enable a live background.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeTab === "sounds" && (
+            <div className="w-full flex flex-col items-center gap-4">
+              <div className="flex flex-wrap justify-center gap-2">
+                {soundCategories.map((category) => (
+                  <button
+                    key={category}
+                    onClick={() => setActiveSoundCategory(category)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold transition border ${category === activeSoundCategory
+                      ? "bg-emerald-600 text-white border-emerald-600"
+                      : "bg-white/80 dark:bg-slate-900/70 text-slate-700 dark:text-slate-200 border-white/40 dark:border-slate-700/40 hover:bg-white"
+                      }`}
+                  >
+                    {category}
+                  </button>
+                ))}
+              </div>
+              <div className="w-full overflow-x-auto pb-2">
+                <div className="flex w-max min-w-full justify-center gap-3 px-1">
+                  {filteredSoundscapes.map((scene) => {
+                    const isActive = scene.id === activeSound?.id;
+                    const icon = soundIconsById[scene.id] ?? soundCategoryIcons[scene.category];
+
+                    return (
+                      <button
+                        key={scene.id}
+                        onClick={() => {
+                          void handleSoundSelect(scene.id);
+                        }}
+                        className={`min-w-[220px] rounded-2xl border px-4 py-3 text-left transition ${isActive
+                          ? "border-emerald-500 bg-emerald-50/90 dark:bg-emerald-900/30"
+                          : "border-white/40 bg-white/75 dark:bg-slate-900/70 hover:bg-white dark:hover:bg-slate-800"
+                          }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-base leading-none">{icon}</span>
+                          <span className={`text-sm font-semibold ${isActive ? "text-emerald-800 dark:text-emerald-200" : "text-slate-800 dark:text-slate-100"}`}>
+                            {scene.label}
+                          </span>
+                        </div>
+                        <div className="mt-2 flex items-center gap-2">
+                          <span className={`material-symbols-outlined text-base ${isActive && isPlaying ? "text-emerald-600" : "text-slate-400 dark:text-slate-500"}`}>
+                            {isActive && isPlaying ? "volume_up" : "volume_off"}
+                          </span>
+                          <span className={`h-px flex-1 ${isActive ? "bg-emerald-400/80" : "bg-slate-400/50 dark:bg-slate-600/70"}`} />
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="flex flex-col items-center gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+                    {isPlaying ? "Now Playing" : "Select a sound to play"}
+                  </span>
+                  <span className="text-sm text-slate-600 dark:text-slate-300">
+                    {activeSound?.description}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    Volume
+                  </label>
+                  <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    value={volume}
+                    onChange={(event) => handleVolumeChange(Number(event.target.value))}
+                    className="w-40 accent-emerald-600"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 
