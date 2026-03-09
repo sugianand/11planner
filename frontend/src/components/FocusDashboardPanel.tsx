@@ -99,18 +99,10 @@ export default function FocusDashboardPanel({ atmospherePanel }: FocusDashboardP
           />
         </div>
 
-        <div className="lg:col-span-6 flex flex-col gap-6">
-          <div className="flex justify-center">
-            <div className="w-full max-w-xl">
-              <Timer />
-            </div>
+        <div className="lg:col-span-6 flex justify-center">
+          <div className="w-full max-w-xl self-start">
+            <Timer />
           </div>
-
-          {atmospherePanel ? (
-            <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl rounded-3xl border border-white/40 dark:border-slate-700/40 p-4 md:p-6">
-              {atmospherePanel}
-            </div>
-          ) : null}
         </div>
 
         <div className="lg:col-span-3 flex flex-col gap-4">
@@ -153,6 +145,11 @@ export default function FocusDashboardPanel({ atmospherePanel }: FocusDashboardP
         </div>
       </div>
 
+      {atmospherePanel ? (
+        <div className="w-full bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl rounded-3xl border border-white/40 dark:border-slate-700/40 p-4 md:p-6 mt-4">
+          {atmospherePanel}
+        </div>
+      ) : null}
 
     </div>
   );
