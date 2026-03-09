@@ -1,4 +1,4 @@
-import { Event, DayData, TimeSlot } from '@/types/schedule';
+import { DayData, TimeSlot } from '@/types/schedule';
 
 export function getTimeSlots(): TimeSlot[] {
   const slots: TimeSlot[] = [];
@@ -18,8 +18,6 @@ export function getDaysInMonth(date: Date): DayData[] {
   const year = date.getFullYear();
   const month = date.getMonth();
   const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
-  const daysInMonth = lastDay.getDate();
   const startDate = new Date(firstDay);
   startDate.setDate(startDate.getDate() - firstDay.getDay());
 

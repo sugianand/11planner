@@ -34,7 +34,7 @@ export default function TasksPage() {
   useEffect(() => {
     loadCourses();
     loadTasks();
-  }, [userId]);
+  }, [userId, loadCourses, loadTasks]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { usePlanner } from "@/contexts/PlannerContext";
 
 export type NotificationType = "info" | "warning" | "danger";
@@ -93,11 +93,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     localStorage.setItem(STORAGE_KEYS.notified, JSON.stringify(notifiedRef.current));
   };
 
-  const dismissNotification = (id: string) => {
+  const dismissNotification = useCallback((id: string) => {
     setNotifications((prev) => prev.filter((item) => item.id !== id));
-  };
+  }, []);
 
-  const pushNotification = (item: NotificationItem) => {
+  const pushNotification = useCallback((item: NotificationItem) => {
     setNotifications((prev) => [item, ...prev].slice(0, 5));
     if (permission === "granted") {
       new Notification(item.title, { body: item.message });
@@ -105,9 +105,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     setTimeout(() => {
       dismissNotification(item.id);
     }, 10000);
-  };
+  }, [permission, dismissNotification]);
 
-  const requestPermission = async () => {
+  const requestPermission = useCallback(async () => {
     if (typeof window === "undefined" || !("Notification" in window)) {
       setPermission("unsupported");
       return "unsupported";
@@ -115,7 +115,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     const result = await Notification.requestPermission();
     setPermission(result);
     return result;
-  };
+  }, []);
 
   useEffect(() => {
     if (!notificationsEnabled) {
@@ -175,7 +175,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     checkDeadlines();
     const interval = setInterval(checkDeadlines, 60000);
     return () => clearInterval(interval);
-  }, [notificationsEnabled, reminderLeadHours, tasks, permission]);
+  }, [notificationsEnabled, reminderLeadHours, tasks, permission, pushNotification]);
 
   const value = useMemo(
     () => ({
@@ -190,6 +190,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }),
     [
       notifications,
+      dismissNotification,
+      requestPermission,
       permission,
       notificationsEnabled,
       reminderLeadHours,
