@@ -137,6 +137,63 @@
       display: block;
     }
 
+    /* ── User badge (logged-in state) ── */
+    .user-badge {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 10px 14px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .user-badge .avatar {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #306844, #255236);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+      color: white;
+      flex-shrink: 0;
+    }
+
+    .user-badge .info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .user-badge .user-email {
+      font-size: 12px;
+      color: #e2e8f0;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .user-badge .connected-label {
+      font-size: 10px;
+      color: #4ade80;
+      margin-top: 2px;
+    }
+
+    .btn-danger {
+      background: #1e293b;
+      color: #f87171;
+      border: 1px solid #7f1d1d;
+      font-size: 12px;
+    }
+
+    .btn-danger:hover {
+      background: #450a0a;
+    }
+
     .preview {
       background: #1e293b;
       border: 1px solid #334155;
@@ -210,32 +267,52 @@
   <div class="content">
     <div id="status" class="status"></div>
 
-    <button class="btn btn-primary" id="extractBtn">
-      🎓 Extract Assignments
-    </button>
-
-    <div class="preview" id="preview">
-      <div id="previewList"></div>
+    <!-- ── NOT LOGGED IN ── -->
+    <div id="loginPanel">
+      <div class="section">
+        <label>11Planner Email</label>
+        <input id="loginEmail" type="email" placeholder="your@email.com" autocomplete="email" />
+      </div>
+      <div class="section">
+        <label>Password</label>
+        <input id="loginPassword" type="password" placeholder="Your 11Planner password" />
+      </div>
+      <button class="btn btn-primary" id="loginBtn">🔑 Log In to 11Planner</button>
     </div>
 
-    <button class="btn btn-primary" id="syncBtn" style="display:none;">
-      ⬆️ Sync to 11Planner <span id="syncCount" class="count-badge">0</span>
-    </button>
-
-    <details>
-      <summary>⚙️ Settings</summary>
-      <div class="settings-panel">
-        <div class="section">
-          <label>Backend URL</label>
-          <input id="backendUrl" type="text" placeholder="http://localhost:8000" />
+    <!-- ── LOGGED IN ── -->
+    <div id="mainPanel" style="display:none;">
+      <div class="user-badge">
+        <div class="avatar" id="userAvatar">?</div>
+        <div class="info">
+          <div class="user-email" id="userEmail">—</div>
+          <div class="connected-label">Connected to 11Planner ✓</div>
         </div>
-        <div class="section">
-          <label>Your User ID (from Supabase)</label>
-          <input id="userId" type="text" placeholder="Paste your Supabase user UUID" />
-        </div>
-        <button class="btn btn-secondary" id="saveSettings">Save Settings</button>
       </div>
-    </details>
+
+      <button class="btn btn-primary" id="extractBtn">🎓 Extract Assignments</button>
+
+      <div class="preview" id="preview">
+        <div id="previewList"></div>
+      </div>
+
+      <button class="btn btn-primary" id="syncBtn" style="display:none;">
+        ⬆️ Sync to 11Planner <span id="syncCount" class="count-badge">0</span>
+      </button>
+
+      <button class="btn btn-danger" id="logoutBtn" style="margin-top:4px;">Sign Out</button>
+
+      <details style="margin-top:8px;">
+        <summary>⚙️ Advanced</summary>
+        <div class="settings-panel">
+          <div class="section">
+            <label>Backend URL</label>
+            <input id="backendUrl" type="text" placeholder="http://localhost:8000" />
+          </div>
+          <button class="btn btn-secondary" id="saveSettings">Save</button>
+        </div>
+      </details>
+    </div>
   </div>
 
   <script src="popup.js"></script>

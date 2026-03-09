@@ -1,177 +1,193 @@
 /**
  * 11Planner Canvas Extension – Popup Script
+ * Handles login via Supabase Auth and assignment extraction/sync.
  */
+
+// ── Supabase config (anon key is safe to embed in client code) ──
+const SUPABASE_URL = 'https://ddszcujvbvvihwsrkzsk.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkc3pjdWp2YnZ2aWh3c3JrenNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAxNjIzNDYsImV4cCI6MjA4NTczODM0Nn0.HfSG1DHiGG3Riv_JVFvFBWJggy40tPS4iAavIDKjs1o';
 
 let extractedAssignments = [];
 
+// ── UI helpers ──
 function showStatus(message, type) {
     const el = document.getElementById('status');
     el.textContent = message;
     el.className = `status ${type}`;
 }
 
-function renderPreview(assignments) {
-    const preview = document.getElementById('preview');
-    const list = document.getElementById('previewList');
-    const syncCount = document.getElementById('syncCount');
-    const syncBtn = document.getElementById('syncBtn');
-
-    list.innerHTML = '';
-    if (assignments.length === 0) {
-        preview.style.display = 'none';
-        syncBtn.style.display = 'none';
-        return;
+function showPanel(loggedIn, email) {
+    document.getElementById('loginPanel').style.display = loggedIn ? 'none' : 'block';
+    document.getElementById('mainPanel').style.display = loggedIn ? 'block' : 'none';
+    if (loggedIn && email) {
+        document.getElementById('userEmail').textContent = email;
+        document.getElementById('userAvatar').textContent = email[0].toUpperCase();
     }
+}
 
-    assignments.forEach(a => {
-        const item = document.createElement('div');
-        item.className = 'preview-item';
-        let dueStr;
-        if (a.dueDate) {
-            const d = new Date(a.dueDate);
-            dueStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                + ' ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+// ── Auth ──
+async function login(email, password) {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error_description || data.msg || 'Login failed');
+    return { userId: data.user.id, email: data.user.email, accessToken: data.access_token };
+}
+
+// ── On load: check if already logged in ──
+document.addEventListener('DOMContentLoaded', () => {
+    chrome.storage.local.get(['userId', 'userEmail', 'backendUrl'], result => {
+        if (result.userId && result.userEmail) {
+            showPanel(true, result.userEmail);
         } else {
-            dueStr = '⚠️ No date found';
+            showPanel(false);
         }
-        item.innerHTML = `
-      <div class="title">${a.title}</div>
-      <div class="meta" style="color:${a.dueDate ? '' : 'red'}">${a.course || 'Unknown course'} · ${dueStr}${a.points ? ` · ${a.points} pts` : ''}</div>
-    `;
-        list.appendChild(item);
+        const backendEl = document.getElementById('backendUrl');
+        if (result.backendUrl && backendEl) backendEl.value = result.backendUrl;
     });
 
-    preview.style.display = 'block';
-    syncCount.textContent = assignments.length;
-    syncBtn.style.display = 'block';
-}
+    // ── Login button ──
+    document.getElementById('loginBtn')?.addEventListener('click', async () => {
+        const btn = document.getElementById('loginBtn');
+        const email = document.getElementById('loginEmail').value.trim();
+        const password = document.getElementById('loginPassword').value;
 
-// Load saved settings
-async function loadSettings() {
-    chrome.runtime.sendMessage({ action: 'getSettings' }, settings => {
-        if (settings.backendUrl) document.getElementById('backendUrl').value = settings.backendUrl;
-        if (settings.userId) document.getElementById('userId').value = settings.userId;
+        if (!email || !password) {
+            showStatus('Please enter your email and password.', 'error');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'Logging in…';
+        showStatus('', '');
+
+        try {
+            const { userId, email: userEmail } = await login(email, password);
+            chrome.storage.local.set({ userId, userEmail }, () => {
+                showPanel(true, userEmail);
+                showStatus('Logged in successfully!', 'success');
+                setTimeout(() => { document.getElementById('status').className = 'status'; }, 2000);
+            });
+        } catch (err) {
+            showStatus(`Login failed: ${err.message}`, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '🔑 Log In to 11Planner';
+        }
     });
-}
 
-// Extract button
-document.getElementById('extractBtn').addEventListener('click', async () => {
-    const btn = document.getElementById('extractBtn');
-    btn.disabled = true;
-    btn.textContent = 'Extracting…';
-    showStatus('Scanning this Canvas page for assignments…', 'info');
+    // ── Logout button ──
+    document.getElementById('logoutBtn')?.addEventListener('click', () => {
+        chrome.storage.local.remove(['userId', 'userEmail'], () => {
+            showPanel(false);
+            document.getElementById('status').className = 'status';
+            extractedAssignments = [];
+            document.getElementById('preview').style.display = 'none';
+            document.getElementById('syncBtn').style.display = 'none';
+        });
+    });
 
-    try {
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    // ── Preview renderer ──
+    function renderPreview(assignments) {
+        const preview = document.getElementById('preview');
+        const list = document.getElementById('previewList');
+        const syncCount = document.getElementById('syncCount');
+        const syncBtn = document.getElementById('syncBtn');
 
-        // Inject content.js directly into the active tab — works on ANY Canvas domain
-        const results = await chrome.scripting.executeScript({
-            target: { tabId: tab.id },
-            files: ['content.js'],
+        list.innerHTML = '';
+        if (assignments.length === 0) {
+            preview.style.display = 'none';
+            syncBtn.style.display = 'none';
+            return;
+        }
+
+        assignments.forEach(a => {
+            const item = document.createElement('div');
+            item.className = 'preview-item';
+            let dueStr;
+            if (a.dueDate) {
+                const d = new Date(a.dueDate);
+                dueStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                    + ' ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+            } else {
+                dueStr = '⚠️ No date found';
+            }
+            item.innerHTML = `
+          <div class="title">${a.title}</div>
+          <div class="meta" style="color:${a.dueDate ? '' : '#ef4444'}">${a.course || 'Unknown'} · ${dueStr}</div>
+        `;
+            list.appendChild(item);
         });
 
-        // Now send the extract message
-        chrome.tabs.sendMessage(tab.id, { action: 'extract' }, response => {
-            if (chrome.runtime.lastError || !response) {
-                showStatus('Could not extract. Make sure you are on a Canvas page (assignments, calendar, or dashboard).', 'error');
+        preview.style.display = 'block';
+        syncCount.textContent = assignments.length;
+        syncBtn.style.display = 'block';
+    }
+
+    // ── Extract button ──
+    document.getElementById('extractBtn')?.addEventListener('click', async () => {
+        const btn = document.getElementById('extractBtn');
+        btn.disabled = true;
+        btn.textContent = 'Extracting…';
+        showStatus('Scanning this Canvas page…', 'info');
+
+        try {
+            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
+
+            chrome.tabs.sendMessage(tab.id, { action: 'extract' }, response => {
+                if (chrome.runtime.lastError || !response) {
+                    showStatus('Could not extract. Make sure you are on a Canvas page.', 'error');
+                    btn.disabled = false;
+                    btn.textContent = '🎓 Extract Assignments';
+                    return;
+                }
+                extractedAssignments = response.assignments || [];
+                if (extractedAssignments.length === 0) {
+                    showStatus('No assignments found on this page.', 'info');
+                } else {
+                    showStatus(`Found ${extractedAssignments.length} assignment(s).`, 'success');
+                }
+                renderPreview(extractedAssignments);
                 btn.disabled = false;
                 btn.textContent = '🎓 Extract Assignments';
-                return;
-            }
-
-            extractedAssignments = response.assignments || [];
-            if (extractedAssignments.length === 0) {
-                showStatus('No assignments found. Try the Canvas Assignments page (/assignments) for better results.', 'info');
-            } else {
-                showStatus(`Found ${extractedAssignments.length} assignment(s). Review and sync below.`, 'success');
-            }
-
-            renderPreview(extractedAssignments);
+            });
+        } catch (err) {
+            showStatus(`Error: ${err.message}`, 'error');
             btn.disabled = false;
             btn.textContent = '🎓 Extract Assignments';
-        });
-
-    } catch (err) {
-        showStatus(`Error: ${err.message}`, 'error');
-        btn.disabled = false;
-        btn.textContent = '🎓 Extract Assignments';
-    }
-});
-
-// Sync button
-document.getElementById('syncBtn').addEventListener('click', async () => {
-    const btn = document.getElementById('syncBtn');
-    btn.disabled = true;
-    showStatus('Syncing to 11Planner…', 'info');
-
-    chrome.runtime.sendMessage({ action: 'sync', assignments: extractedAssignments }, response => {
-        if (response.success) {
-            showStatus(`✅ ${response.message || `Synced ${response.count} assignments!`}`, 'success');
-        } else {
-            showStatus(`❌ ${response.error}`, 'error');
         }
-        btn.disabled = false;
     });
-});
 
-// Save settings
-document.getElementById('saveSettings').addEventListener('click', () => {
-    const backendUrl = document.getElementById('backendUrl').value.trim() || 'http://localhost:8000';
-    const userId = document.getElementById('userId').value.trim();
-    chrome.runtime.sendMessage({ action: 'saveSettings', backendUrl, userId }, () => {
-        showStatus('Settings saved!', 'success');
-        setTimeout(() => { document.getElementById('status').style.display = 'none'; }, 2000);
-    });
-});
+    // ── Sync button ──
+    document.getElementById('syncBtn')?.addEventListener('click', async () => {
+        const btn = document.getElementById('syncBtn');
+        btn.disabled = true;
+        showStatus('Syncing to 11Planner…', 'info');
 
-// Debug DOM button — dumps raw Canvas agenda HTML into the textarea
-document.getElementById('debugBtn').addEventListener('click', async () => {
-    const out = document.getElementById('debugOut');
-    out.style.display = 'block';
-    out.value = 'Running…';
-
-    try {
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
-
-        const results = await chrome.scripting.executeScript({
-            target: { tabId: tab.id },
-            func: () => {
-                const lines = [];
-                const days = document.querySelectorAll('tr.fc-list-day');
-                const items = document.querySelectorAll('tr.fc-list-item');
-                lines.push(`fc-list-day rows: ${days.length}`);
-                lines.push(`fc-list-item rows: ${items.length}`);
-
-                if (days.length > 0) {
-                    const d = days[0];
-                    const attrs = [...d.attributes].map(a => `${a.name}="${a.value}"`).join(' ');
-                    lines.push(`\nDay[0] attrs: ${attrs}`);
-                    lines.push(`Day[0] HTML: ${d.innerHTML.slice(0, 400)}`);
-                }
-                if (items.length > 0) {
-                    const item = items[0];
-                    const attrs = [...item.attributes].map(a => `${a.name}="${a.value}"`).join(' ');
-                    lines.push(`\nItem[0] attrs: ${attrs}`);
-                    lines.push(`Item[0] HTML: ${item.innerHTML.slice(0, 400)}`);
-                }
-
-                // data-date anywhere
-                const withDate = document.querySelectorAll('[data-date]');
-                lines.push(`\nElements [data-date]: ${withDate.length}`);
-                [...withDate].slice(0, 3).forEach((el, i) => {
-                    lines.push(`  [${i}] <${el.tagName}.${el.className.split(' ')[0]}> data-date="${el.getAttribute('data-date')}"`);
-                });
-
-                return lines.join('\n');
+        chrome.runtime.sendMessage({ action: 'sync', assignments: extractedAssignments }, response => {
+            if (response.success) {
+                showStatus(`✅ ${response.message || `Synced ${response.count} assignments!`}`, 'success');
+            } else {
+                showStatus(`❌ ${response.error}`, 'error');
             }
+            btn.disabled = false;
         });
+    });
 
-        out.value = results[0]?.result || 'No result';
-    } catch (err) {
-        out.value = `Error: ${err.message}`;
-    }
-});
+    // ── Save settings ──
+    document.getElementById('saveSettings')?.addEventListener('click', () => {
+        const backendUrl = document.getElementById('backendUrl')?.value?.trim() || 'http://localhost:8000';
+        chrome.storage.local.set({ backendUrl }, () => {
+            showStatus('Settings saved!', 'success');
+            setTimeout(() => { document.getElementById('status').className = 'status'; }, 2000);
+        });
+    });
 
-// Init
-loadSettings();
+}); // end DOMContentLoaded
