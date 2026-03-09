@@ -26,6 +26,14 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
     setEventList(events);
   }, [events]);
 
+  const updateDate = (newDate: Date) => {
+    setCurrentDate(newDate);
+    setWeekDays(getWeekDays(newDate));
+    setDaysInMonth(getDaysInMonth(newDate));
+    setDayData(getDayData(newDate));
+    setMonthsInYear(getMonthsInYear(newDate.getFullYear()));
+  };
+
   const handlePreviousPeriod = useCallback(() => {
     const newDate = new Date(currentDate);
     switch (viewMode) {
@@ -67,14 +75,6 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
   const handleToday = useCallback(() => {
     updateDate(new Date());
   }, []);
-
-  const updateDate = (newDate: Date) => {
-    setCurrentDate(newDate);
-    setWeekDays(getWeekDays(newDate));
-    setDaysInMonth(getDaysInMonth(newDate));
-    setDayData(getDayData(newDate));
-    setMonthsInYear(getMonthsInYear(newDate.getFullYear()));
-  };
 
   const handleViewModeChange = (mode: ViewMode) => {
     setViewMode(mode);

@@ -127,6 +127,15 @@ export const scheduleAPI = {
       body: JSON.stringify(block),
     }),
 
+  generate: (userId: string, tasks: Task[] = []) =>
+    fetchAPI<{ message: string; blocks: ScheduleBlock[]; stats: Record<string, unknown> | null }>(
+      `/api/schedule/generate/${userId}`,
+      {
+        method: "POST",
+        body: JSON.stringify({ tasks }),
+      }
+    ),
+
   getByUser: (userId: string) =>
     fetchAPI<ScheduleBlock[]>(`/api/schedule-blocks/${userId}`, {
       method: "GET",

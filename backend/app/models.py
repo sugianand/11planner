@@ -19,6 +19,12 @@ class CourseBase(BaseModel):
 class CourseCreate(CourseBase):
     user_id: str
 
+class CourseUpdate(BaseModel):
+    name: Optional[str] = None
+    code: Optional[str] = None
+    professor: Optional[str] = None
+    description: Optional[str] = None
+
 class Course(CourseBase):
     id: str
     user_id: str
@@ -38,6 +44,14 @@ class AssignmentBase(BaseModel):
 
 class AssignmentCreate(AssignmentBase):
     user_id: str
+
+class AssignmentUpdate(BaseModel):
+    title: Optional[str] = None
+    course_id: Optional[str] = None
+    deadline: Optional[datetime] = None
+    description: Optional[str] = None
+    priority: Optional[int] = None
+    completed: Optional[bool] = None
 
 class Assignment(AssignmentBase):
     id: str
@@ -62,6 +76,16 @@ class TaskBase(BaseModel):
 class TaskCreate(TaskBase):
     user_id: str
 
+class TaskUpdate(BaseModel):
+    title: Optional[str] = None
+    assignment_id: Optional[str] = None
+    course_id: Optional[str] = None
+    deadline: Optional[datetime] = None
+    estimated_hours: Optional[float] = None
+    priority: Optional[int] = None
+    description: Optional[str] = None
+    completed: Optional[bool] = None
+
 class Task(TaskBase):
     id: str
     user_id: str
@@ -82,6 +106,14 @@ class ScheduleBlockBase(BaseModel):
 
 class ScheduleBlockCreate(ScheduleBlockBase):
     user_id: str
+
+class ScheduleBlockUpdate(BaseModel):
+    task_id: Optional[str] = None
+    date: Optional[datetime] = None
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
+    duration_minutes: Optional[int] = None
+    completed: Optional[bool] = None
 
 class ScheduleBlock(ScheduleBlockBase):
     id: str

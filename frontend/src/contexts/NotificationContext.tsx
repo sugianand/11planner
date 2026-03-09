@@ -38,42 +38,39 @@ const DEFAULT_LEAD_HOURS = 24;
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const { tasks } = usePlanner();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [notificationsEnabled, setNotificationsEnabledState] = useState(true);
-  const [reminderLeadHours, setReminderLeadHoursState] = useState(DEFAULT_LEAD_HOURS);
-  const [permission, setPermission] = useState<NotificationPermission | "unsupported">(
-    typeof window === "undefined" || !("Notification" in window) ? "unsupported" : Notification.permission
-  );
-  const notifiedRef = useRef<Record<string, string>>({});
-
-  useEffect(() => {
+  const [notificationsEnabled, setNotificationsEnabledState] = useState(() => {
     if (typeof window === "undefined") {
-      return;
+      return true;
     }
     const savedEnabled = localStorage.getItem(STORAGE_KEYS.enabled);
-    const savedLeadHours = localStorage.getItem(STORAGE_KEYS.leadHours);
-    const savedNotified = localStorage.getItem(STORAGE_KEYS.notified);
-
-    if (savedEnabled !== null) {
-      setNotificationsEnabledState(savedEnabled !== "false");
+    return savedEnabled === null ? true : savedEnabled !== "false";
+  });
+  const [reminderLeadHours, setReminderLeadHoursState] = useState(() => {
+    if (typeof window === "undefined") {
+      return DEFAULT_LEAD_HOURS;
     }
-    if (savedLeadHours) {
-      const parsed = Number(savedLeadHours);
-      if (!Number.isNaN(parsed)) {
-        setReminderLeadHoursState(parsed);
+    const savedLeadHours = Number(localStorage.getItem(STORAGE_KEYS.leadHours));
+    return Number.isNaN(savedLeadHours) ? DEFAULT_LEAD_HOURS : savedLeadHours;
+  });
+  const [permission, setPermission] = useState<NotificationPermission | "unsupported">(() =>
+    typeof window === "undefined" || !("Notification" in window) ? "unsupported" : Notification.permission
+  );
+  const notifiedRef = useRef<Record<string, string>>(
+    (() => {
+      if (typeof window === "undefined") {
+        return {};
       }
-    }
-    if (savedNotified) {
+      const savedNotified = localStorage.getItem(STORAGE_KEYS.notified);
+      if (!savedNotified) {
+        return {};
+      }
       try {
-        notifiedRef.current = JSON.parse(savedNotified) || {};
+        return JSON.parse(savedNotified) || {};
       } catch {
-        notifiedRef.current = {};
+        return {};
       }
-    }
-
-    if ("Notification" in window) {
-      setPermission(Notification.permission);
-    }
-  }, []);
+    })()
+  );
 
   useEffect(() => {
     if (typeof window === "undefined") {

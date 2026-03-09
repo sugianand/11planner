@@ -6,7 +6,7 @@ from uuid import uuid4
 from fastapi import APIRouter, HTTPException
 from supabase import Client, create_client
 
-from app.models import ScheduleBlock, ScheduleBlockBase, ScheduleBlockCreate
+from app.models import ScheduleBlock, ScheduleBlockBase, ScheduleBlockCreate, ScheduleBlockUpdate
 
 
 router = APIRouter(prefix="/api/schedule-blocks", tags=["schedule"])
@@ -104,13 +104,16 @@ async def get_schedule_blocks_by_user(user_id: str):
 
 
 @router.put("/{block_id}", response_model=ScheduleBlock)
-async def update_schedule_block(block_id: str, block_update: ScheduleBlockBase):
+async def update_schedule_block(block_id: str, block_update: ScheduleBlockUpdate):
     supabase = get_supabase()
-    payload = {
-        "starts_at": block_update.start_time.isoformat(),
-        "ends_at": block_update.end_time.isoformat(),
-        "source_task_id": block_update.task_id,
-    }
+    update_data = block_update.model_dump(exclude_unset=True)
+    payload = {}
+    if "start_time" in update_data:
+        payload["starts_at"] = update_data["start_time"].isoformat()
+    if "end_time" in update_data:
+        payload["ends_at"] = update_data["end_time"].isoformat()
+    if "task_id" in update_data:
+        payload["source_task_id"] = update_data["task_id"]
     supabase.table("schedule_blocks").update(payload).eq("id", block_id).execute()
     rows = (
         supabase.table("schedule_blocks")

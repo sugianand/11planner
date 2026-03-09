@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from typing import List
-from app.models import Course, CourseCreate
+from app.models import Course, CourseCreate, CourseUpdate
 from uuid import uuid4
 
 router = APIRouter(prefix="/api/courses", tags=["courses"])
@@ -27,11 +27,13 @@ async def get_course_by_id(course_id: str):
     return courses_db[course_id]
 
 @router.put("/{course_id}", response_model=Course)
-async def update_course(course_id: str, course_update: CourseCreate):
+async def update_course(course_id: str, course_update: CourseUpdate):
     if course_id not in courses_db:
         raise HTTPException(status_code=404, detail="Course not found")
-    
-    updated_course = Course(id=course_id, **course_update.dict())
+
+    existing = courses_db[course_id]
+    updated_fields = course_update.dict(exclude_unset=True)
+    updated_course = Course(**{**existing.dict(), **updated_fields})
     courses_db[course_id] = updated_course
     return updated_course
 

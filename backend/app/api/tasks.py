@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 from app.models import (
     CourseBase, CourseCreate, Course, 
     AssignmentBase, AssignmentCreate, Assignment,
-    TaskBase, TaskCreate, Task
+    TaskBase, TaskCreate, Task, TaskUpdate
 )
 from app.schedule_generator import BusyBlock, Preferences, ScheduleGenerator
 from typing import List
@@ -284,11 +284,11 @@ async def get_task(task_id: str):
     return tasks_db[task_id]
 
 @router.put("/tasks/{task_id}", response_model=Task)
-async def update_task(task_id: str, task: TaskBase):
+async def update_task(task_id: str, task: TaskUpdate):
     """Update a task"""
     if task_id not in tasks_db:
         raise HTTPException(status_code=404, detail="Task not found")
-    tasks_db[task_id].update(task.dict())
+    tasks_db[task_id].update(task.model_dump(exclude_unset=True))
     return tasks_db[task_id]
 
 @router.delete("/tasks/{task_id}")

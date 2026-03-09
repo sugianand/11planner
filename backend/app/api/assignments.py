@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from typing import List, Optional
-from app.models import Assignment, AssignmentCreate
+from app.models import Assignment, AssignmentCreate, AssignmentUpdate
 from datetime import datetime
 from uuid import uuid4
 import os
@@ -108,19 +108,28 @@ async def create_assignment(assignment: AssignmentCreate):
 
 
 @router.put("/{assignment_id}", response_model=Assignment)
-async def update_assignment(assignment_id: str, assignment: AssignmentCreate):
+async def update_assignment(assignment_id: str, assignment: AssignmentUpdate):
     supabase = get_supabase()
-    payload = {
-        "title": assignment.title,
-        "course_id": assignment.course_id or None,
-        "deadline": assignment.deadline.isoformat(),
-        "description": assignment.description or None,
-        "priority": assignment.priority,
-        "estimated_hours": assignment.estimated_hours,
-        "status": assignment.status,
-        "points": assignment.points,
-        "url": assignment.url,
-    }
+    update_data = assignment.model_dump(exclude_unset=True)
+    payload = {}
+    if "title" in update_data:
+        payload["title"] = update_data["title"]
+    if "course_id" in update_data:
+        payload["course_id"] = update_data["course_id"]
+    if "deadline" in update_data:
+        payload["deadline"] = update_data["deadline"].isoformat()
+    if "description" in update_data:
+        payload["description"] = update_data["description"]
+    if "priority" in update_data:
+        payload["priority"] = update_data["priority"]
+    if "estimated_hours" in update_data:
+        payload["estimated_hours"] = update_data["estimated_hours"]
+    if "status" in update_data:
+        payload["status"] = update_data["status"]
+    if "points" in update_data:
+        payload["points"] = update_data["points"]
+    if "url" in update_data:
+        payload["url"] = update_data["url"]
     result = (
         supabase.table("assignments")
         .update(payload)

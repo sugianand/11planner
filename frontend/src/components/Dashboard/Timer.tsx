@@ -27,30 +27,40 @@ export default function Timer() {
     };
 
     useEffect(() => {
-        // Reset timer when mode changes
-        setTimeLeft(modes[mode].minutes * 60);
-        setIsActive(false);
-        if (intervalRef.current) clearInterval(intervalRef.current);
-    }, [mode, customDurations]);
-
-    useEffect(() => {
-        if (isActive && timeLeft > 0) {
-            intervalRef.current = setInterval(() => {
-                setTimeLeft((prev) => prev - 1);
-            }, 1000);
-        } else if (timeLeft === 0) {
-            setIsActive(false);
-            if (intervalRef.current) clearInterval(intervalRef.current);
+        if (!isActive) {
+            return;
         }
+
+        if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+        }
+
+        intervalRef.current = setInterval(() => {
+            setTimeLeft((prev) => {
+                if (prev <= 1) {
+                    setIsActive(false);
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
 
         return () => {
             if (intervalRef.current) clearInterval(intervalRef.current);
         };
-    }, [isActive, timeLeft]);
+    }, [isActive]);
 
     const toggleTimer = () => setIsActive(!isActive);
+    const handleModeChange = (nextMode: TimerMode) => {
+        setMode(nextMode);
+        setIsActive(false);
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        setTimeLeft(customDurations[nextMode] * 60);
+    };
+
     const resetTimer = () => {
         setIsActive(false);
+        if (intervalRef.current) clearInterval(intervalRef.current);
         setTimeLeft(modes[mode].minutes * 60);
     };
 
@@ -66,6 +76,8 @@ export default function Timer() {
     };
 
     const handleSaveSettings = () => {
+        setIsActive(false);
+        if (intervalRef.current) clearInterval(intervalRef.current);
         setTimeLeft(customDurations[mode] * 60);
         setShowSettings(false);
     };
@@ -158,7 +170,7 @@ export default function Timer() {
                 {(Object.keys(modes) as TimerMode[]).map((m) => (
                     <button
                         key={m}
-                        onClick={() => setMode(m)}
+                        onClick={() => handleModeChange(m)}
                         className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${mode === m
                             ? "bg-[#306844] text-white shadow-md"
                             : "text-slate-600 dark:text-slate-300 hover:bg-white/50 dark:hover:bg-slate-700/50"

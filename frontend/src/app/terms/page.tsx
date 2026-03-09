@@ -69,7 +69,7 @@ export default function TermsPage() {
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">Disclaimer</h2>
             <p className="text-slate-700 dark:text-slate-300">
-              11Planner is provided "as is" without warranties. We are not responsible for
+              11Planner is provided &quot;as is&quot; without warranties. We are not responsible for
               missed deadlines or outcomes based on scheduling suggestions.
             </p>
           </section>

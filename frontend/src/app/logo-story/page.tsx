@@ -30,7 +30,7 @@ export default function LogoStoryPage() {
             <p className="text-slate-700 dark:text-slate-300">
               11Planner is about turning pressure into focus. We were inspired by the idea of resilience and
               calm intensity that resonates with many students. The number 11 in our name echoes the
-              iconic "Eleven" and the late-night 11:59 deadline culture students know all too well.
+              iconic &quot;Eleven&quot; and the late-night 11:59 deadline culture students know all too well.
             </p>
           </section>
 

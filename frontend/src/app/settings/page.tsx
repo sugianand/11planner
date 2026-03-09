@@ -21,21 +21,25 @@ const sliderStyles = `
   }
 `;
 
+const readStoredBoolean = (key: string, fallback: boolean): boolean => {
+  if (typeof window === "undefined") {
+    return fallback;
+  }
+  const value = localStorage.getItem(key);
+  return value === null ? fallback : value !== "false";
+};
+
+const readStoredNumber = (key: string, fallback: number): number => {
+  if (typeof window === "undefined") {
+    return fallback;
+  }
+  const value = Number(localStorage.getItem(key));
+  return Number.isNaN(value) ? fallback : value;
+};
+
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
-  const [emailUpdates, setEmailUpdates] = useState(true);
-  const [weeklyReport, setWeeklyReport] = useState(true);
-  const [dailyLimit, setDailyLimit] = useState(4);
-  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
-  const [isMounted, setIsMounted] = useState(false);
-  const [savedSettings, setSavedSettings] = useState({
-    theme: "light" as Theme,
-    notifications: true,
-    emailUpdates: true,
-    weeklyReport: true,
-    dailyLimit: 4,
-    reminderLeadHours: 24,
-  });
+  const isMounted = typeof window !== "undefined";
   const {
     notificationsEnabled,
     setNotificationsEnabled,
@@ -44,29 +48,18 @@ export default function SettingsPage() {
     permission,
     requestPermission,
   } = useNotification();
-
-  useEffect(() => {
-    setIsMounted(true);
-
-    const savedNotifications = localStorage.getItem("notifications") !== "false";
-    const savedEmailUpdates = localStorage.getItem("emailUpdates") !== "false";
-    const savedWeeklyReport = localStorage.getItem("weeklyReport") !== "false";
-    const savedDailyLimit = parseInt(localStorage.getItem("dailyLimit") || "4");
-
-    setNotificationsEnabled(savedNotifications);
-    setEmailUpdates(savedEmailUpdates);
-    setWeeklyReport(savedWeeklyReport);
-    setDailyLimit(savedDailyLimit);
-
-    setSavedSettings({
-      theme: theme as Theme,
-      notifications: savedNotifications,
-      emailUpdates: savedEmailUpdates,
-      weeklyReport: savedWeeklyReport,
-      dailyLimit: savedDailyLimit,
-      reminderLeadHours,
-    });
-  }, []);
+  const [emailUpdates, setEmailUpdates] = useState(() => readStoredBoolean("emailUpdates", true));
+  const [weeklyReport, setWeeklyReport] = useState(() => readStoredBoolean("weeklyReport", true));
+  const [dailyLimit, setDailyLimit] = useState(() => readStoredNumber("dailyLimit", 4));
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [savedSettings, setSavedSettings] = useState({
+    theme: theme as Theme,
+    notifications: notificationsEnabled,
+    emailUpdates,
+    weeklyReport,
+    dailyLimit,
+    reminderLeadHours,
+  });
 
   const handleThemeChange = (newTheme: Theme) => {
     setTheme(newTheme);
@@ -119,7 +112,7 @@ export default function SettingsPage() {
   }, [reminderLeadHours, savedSettings.reminderLeadHours]);
 
   useEffect(() => {
-    if (!isMounted || !hasChanges) {
+    if (!hasChanges) {
       return;
     }
     const timer = setTimeout(() => {
@@ -139,7 +132,6 @@ export default function SettingsPage() {
 
     return () => clearTimeout(timer);
   }, [
-    isMounted,
     hasChanges,
     theme,
     notificationsEnabled,
@@ -150,9 +142,6 @@ export default function SettingsPage() {
   ]);
 
   const permissionLabel = useMemo(() => {
-    if (!isMounted) {
-      return "Checking browser permission...";
-    }
     if (permission === "granted") {
       return "Notifications enabled in your browser";
     }
@@ -163,14 +152,11 @@ export default function SettingsPage() {
       return "Not supported in this browser";
     }
     return "Not enabled yet";
-  }, [isMounted, permission]);
+  }, [permission]);
 
   const permissionButtonLabel = useMemo(() => {
-    if (!isMounted) {
-      return "Checking...";
-    }
     return permission === "granted" ? "Enabled" : "Enable";
-  }, [isMounted, permission]);
+  }, [permission]);
 
   const handleResetDefaults = () => {
     handleThemeChange("light");

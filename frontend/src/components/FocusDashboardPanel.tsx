@@ -23,7 +23,7 @@ export default function FocusDashboardPanel() {
     loadTasks();
     loadAssignments();
     loadScheduleBlocks();
-  }, [userId]);
+  }, [userId, loadCourses, loadTasks, loadAssignments, loadScheduleBlocks]);
 
   const totalTasks = tasks.length;
   const completedTasks = tasks.filter((t) => t.completed).length;
@@ -46,7 +46,7 @@ export default function FocusDashboardPanel() {
             Focus Dashboard
           </h1>
           <p className="text-slate-600 dark:text-slate-300 font-medium">
-            Let's get in the zone, {userId ? "Student" : "Guest"}.
+            Let&apos;s get in the zone, {userId ? "Student" : "Guest"}.
           </p>
         </div>
 
