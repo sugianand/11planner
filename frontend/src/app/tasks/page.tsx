@@ -144,7 +144,7 @@ export default function TasksPage() {
           )}
 
           {/* No Courses Warning */}
-          {courses.length === 0 && !showForm && (
+          {courses.length === 0 && assignments.length === 0 && !showForm && (
             <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-lg p-8 text-center border border-slate-200 dark:border-slate-700/40 mb-6">
               <p className="text-slate-600 dark:text-slate-300 text-lg font-semibold mb-2">No courses added yet.</p>
               <p className="text-slate-600 dark:text-slate-300 mb-4">Please add a course first before creating assignments.</p>
@@ -221,7 +221,7 @@ export default function TasksPage() {
           )}
 
           {/* Assignments List */}
-          {courses.length > 0 && (
+          {(courses.length > 0 || assignments.length > 0) && (
             <div className="space-y-4">
               {loading && assignments.length === 0 ? (
                 <div className="text-center py-12">
