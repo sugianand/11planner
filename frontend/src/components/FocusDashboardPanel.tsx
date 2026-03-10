@@ -100,7 +100,7 @@ export default function FocusDashboardPanel({ atmospherePanel }: FocusDashboardP
         </div>
 
         <div className="lg:col-span-6 flex justify-center">
-          <div className="w-full max-w-xl self-start">
+          <div className="w-full max-w-xl">
             <Timer />
           </div>
         </div>
@@ -146,10 +146,11 @@ export default function FocusDashboardPanel({ atmospherePanel }: FocusDashboardP
       </div>
 
       {atmospherePanel ? (
-        <div className="w-full bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl rounded-3xl border border-white/40 dark:border-slate-700/40 p-4 md:p-6 mt-4">
+        <div className="w-full">
           {atmospherePanel}
         </div>
       ) : null}
+
 
     </div>
   );
