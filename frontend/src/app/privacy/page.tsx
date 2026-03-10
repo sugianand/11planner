@@ -10,17 +10,17 @@ export default function PrivacyPage() {
 
 
       <div className="max-w-3xl mx-auto p-6 lg:p-10 mt-16 mb-24">
-        <div className="mb-8">
-          <p className="text-sm font-semibold uppercase tracking-widest text-emerald-600">Privacy</p>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight mt-2">
-            Your data, your control.
-          </h1>
-          <p className="text-slate-600 dark:text-slate-300 mt-3 font-medium">
-            Effective date: February 6, 2026
-          </p>
-        </div>
+        <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-sm p-6 md:p-10 border border-white/40 dark:border-slate-700/40 space-y-6">
+          <div className="mb-8 border-b border-slate-200/50 dark:border-slate-700/50 pb-6">
+            <p className="text-sm font-semibold uppercase tracking-widest text-emerald-600">Privacy</p>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight mt-2">
+              Your data, your control.
+            </h1>
+            <p className="text-slate-600 dark:text-slate-300 mt-3 font-medium">
+              Effective date: February 6, 2026
+            </p>
+          </div>
 
-        <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-sm p-6 border border-white/40 dark:border-slate-700/40 space-y-6">
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">Overview</h2>
             <p className="text-slate-700 dark:text-slate-300">
