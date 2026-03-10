@@ -5,16 +5,6 @@ import { usePlanner } from "@/contexts/PlannerContext";
 import { ScheduleView } from "@/components/ScheduleView";
 import { Event } from "@/types/schedule";
 import Footer from "@/components/Footer";
-import { scheduleAPI } from "@/lib/api";
-import { ScheduleBlock } from "@/types";
-
-type ScheduleStats = {
-  valid: boolean;
-  total_blocks: number;
-  total_hours: number;
-  days_span: number;
-  avg_hours_per_day: number;
-};
 
 
 export default function SchedulePage() {
@@ -28,8 +18,8 @@ export default function SchedulePage() {
   } = usePlanner();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [scheduleStats, setScheduleStats] = useState<ScheduleStats | null>(null);
-  const [generatedBlocks, setGeneratedBlocks] = useState<ScheduleBlock[]>([]);
+  const [scheduleStats, setScheduleStats] = useState<any>(null);
+  const [generatedBlocks, setGeneratedBlocks] = useState<any[]>([]);
 
 
   useEffect(() => {
@@ -42,12 +32,21 @@ export default function SchedulePage() {
     setError(null);
 
     try {
-      const data = await scheduleAPI.generate(userId, pendingTasks);
+      const response = await fetch(
+        `http://localhost:8000/api/schedule/generate/${userId}`,
+        { method: "POST" }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to generate schedule");
+      }
+
+      const data = await response.json();
       setGeneratedBlocks(data.blocks || []);
-      setScheduleStats((data.stats as ScheduleStats | null) ?? null);
+      setScheduleStats(data.stats);
       await loadScheduleBlocks();
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to generate schedule");
+    } catch (err: any) {
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -93,8 +92,8 @@ export default function SchedulePage() {
         end_time: updatedEnd.toISOString(),
         duration_minutes: block.duration_minutes,
       });
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to move block");
+    } catch (err: any) {
+      setError(err.message || "Failed to move block");
     }
   };
 
