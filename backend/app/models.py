@@ -37,7 +37,7 @@ class Course(CourseBase):
 
 class AssignmentBase(BaseModel):
     title: str
-    course_id: str
+    course_id: Optional[str] = None
     deadline: datetime
     description: Optional[str] = None
     priority: int = 2  # 1-5 scale

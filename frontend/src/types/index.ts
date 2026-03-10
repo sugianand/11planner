@@ -39,7 +39,7 @@ export interface CourseCreate {
 export interface Assignment {
   id: string;
   title: string;
-  course_id: string;
+  course_id?: string;
   deadline: string;
   description?: string;
   priority: number;
@@ -55,7 +55,7 @@ export interface Assignment {
 
 export interface AssignmentCreate {
   title: string;
-  course_id: string;
+  course_id?: string;
   deadline: string;
   description?: string;
   priority: number;
