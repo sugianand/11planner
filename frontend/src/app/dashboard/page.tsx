@@ -701,6 +701,7 @@ export default function Dashboard() {
     stop: () => void;
   } | null>(null);
   const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const playbackRequestRef = useRef(0);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     setIsDragging(true);
@@ -957,8 +958,12 @@ export default function Dashboard() {
   );
 
   const startPlayback = useCallback(
-    async (scene: Soundscape) => {
+    async (scene: Soundscape, requestId: number) => {
       await stopPlayback(false);
+
+      if (requestId !== playbackRequestRef.current) {
+        return false;
+      }
 
       if (scene.engine === "none") {
         return false;
@@ -970,6 +975,13 @@ export default function Dashboard() {
         audio.volume = volume;
         try {
           await audio.play();
+
+          if (requestId !== playbackRequestRef.current) {
+            audio.pause();
+            audio.src = "";
+            return false;
+          }
+
           audioRef.current = audio;
           return true;
         } catch {
@@ -980,6 +992,12 @@ export default function Dashboard() {
 
       const generatedSound = createGeneratedSound(scene.engine, volume);
       if (!generatedSound) {
+        return false;
+      }
+
+      if (requestId !== playbackRequestRef.current) {
+        generatedSound.stop();
+        await generatedSound.context.close().catch(() => undefined);
         return false;
       }
 
@@ -1042,7 +1060,9 @@ export default function Dashboard() {
     if (activeSoundCategory === "All") {
       return soundscapes;
     }
-    return soundscapes.filter((scene) => scene.category === activeSoundCategory);
+    const noSoundOption = soundscapes.find((scene) => scene.id === "no-sound");
+    const scopedScenes = soundscapes.filter((scene) => scene.category === activeSoundCategory);
+    return noSoundOption ? [noSoundOption, ...scopedScenes] : scopedScenes;
   }, [activeSoundCategory]);
 
   const handleBackgroundSelect = (sceneId: string) => {
@@ -1063,6 +1083,8 @@ export default function Dashboard() {
   };
 
   const handleSoundSelect = async (sceneId: string) => {
+    const requestId = playbackRequestRef.current + 1;
+    playbackRequestRef.current = requestId;
     setSoundId(sceneId);
 
     const scene = soundscapes.find((item) => item.id === sceneId);
@@ -1070,8 +1092,16 @@ export default function Dashboard() {
       return;
     }
 
-    const isStarted = await startPlayback(scene);
-    setIsPlaying(isStarted);
+    if (scene.engine === "none") {
+      await stopPlayback(true);
+      setIsPlaying(false);
+      return;
+    }
+
+    const isStarted = await startPlayback(scene, requestId);
+    if (requestId === playbackRequestRef.current) {
+      setIsPlaying(isStarted);
+    }
   };
 
   useEffect(() => {
