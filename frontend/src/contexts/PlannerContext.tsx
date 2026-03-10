@@ -69,6 +69,12 @@ type SupabaseCourseRow = {
   course_code: string;
   professor: string | null;
   description: string | null;
+  is_online: boolean;
+  has_lab: boolean;
+  lab_day: string | null;
+  lab_start_time: string | null;
+  lab_end_time: string | null;
+  lab_is_online: boolean;
   created_at: string;
 };
 
@@ -138,6 +144,12 @@ function mapCourseRowToModel(row: SupabaseCourseRow): Course {
     endTime: row.end_time || "",
     professor: row.professor || "",
     description: row.description || "",
+    isOnline: row.is_online,
+    hasLab: row.has_lab,
+    labDay: row.lab_day || "",
+    labStartTime: row.lab_start_time || "",
+    labEndTime: row.lab_end_time || "",
+    labIsOnline: row.lab_is_online,
     created_at: row.created_at,
   };
 }
@@ -263,11 +275,17 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
           user_id: course.user_id || userId,
           course_name: course.name,
           course_days: parseCourseDays(course.courseDate),
-          start_time: normalizeTimeForDb(course.startTime),
-          end_time: normalizeTimeForDb(course.endTime),
+          start_time: !course.isOnline ? normalizeTimeForDb(course.startTime) : null,
+          end_time: !course.isOnline ? normalizeTimeForDb(course.endTime) : null,
           course_code: course.code,
           professor: course.professor || null,
           description: course.description || null,
+          is_online: course.isOnline || false,
+          has_lab: course.hasLab || false,
+          lab_day: course.hasLab ? course.labDay : null,
+          lab_start_time: course.hasLab && !course.labIsOnline ? normalizeTimeForDb(course.labStartTime || "") : null,
+          lab_end_time: course.hasLab && !course.labIsOnline ? normalizeTimeForDb(course.labEndTime || "") : null,
+          lab_is_online: course.labIsOnline || false,
         };
 
         const { data, error: insertError } = await supabase
@@ -300,10 +318,27 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
       if (course.name !== undefined) updatePayload.course_name = course.name;
       if (course.code !== undefined) updatePayload.course_code = course.code;
       if (course.courseDate !== undefined) updatePayload.course_days = parseCourseDays(course.courseDate);
-      if (course.startTime !== undefined) updatePayload.start_time = normalizeTimeForDb(course.startTime);
-      if (course.endTime !== undefined) updatePayload.end_time = normalizeTimeForDb(course.endTime);
+      if (course.startTime !== undefined) updatePayload.start_time = course.isOnline ? null : normalizeTimeForDb(course.startTime);
+      if (course.endTime !== undefined) updatePayload.end_time = course.isOnline ? null : normalizeTimeForDb(course.endTime);
       if (course.professor !== undefined) updatePayload.professor = course.professor || null;
       if (course.description !== undefined) updatePayload.description = course.description || null;
+      
+      // Handle online/lab fields
+      if (course.isOnline !== undefined) updatePayload.is_online = course.isOnline;
+      if (course.hasLab !== undefined) {
+        updatePayload.has_lab = course.hasLab;
+        // If hasLab is false, clear all lab fields
+        if (!course.hasLab) {
+          updatePayload.lab_day = null;
+          updatePayload.lab_start_time = null;
+          updatePayload.lab_end_time = null;
+          updatePayload.lab_is_online = false;
+        }
+      }
+      if (course.labDay !== undefined) updatePayload.lab_day = course.hasLab ? course.labDay : null;
+      if (course.labStartTime !== undefined) updatePayload.lab_start_time = course.hasLab && !course.labIsOnline ? normalizeTimeForDb(course.labStartTime) : null;
+      if (course.labEndTime !== undefined) updatePayload.lab_end_time = course.hasLab && !course.labIsOnline ? normalizeTimeForDb(course.labEndTime) : null;
+      if (course.labIsOnline !== undefined) updatePayload.lab_is_online = course.labIsOnline;
 
       const { error: updateError } = await supabase
         .from("courses")

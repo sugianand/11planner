@@ -9,6 +9,9 @@ class CourseBase(BaseModel):
     code: str
     professor: Optional[str] = None
     description: Optional[str] = None
+    course_days: Optional[list] = None
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
     isOnline: bool = False
     hasLab: bool = False
     labDay: Optional[str] = None

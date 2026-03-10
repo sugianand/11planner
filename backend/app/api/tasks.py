@@ -20,10 +20,7 @@ from supabase import Client, create_client
 
 router = APIRouter(prefix="/api", tags=["tasks"])
 
-courses_db = {}
-assignments_db = {}
-tasks_db = {}
-
+# Supabase client is used for all data operations
 _supabase_client: Client | None = None
 
 
@@ -186,43 +183,74 @@ def build_course_busy_blocks(course_rows: list[dict], window_start: datetime, wi
 
 @router.post("/courses", response_model=Course)
 async def create_course(course: CourseCreate):
-    """Create a new course"""
-    course_id = f"course_{len(courses_db) + 1}"
-    course_data = {
-        "id": course_id,
-        **course.dict(),
-        "created_at": datetime.now()
+    """Create a new course in Supabase"""
+    supabase = get_supabase()
+    payload = {
+        "user_id": course.user_id,
+        "course_name": course.name,
+        "course_code": course.code,
+        "course_days": course.course_days,
+        "start_time": course.start_time,
+        "end_time": course.end_time,
+        "professor": course.professor,
+        "description": course.description,
+        "is_online": course.isOnline,
+        "has_lab": course.hasLab,
+        "lab_day": course.labDay,
+        "lab_start_time": course.labStartTime,
+        "lab_end_time": course.labEndTime,
+        "lab_is_online": course.labIsOnline,
     }
-    courses_db[course_id] = course_data
-    return course_data
+    response = supabase.table("courses").insert(payload).execute()
+    if not response.data:
+        raise HTTPException(status_code=500, detail="Failed to create course")
+    return response.data[0]
 
 @router.get("/courses/{user_id}", response_model=List[Course])
 async def get_user_courses(user_id: str):
-    """Get all courses for a user"""
-    user_courses = [c for c in courses_db.values() if c["user_id"] == user_id]
-    return user_courses
+    """Get all courses for a user from Supabase"""
+    supabase = get_supabase()
+    response = supabase.table("courses").select("*").eq("user_id", user_id).execute()
+    return response.data
 
 @router.get("/courses/detail/{course_id}", response_model=Course)
 async def get_course(course_id: str):
-    """Get a specific course"""
-    if course_id not in courses_db:
+    """Get a specific course from Supabase"""
+    supabase = get_supabase()
+    response = supabase.table("courses").select("*").eq("id", course_id).single().execute()
+    if not response.data:
         raise HTTPException(status_code=404, detail="Course not found")
-    return courses_db[course_id]
+    return response.data
 
 @router.put("/courses/{course_id}", response_model=Course)
 async def update_course(course_id: str, course: CourseBase):
-    """Update a course"""
-    if course_id not in courses_db:
+    """Update a course in Supabase"""
+    supabase = get_supabase()
+    update_payload = {
+        "course_name": course.name,
+        "course_code": course.code,
+        "course_days": course.course_days,
+        "start_time": course.start_time,
+        "end_time": course.end_time,
+        "professor": course.professor,
+        "description": course.description,
+        "is_online": course.isOnline,
+        "has_lab": course.hasLab,
+        "lab_day": course.labDay,
+        "lab_start_time": course.labStartTime,
+        "lab_end_time": course.labEndTime,
+        "lab_is_online": course.labIsOnline,
+    }
+    response = supabase.table("courses").update(update_payload).eq("id", course_id).execute()
+    if not response.data:
         raise HTTPException(status_code=404, detail="Course not found")
-    courses_db[course_id].update(course.dict())
-    return courses_db[course_id]
+    return response.data[0]
 
 @router.delete("/courses/{course_id}")
 async def delete_course(course_id: str):
-    """Delete a course"""
-    if course_id not in courses_db:
-        raise HTTPException(status_code=404, detail="Course not found")
-    del courses_db[course_id]
+    """Delete a course from Supabase"""
+    supabase = get_supabase()
+    supabase.table("courses").delete().eq("id", course_id).execute()
     return {"message": "Course deleted"}
 
 
@@ -310,92 +338,12 @@ def ai__optimizer(context: dict) -> dict:
 
 
 # ========== ASSIGNMENT ENDPOINTS ==========
-
-@router.post("/assignments", response_model=Assignment)
-async def create_assignment(assignment: AssignmentCreate):
-    """Create a new assignment"""
-    assignment_id = f"assignment_{len(assignments_db) + 1}"
-    assignment_data = {
-        "id": assignment_id,
-        **assignment.dict(),
-        "completed": False,
-        "created_at": datetime.now()
-    }
-    assignments_db[assignment_id] = assignment_data
-    return assignment_data
-
-@router.get("/assignments/{user_id}", response_model=List[Assignment])
-async def get_user_assignments(user_id: str):
-    """Get all assignments for a user"""
-    user_assignments = [a for a in assignments_db.values() if a["user_id"] == user_id]
-    return user_assignments
-
-@router.get("/assignments/detail/{assignment_id}", response_model=Assignment)
-async def get_assignment(assignment_id: str):
-    """Get a specific assignment"""
-    if assignment_id not in assignments_db:
-        raise HTTPException(status_code=404, detail="Assignment not found")
-    return assignments_db[assignment_id]
-
-@router.put("/assignments/{assignment_id}", response_model=Assignment)
-async def update_assignment(assignment_id: str, assignment: AssignmentBase):
-    """Update an assignment"""
-    if assignment_id not in assignments_db:
-        raise HTTPException(status_code=404, detail="Assignment not found")
-    assignments_db[assignment_id].update(assignment.dict())
-    return assignments_db[assignment_id]
-
-@router.delete("/assignments/{assignment_id}")
-async def delete_assignment(assignment_id: str):
-    """Delete an assignment"""
-    if assignment_id not in assignments_db:
-        raise HTTPException(status_code=404, detail="Assignment not found")
-    del assignments_db[assignment_id]
-    return {"message": "Assignment deleted"}
+# Assignments are handled in /api/assignments endpoints (see assignments.py)
+# Do not create duplicate endpoints here
 
 # ========== TASK ENDPOINTS ==========
-
-@router.post("/tasks", response_model=Task)
-async def create_task(task: TaskCreate):
-    """Create a new task"""
-    task_id = f"task_{len(tasks_db) + 1}"
-    task_data = {
-        "id": task_id,
-        **task.dict(),
-        "completed": False,
-        "created_at": datetime.now()
-    }
-    tasks_db[task_id] = task_data
-    return task_data
-
-@router.get("/tasks/{user_id}", response_model=List[Task])
-async def get_user_tasks(user_id: str):
-    """Get all tasks for a user"""
-    user_tasks = [t for t in tasks_db.values() if t["user_id"] == user_id]
-    return user_tasks
-
-@router.get("/tasks/detail/{task_id}", response_model=Task)
-async def get_task(task_id: str):
-    """Get a specific task"""
-    if task_id not in tasks_db:
-        raise HTTPException(status_code=404, detail="Task not found")
-    return tasks_db[task_id]
-
-@router.put("/tasks/{task_id}", response_model=Task)
-async def update_task(task_id: str, task: TaskBase):
-    """Update a task"""
-    if task_id not in tasks_db:
-        raise HTTPException(status_code=404, detail="Task not found")
-    tasks_db[task_id].update(task.dict())
-    return tasks_db[task_id]
-
-@router.delete("/tasks/{task_id}")
-async def delete_task(task_id: str):
-    """Delete a task"""
-    if task_id not in tasks_db:
-        raise HTTPException(status_code=404, detail="Task not found")
-    del tasks_db[task_id]
-    return {"message": "Task deleted"}
+# Tasks are handled via the schedule generation endpoints below
+# Do not create duplicate endpoints here
 
 # ========== SCHEDULE GENERATION ENDPOINTS ==========
 
