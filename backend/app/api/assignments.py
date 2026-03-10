@@ -25,7 +25,25 @@ def get_supabase() -> Client:
 
 
 def parse_dt(value: str | datetime) -> datetime:
-    dt = value if isinstance(value, datetime) else datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if isinstance(value, datetime):
+        dt = value
+    else:
+        # Python 3.10 fromisoformat is dangerously strict about microsecond length. 
+        # Safely chop off microseconds before parsing, keeping the timezone block
+        if "." in value:
+            main_part, rest = value.split(".", 1)
+            tz_part = ""
+            if "+" in rest:
+                tz_part = "+" + rest.split("+")[1]
+            elif "-" in rest:
+                tz_part = "-" + rest.split("-")[1]
+            elif "Z" in rest:
+                tz_part = "+00:00"
+            value = main_part + tz_part
+        else:
+            value = value.replace("Z", "+00:00")
+        dt = datetime.fromisoformat(value)
+        
     if dt.tzinfo is not None:
         return dt.astimezone().replace(tzinfo=None)
     return dt
@@ -54,6 +72,11 @@ def map_row(row: dict) -> dict:
 
 @router.get("/{user_id}", response_model=List[Assignment])
 async def get_assignments_by_user(user_id: str):
+    import os
+    print(f"DEBUG IN UVICORN: Fetching for {user_id}")
+    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_KEY")
+    print(f"DEBUG IN UVICORN: Using key ending in... {key[-5:] if key else 'None'} | Is Service Role? {'SUPABASE_SERVICE_ROLE_KEY' in os.environ}")
+    
     supabase = get_supabase()
     result = (
         supabase.table("assignments")

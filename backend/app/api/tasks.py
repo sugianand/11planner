@@ -179,6 +179,7 @@ def build_course_busy_blocks(course_rows: list[dict], window_start: datetime, wi
 
     return busy_blocks
 
+<<<<<<< HEAD
 # ========== COURSE ENDPOINTS ==========
 
 @router.post("/courses", response_model=Course)
@@ -254,6 +255,8 @@ async def delete_course(course_id: str):
     return {"message": "Course deleted"}
 
 
+=======
+>>>>>>> 9c89904 (Fix: Add robust Supabase timestamp parsing to prevent Python 3.10 fromisoformat crashes, and remove duplicate legacy tasks routes)
 
 # AI schedule optimizer
 openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY")) if (OpenAI and os.getenv("OPENAI_API_KEY")) else None
@@ -337,9 +340,13 @@ def ai__optimizer(context: dict) -> dict:
 
 
 
+<<<<<<< HEAD
 # ========== ASSIGNMENT ENDPOINTS ==========
 # Assignments are handled in /api/assignments endpoints (see assignments.py)
 # Do not create duplicate endpoints here
+=======
+
+>>>>>>> 9c89904 (Fix: Add robust Supabase timestamp parsing to prevent Python 3.10 fromisoformat crashes, and remove duplicate legacy tasks routes)
 
 # ========== TASK ENDPOINTS ==========
 # Tasks are handled via the schedule generation endpoints below
