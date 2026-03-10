@@ -43,8 +43,13 @@ export interface Assignment {
   deadline: string;
   description?: string;
   priority: number;
+  estimated_hours: number;
   user_id: string;
   created_at: string;
+  status?: string;
+  points?: number;
+  url?: string;
+  source?: string;
   completed: boolean;
 }
 
@@ -54,7 +59,12 @@ export interface AssignmentCreate {
   deadline: string;
   description?: string;
   priority: number;
+  estimated_hours: number;
   user_id: string;
+  status?: string;
+  points?: number;
+  url?: string;
+  source?: string;
 }
 
 // ========== Task Types ==========
