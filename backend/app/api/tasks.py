@@ -54,6 +54,14 @@ def parse_dt(value: str | datetime) -> datetime:
 
 
 def work_window_from_profile(worktime_value: str | None) -> tuple[time, time]:
+    """
+    Returns work window as tuple of (start_time, end_time).
+    
+    TODO: These times are currently interpreted as local time but may need
+    timezone handling to ensure consistency between backend schedule generation
+    and frontend display. Consider adding a timezone field to user profiles
+    to properly handle conversions.
+    """
     value = (worktime_value or "").strip().lower()
     if value == "morning":
         return time(6, 0), time(12, 0)
@@ -67,7 +75,7 @@ def work_window_from_profile(worktime_value: str | None) -> tuple[time, time]:
 def focus_hours_from_workstyle(workstyle: str | None) -> float:
     value = (workstyle or "").strip().lower()
     if value == "short":
-        return 0.5
+        return 0.33
     if value == "classic":
         return 0.5
     if value == "deep-work":
@@ -328,7 +336,7 @@ async def generate_schedule(user_id: str):
 
     profile_result = (
         supabase.table("profiles")
-        .select("worktime, workdays, workstyle, additional_info")
+        .select("worktime, workdays, workstyle, additional_info, assignmentplan")
         .eq("id", user_id)
         .limit(1)
         .execute()
@@ -345,9 +353,10 @@ async def generate_schedule(user_id: str):
         ],
         work_start=work_start,
         work_end=work_end,
-        study_limit_hours=8,
+        study_limit_hours=4,
         workstyle=profile_row.get("workstyle"),
         additional_info=profile_row.get("additional_info"),
+        assignment_plan=profile_row.get("assignmentplan"),
     )
 
     task_objects = [

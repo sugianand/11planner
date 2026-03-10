@@ -14,6 +14,7 @@ class Preferences:
     study_limit_hours: float
     workstyle: Optional[str] = None  
     additional_info: Optional[str] = None
+    assignment_plan: Optional[str] = None
 
 @dataclass 
 class BusyBlock:
@@ -77,6 +78,26 @@ class ScheduleGenerator:
         return self.move_to_next_work_start(dt, pref)
     #move to next day and set to work start time, used when current day time ends and you want to go to the next day 
 
+    def get_block_hours_for_plan(self, prefs: Preferences, task: Task, hours_remaining: float) -> float:
+        """
+        Determine block size based on assignment plan preference.
+        - early: Smaller blocks (0.5-1 hr) to spread over more days
+        - deadline: Larger blocks (2-3 hr) to finish closer to deadline
+        - balanced: Default behavior (1-2 hr blocks)
+        """
+        plan = (prefs.assignment_plan or "").strip().lower()
+        
+        if plan == "early":
+            # Smaller blocks to spread work out
+            return min(1.0, hours_remaining)
+        elif plan == "deadline":
+            # Larger blocks to complete faster
+            return min(3.0, hours_remaining)
+        else:  # balanced or default
+            # Standard focus blocks
+            return min(self.focus_block_hours, hours_remaining)
+ 
+
         
     def generate_schedule(
         self,
@@ -99,9 +120,10 @@ class ScheduleGenerator:
         def urgency_score(task: Task):
             days_until = (task.deadline - start_date).days
             hours_needed = task.estimated_hours or 1
+            priority = task.priority or 2
             if days_until <= 0:
                 return -999
-            return days_until / hours_needed
+            return (days_until / hours_needed) / priority
 
         sorted_tasks = sorted(pending_tasks, key=urgency_score)
 
@@ -171,7 +193,7 @@ class ScheduleGenerator:
                     block_hours = override_list[override_idx] / 60.0
                     override_idx += 1
                 else:
-                    block_hours = min(self.focus_block_hours, hours_remaining)
+                    block_hours = self.get_block_hours_for_plan(prefs, task, hours_remaining)
 
                 block_hours = min(block_hours, max_hours_per_day - hours_today)
 
