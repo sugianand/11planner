@@ -502,42 +502,6 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     }
   }, [userId]);
 
-  const deleteTask = useCallback(async (id: string) => {
-    try {
-      if (userId === "user_demo") {
-        throw new Error("Please sign in to delete tasks.");
-      }
-      setLoading(true);
-      
-      // Delete associated schedule blocks first
-      await supabase
-        .from("schedule_blocks")
-        .delete()
-        .eq("source_task_id", id)
-        .eq("user_id", userId);
-      
-      // Then delete the task
-      const { error: deleteError } = await supabase
-        .from("tasks")
-        .delete()
-        .eq("id", id)
-        .eq("user_id", userId);
-
-      if (deleteError) throw deleteError;
-      
-      // Update local state
-      setTasks((prev) => prev.filter((t) => t.id !== id));
-      
-      // Refresh schedule blocks to remove deleted task's blocks from UI
-      await loadScheduleBlocks();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete task");
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, [userId, loadScheduleBlocks]);
-
   // ========== Schedule Blocks ==========
   const loadScheduleBlocks = useCallback(async () => {
     try {
@@ -551,6 +515,42 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     }
   }, [userId]);
+
+  const deleteTask = useCallback(async (id: string) => {
+    try {
+      if (userId === "user_demo") {
+        throw new Error("Please sign in to delete tasks.");
+      }
+      setLoading(true);
+
+      // Delete associated schedule blocks first
+      await supabase
+        .from("schedule_blocks")
+        .delete()
+        .eq("source_task_id", id)
+        .eq("user_id", userId);
+
+      // Then delete the task
+      const { error: deleteError } = await supabase
+        .from("tasks")
+        .delete()
+        .eq("id", id)
+        .eq("user_id", userId);
+
+      if (deleteError) throw deleteError;
+
+      // Update local state
+      setTasks((prev) => prev.filter((t) => t.id !== id));
+
+      // Refresh schedule blocks to remove deleted task's blocks from UI
+      await loadScheduleBlocks();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete task");
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [userId, loadScheduleBlocks]);
 
   const updateScheduleBlock = useCallback(async (id: string, block: Partial<ScheduleBlock>) => {
     try {
