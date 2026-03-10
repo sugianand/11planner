@@ -30,10 +30,13 @@ async function syncAssignments(assignments) {
 
     const body = JSON.stringify({ userId: userId.trim(), assignments });
 
+    // Remove any trailing slashes from the configured backend URL to prevent //api paths
+    const cleanUrl = backendUrl.replace(/\/+$/, '');
+    
     // Try both localhost and 127.0.0.1 (Chrome MV3 service workers sometimes can't resolve localhost DNS)
     const urlsToTry = [
-        `${backendUrl}/api/assignments/sync`,
-        `${backendUrl.replace('localhost', '127.0.0.1')}/api/assignments/sync`,
+        `${cleanUrl}/api/assignments/sync`,
+        `${cleanUrl.replace('localhost', '127.0.0.1')}/api/assignments/sync`,
     ];
 
     let lastErr = null;
