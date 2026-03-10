@@ -179,84 +179,6 @@ def build_course_busy_blocks(course_rows: list[dict], window_start: datetime, wi
 
     return busy_blocks
 
-<<<<<<< HEAD
-# ========== COURSE ENDPOINTS ==========
-
-@router.post("/courses", response_model=Course)
-async def create_course(course: CourseCreate):
-    """Create a new course in Supabase"""
-    supabase = get_supabase()
-    payload = {
-        "user_id": course.user_id,
-        "course_name": course.name,
-        "course_code": course.code,
-        "course_days": course.course_days,
-        "start_time": course.start_time,
-        "end_time": course.end_time,
-        "professor": course.professor,
-        "description": course.description,
-        "is_online": course.isOnline,
-        "has_lab": course.hasLab,
-        "lab_day": course.labDay,
-        "lab_start_time": course.labStartTime,
-        "lab_end_time": course.labEndTime,
-        "lab_is_online": course.labIsOnline,
-    }
-    response = supabase.table("courses").insert(payload).execute()
-    if not response.data:
-        raise HTTPException(status_code=500, detail="Failed to create course")
-    return response.data[0]
-
-@router.get("/courses/{user_id}", response_model=List[Course])
-async def get_user_courses(user_id: str):
-    """Get all courses for a user from Supabase"""
-    supabase = get_supabase()
-    response = supabase.table("courses").select("*").eq("user_id", user_id).execute()
-    return response.data
-
-@router.get("/courses/detail/{course_id}", response_model=Course)
-async def get_course(course_id: str):
-    """Get a specific course from Supabase"""
-    supabase = get_supabase()
-    response = supabase.table("courses").select("*").eq("id", course_id).single().execute()
-    if not response.data:
-        raise HTTPException(status_code=404, detail="Course not found")
-    return response.data
-
-@router.put("/courses/{course_id}", response_model=Course)
-async def update_course(course_id: str, course: CourseBase):
-    """Update a course in Supabase"""
-    supabase = get_supabase()
-    update_payload = {
-        "course_name": course.name,
-        "course_code": course.code,
-        "course_days": course.course_days,
-        "start_time": course.start_time,
-        "end_time": course.end_time,
-        "professor": course.professor,
-        "description": course.description,
-        "is_online": course.isOnline,
-        "has_lab": course.hasLab,
-        "lab_day": course.labDay,
-        "lab_start_time": course.labStartTime,
-        "lab_end_time": course.labEndTime,
-        "lab_is_online": course.labIsOnline,
-    }
-    response = supabase.table("courses").update(update_payload).eq("id", course_id).execute()
-    if not response.data:
-        raise HTTPException(status_code=404, detail="Course not found")
-    return response.data[0]
-
-@router.delete("/courses/{course_id}")
-async def delete_course(course_id: str):
-    """Delete a course from Supabase"""
-    supabase = get_supabase()
-    supabase.table("courses").delete().eq("id", course_id).execute()
-    return {"message": "Course deleted"}
-
-
-=======
->>>>>>> 9c89904 (Fix: Add robust Supabase timestamp parsing to prevent Python 3.10 fromisoformat crashes, and remove duplicate legacy tasks routes)
 
 # AI schedule optimizer
 openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY")) if (OpenAI and os.getenv("OPENAI_API_KEY")) else None
@@ -340,13 +262,7 @@ def ai__optimizer(context: dict) -> dict:
 
 
 
-<<<<<<< HEAD
-# ========== ASSIGNMENT ENDPOINTS ==========
-# Assignments are handled in /api/assignments endpoints (see assignments.py)
-# Do not create duplicate endpoints here
-=======
 
->>>>>>> 9c89904 (Fix: Add robust Supabase timestamp parsing to prevent Python 3.10 fromisoformat crashes, and remove duplicate legacy tasks routes)
 
 # ========== TASK ENDPOINTS ==========
 # Tasks are handled via the schedule generation endpoints below
