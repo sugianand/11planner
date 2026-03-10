@@ -1085,12 +1085,20 @@ export default function Dashboard() {
   const handleSoundSelect = async (sceneId: string) => {
     const requestId = playbackRequestRef.current + 1;
     playbackRequestRef.current = requestId;
-    setSoundId(sceneId);
 
     const scene = soundscapes.find((item) => item.id === sceneId);
     if (!scene) {
       return;
     }
+
+    const isSameSound = sceneId === soundId;
+    if (isSameSound && isPlaying) {
+      await stopPlayback(true);
+      setIsPlaying(false);
+      return;
+    }
+
+    setSoundId(sceneId);
 
     if (scene.engine === "none") {
       await stopPlayback(true);
