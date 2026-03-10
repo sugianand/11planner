@@ -33,6 +33,19 @@ app.include_router(assignments_router)
 app.include_router(schedule_blocks_router)
 app.include_router(syllabus_router)
 
+# --- Fallback routes to catch Chrome Extension URL typos ---
+from app.api.assignments import sync_assignments, SyncRequest
+
+@app.post("//api/assignments/sync")
+@app.post("/api/api/assignments/sync")
+@app.post("/api/assignments/sync/")
+@app.post("/api/tasks/sync")
+@app.post("/sync")
+async def fallback_sync_route(sync_request: SyncRequest):
+    return await sync_assignments(sync_request)
+# -----------------------------------------------------------
+
+
 # Health check endpoint
 @app.get("/health")
 async def health_check():

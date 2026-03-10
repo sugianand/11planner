@@ -107,63 +107,6 @@ async def create_assignment(assignment: AssignmentCreate):
     return map_row(result.data[0])
 
 
-@router.post("/sync", response_model=dict)
-async def sync_assignments(payload: dict):
-    """Sync assignments from Canvas extension."""
-    supabase = get_supabase()
-    user_id = payload.get("user_id") or payload.get("userId")
-    assignments = payload.get("assignments", [])
-
-    if not user_id:
-        raise HTTPException(status_code=400, detail="Missing user_id")
-
-    # For simplicity, we'll iterate and insert one by one, 
-    # though a bulk upsert would be more efficient in production.
-    success_count = 0
-    for a in assignments:
-        try:
-            insert_payload = {
-                "user_id": user_id,
-                "title": a.get("title", "Untitled"),
-                "course_id": a.get("course_id"),
-                "deadline": a.get("deadline"),
-                "description": a.get("description", ""),
-                "priority": a.get("priority", 2),
-                "estimated_hours": a.get("estimated_hours", 1),
-                "status": "pending",
-                "completed": False,
-                "points": a.get("points"),
-                "url": a.get("url"),
-                "source": "canvas",
-            }
-            # Add to assignments table
-            supabase.table("assignments").insert(insert_payload).execute()
-            
-            # Also add to tasks table, since the schedule generator reads from tasks
-            task_payload = {
-                "user_id": user_id,
-                "title": a.get("title", "Untitled"),
-                "course_id": a.get("course_id"),
-                "deadline": a.get("deadline"),
-                "deadline_at": a.get("deadline"), # required field
-                "priority": a.get("priority", 2),
-                "estimated_hours": float(a.get("estimated_hours", 1)),
-                "status": "pending",
-                "source": "canvas",
-            }
-            try:
-                supabase.table("tasks").insert(task_payload).execute()
-            except Exception as e:
-                print(f"Warning: Failed to insert into tasks table: {e}")
-                pass
-                
-            success_count += 1
-        except Exception as e:
-            print(f"Failed to sync assignment {a.get('title')}: {e}")
-
-    return {"message": f"Successfully synced {success_count} assignments", "count": success_count}
-
-
 @router.put("/{assignment_id}", response_model=Assignment)
 async def update_assignment(assignment_id: str, assignment: AssignmentUpdate):
     supabase = get_supabase()
