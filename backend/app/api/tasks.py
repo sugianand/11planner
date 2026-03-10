@@ -1,3 +1,5 @@
+import json
+
 from fastapi import APIRouter, HTTPException
 from app.models import (
     CourseBase, CourseCreate, Course, 
@@ -9,6 +11,10 @@ from typing import List
 from datetime import date, datetime, time, timedelta
 import os
 from uuid import uuid4
+try:
+    from openai import OpenAI
+except Exception:
+    OpenAI = None
 
 from supabase import Client, create_client
 
@@ -219,6 +225,90 @@ async def delete_course(course_id: str):
     del courses_db[course_id]
     return {"message": "Course deleted"}
 
+
+
+# AI schedule optimizer
+openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY")) if (OpenAI and os.getenv("OPENAI_API_KEY")) else None
+
+
+def ai__optimizer(context: dict) -> dict:
+    if openai_client is None:
+        return {"task_order": [], "block_minutes_override": {}, "preferred_days": {}}
+
+    try:
+        prompt = (
+            "You are an academic schedule optimization assistant. Your task is to generate an "
+            "optimal study schedule for a student based on their pending tasks, preferences, and existing commitments.\n"
+            "Return only valid JSON.\n"
+            "Goal:\n"
+            "- choose the best order to schedule tasks\n"
+            "- choose how each task should be split into study blocks\n"
+            "- choose preferred days for each task\n\n"
+            "Important rules:\n"
+            "- Use task deadline, estimated_hours, priority, and description\n"
+            "- Respect the user's preferred workdays, work window, and daily study limit\n"
+            "- Spread large tasks across multiple days when that makes sense\n"
+            "- Prefer earlier scheduling for urgent/high priority tasks\n"
+            "- Keep block lengths realistic, such as 30, 45, 60, 90, or 120 minutes\n"
+            "- Do not invent task ids\n\n"
+            "Return ONLY valid JSON with keys: task_order, block_minutes_override, preferred_days.\n"
+            "For block minutes, only use: 30, 45, 60, 90, 120.\n\n"
+            f"TASKS:\n{json.dumps(context.get('tasks', []), indent=2)}\n"
+            f"PREFERENCES:\n{json.dumps(context.get('prefs', {}), indent=2)}\n"
+            f"BUSY TIMES:\n{json.dumps(context.get('busy', []), indent=2)}\n"
+        )
+
+        response = openai_client.chat.completions.create(
+            model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+            temperature=0.2,
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": "Output strict JSON only."},
+                {"role": "user", "content": prompt},
+            ],
+        )
+        parsed = json.loads(response.choices[0].message.content or "{}")
+
+        cleaned_blocks = {}
+        for task_id, mins in parsed.get("block_minutes_override", {}).items():
+            cleaned = []
+            for m in mins if isinstance(mins, list) else []:
+                try:
+                    value = int(m)
+                except Exception:
+                    continue
+                if value in (30, 45, 60, 90, 120):
+                    cleaned.append(value)
+            if cleaned:
+                cleaned_blocks[str(task_id)] = cleaned
+
+        cleaned_days = {}
+        valid_days = {"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"}
+        for task_id, days in parsed.get("preferred_days", {}).items():
+            if not isinstance(days, list):
+                continue
+            cleaned_days[str(task_id)] = [
+                d.strip().capitalize() for d in days
+                if isinstance(d, str) and d.strip().lower() in valid_days
+            ]
+        cleaned_order = [str(task_id) for task_id in parsed.get("task_order", []) if task_id is not None]
+
+        return {
+            "task_order": cleaned_order,
+            "block_minutes_override": cleaned_blocks,
+            "preferred_days": cleaned_days,
+        }
+    except Exception as e:
+        print(f"Error occurred while calling OpenAI API: {e}")
+        return {
+            "task_order": [],
+            "block_minutes_override": {},
+            "preferred_days": {},
+        }
+
+
+
+
 # ========== ASSIGNMENT ENDPOINTS ==========
 
 @router.post("/assignments", response_model=Assignment)
@@ -409,7 +499,7 @@ async def generate_schedule(user_id: str):
         max_hours_per_day=float(prefs.study_limit_hours),
         focus_block_hours=focus_hours_from_workstyle(profile_row.get("workstyle")),
     )
-    generated = generator.generate_schedule(task_objects, prefs, busy=busy)
+    generated = generator.generate_schedule(task_objects, prefs, busy=busy, ai_plan=ai__optimizer)
     validation = generator.validate_schedule(generated)
 
 

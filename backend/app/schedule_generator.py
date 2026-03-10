@@ -67,11 +67,14 @@ class ScheduleGenerator:
     #checks to see if proposed schedule block overlaps with any busy blocks 
 
     def skip_if_busy(self, dt: datetime, busy_blocks: List[BusyBlock]) -> datetime:
-        for block in busy_blocks:
-            if block.start <= dt < block.end:
-                return block.end
+        moved = True
+        while moved:
+            moved = False
+            for block in busy_blocks:
+                if block.start <= dt < block.end:
+                    dt = block.end
+                    moved = True
         return dt
-    #if current time is in busy block, jump to end of that block
 
     def next_day_start(self, dt: datetime, pref: Preferences) -> datetime:
         dt += timedelta(days=1)
@@ -98,7 +101,47 @@ class ScheduleGenerator:
             return min(self.focus_block_hours, hours_remaining)
  
 
-        
+    def move_to_preferred_day(
+            self,
+            dt: datetime,
+            prefs: Preferences,
+            preferred_days: List[str]
+        ) -> datetime:
+        if not preferred_days:
+            return dt
+        probe = dt
+        for _ in range(14):
+            if self.day_name(probe) in preferred_days and self.is_workday(probe, prefs):
+                return self.set_time(probe,prefs.work_start)
+            probe += timedelta(days=1)
+        return dt
+
+
+    def apply_ai_task_order(
+            self,
+            sorted_tasks: List[Task],
+            ai_task_order: List[str]
+        ) -> List[Task]:
+        if not ai_task_order:
+            return sorted_tasks
+        task_dict = {str(task.id): task for task in sorted_tasks}
+        ordered: List[Task] = []
+        used = set()
+
+        for task_id in ai_task_order:
+            task = task_dict.get(str(task_id))
+            if task: 
+                ordered.append(task)
+                used.add(str(task_id))
+        for task in sorted_tasks:
+            if str(task.id) not in used:
+                ordered.append(task)
+        return ordered
+
+
+
+
+
     def generate_schedule(
         self,
         tasks: List[Task],
@@ -107,6 +150,10 @@ class ScheduleGenerator:
         start_date: Optional[datetime] = None,
         ai_plan: Optional[Callable[[Dict[str, Any]], Dict[str, Any]]] = None,
     ) -> List[ScheduleBlock]:
+        
+        block_minutes_override: Dict[str, List[int]] = {}
+        preferred_days_map: Dict[str, List[str]] = {}
+        ai_task_order: List[str] = []
         if busy is None:
             busy = []
 
@@ -121,9 +168,14 @@ class ScheduleGenerator:
             days_until = (task.deadline - start_date).days
             hours_needed = task.estimated_hours or 1
             priority = task.priority or 2
+            priority_value = getattr(task, "priority", None)
+            if priority_value is None:
+                priority_value = getattr(task, "priority_level", 2) or 2
+
             if days_until <= 0:
                 return -999
-            return (days_until / hours_needed) / priority
+
+            return (days_until / hours_needed) - (priority_value * 0.3)
 
         sorted_tasks = sorted(pending_tasks, key=urgency_score)
 
@@ -140,12 +192,14 @@ class ScheduleGenerator:
             context = {
                 "tasks": [
                     {
-                        "id": t.id,
-                        "title": getattr(t, "title", None)
-                        or getattr(t, "task_title", None),
+                        "id": str(t.id),
+                        "title": getattr(t, "title", None) or getattr(t, "task_title", None),
                         "deadline": t.deadline.isoformat(),
                         "estimated_hours": t.estimated_hours,
-                        "priority": getattr(t, "priority_level", None),
+                        "priority": getattr(t, "priority", None)
+                        if getattr(t, "priority", None) is not None
+                        else getattr(t, "priority_level", None),
+                        "description": getattr(t, "description", None),
                     }
                     for t in sorted_tasks
                 ],
@@ -169,18 +223,44 @@ class ScheduleGenerator:
 
             ai_result = ai_plan(context) or {}
             block_minutes_override = ai_result.get("block_minutes_override", {}) or {}
+            preferred_days_map = ai_result.get("preferred_days", {}) or {}
+            ai_task_order = ai_result.get("task_order", []) or []
+            sorted_tasks = self.apply_ai_task_order(sorted_tasks, ai_task_order)
 
         for task in sorted_tasks:
+            task_preferred_days = preferred_days_map.get(str(task.id), [])
+            if task_preferred_days:
+                candidate_dt = self.move_to_preferred_day(current_dt, prefs, task_preferred_days)
+                candidate_dt = self.skip_if_busy(candidate_dt, busy)
+
+                if candidate_dt.date() <= task.deadline.date():
+                    current_dt = candidate_dt
+                    hours_today = 0.0 if current_dt.time() == prefs.work_start else hours_today
             hours_remaining = float(task.estimated_hours or 1)
 
             override_list = block_minutes_override.get(str(task.id), [])
             override_idx = 0
 
             while hours_remaining > 0:
+
+                if self.day_name(current_dt) not in prefs.workdays:
+                    current_dt = self.move_to_next_work_start(current_dt, prefs)
+                    current_dt = self.skip_if_busy(current_dt, busy)
+                    hours_today = 0.0
+                    continue
+
+                if task_preferred_days and self.day_name(current_dt) not in task_preferred_days:
+                    moved_dt = self.move_to_preferred_day(current_dt, prefs, task_preferred_days)
+                    moved_dt = self.skip_if_busy(moved_dt, busy)
+                    if moved_dt.date() <= task.deadline.date():
+                        current_dt = moved_dt
+                        hours_today = 0.0
+
                 if hours_today >= max_hours_per_day:
                     current_dt = self.next_day_start(current_dt, prefs)
                     current_dt = self.skip_if_busy(current_dt, busy)
                     hours_today = 0.0
+                    continue
 
                 day_end = self.work_window_end(current_dt, prefs)
                 if current_dt >= day_end:
@@ -195,6 +275,7 @@ class ScheduleGenerator:
                 else:
                     block_hours = self.get_block_hours_for_plan(prefs, task, hours_remaining)
 
+                block_hours = min(block_hours, hours_remaining)
                 block_hours = min(block_hours, max_hours_per_day - hours_today)
 
                 if block_hours <= 0:
@@ -212,8 +293,10 @@ class ScheduleGenerator:
                     if self.overlaps(start_time, end_time, busy_block.start, busy_block.end):
                         overlapping_block = busy_block
                         break
+
                 if overlapping_block:
                     current_dt = overlapping_block.end
+                    current_dt = self.skip_if_busy(current_dt, busy)
                     continue
 
                 block = ScheduleBlock(
