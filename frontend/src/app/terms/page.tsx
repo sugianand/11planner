@@ -1,19 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import Footer from "@/components/Footer";
 
 export default function TermsPage() {
   return (
-    <div className="min-h-screen relative overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors duration-500 p-6 lg:p-10">
-      <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute -top-32 -left-24 h-[32rem] w-[32rem] rounded-full bg-emerald-200/40 blur-[120px]" />
-        <div className="absolute top-1/3 -right-32 h-[28rem] w-[28rem] rounded-full bg-amber-200/40 blur-[120px]" />
-        <div className="absolute bottom-[-10%] left-1/2 h-[26rem] w-[26rem] -translate-x-1/2 rounded-full bg-sky-200/40 blur-[120px]" />
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.08)_1px,transparent_1px)] bg-[size:48px_48px]" />
-        <div className="absolute inset-0 dark:bg-[radial-gradient(circle_at_top,rgba(15,23,42,0.2),transparent_55%)]" />
-      </div>
+    <div className="min-h-screen relative overflow-hidden transition-colors duration-500 pb-0">
+      <div className="fixed inset-0 bg-focus-light dark:bg-focus-dark -z-20"></div>
 
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-3xl mx-auto p-6 lg:p-10 mt-16 mb-24">
         <div className="mb-8">
           <p className="text-sm font-semibold uppercase tracking-widest text-emerald-600">Terms</p>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight mt-2">
@@ -100,6 +95,7 @@ export default function TermsPage() {
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }

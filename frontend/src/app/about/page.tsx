@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Footer from '@/components/Footer';
 
 export default function AboutPage() {
   const teamMembers = [
@@ -55,8 +56,8 @@ export default function AboutPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-      <div className="fixed inset-0 bg-focus-light dark:bg-focus-dark bg-cover bg-center -z-20"></div>
+    <div className="min-h-screen relative overflow-hidden transition-colors duration-500 pb-0">
+      <div className="fixed inset-0 bg-focus-light dark:bg-focus-dark -z-20"></div>
 
       <main className="w-full max-w-[1200px] mx-auto px-6 py-16">
         <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-3xl p-8 md:p-12 shadow-2xl dark:border dark:border-slate-700/50 mb-12">
@@ -69,15 +70,15 @@ export default function AboutPage() {
               About Us
             </h1>
             <p className="text-slate-700 dark:text-slate-300 text-lg font-medium leading-relaxed max-w-3xl mx-auto">
-              Our team is organized to ensure clear ownership across all major areas of the software development timeline, 
-              including planning, implementation, testing, documentation, and deployment. While each member has primary 
+              Our team is organized to ensure clear ownership across all major areas of the software development timeline,
+              including planning, implementation, testing, documentation, and deployment. While each member has primary
               responsibilities, all group members contribute across all different tasks.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {teamMembers.map((member, index) => (
-              <div 
+              <div
                 key={index}
                 className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-md rounded-2xl p-8 shadow-sm border border-white/40 dark:border-slate-700/40 hover:shadow-lg transition-all"
               >
@@ -96,7 +97,7 @@ export default function AboutPage() {
                 </div>
                 <ul className="space-y-3">
                   {member.responsibilities.map((responsibility, idx) => (
-                    <li 
+                    <li
                       key={idx}
                       className="flex items-start gap-2 text-slate-700 dark:text-slate-300 text-sm leading-relaxed"
                     >
@@ -116,33 +117,14 @@ export default function AboutPage() {
               Collaborative Approach
             </h3>
             <p className="text-slate-700 dark:text-slate-300 text-base leading-relaxed max-w-3xl mx-auto">
-              While each team member has designated leadership areas, we embrace a collaborative culture where 
-              everyone contributes across all aspects of the project. This ensures knowledge sharing, maintains 
+              While each team member has designated leadership areas, we embrace a collaborative culture where
+              everyone contributes across all aspects of the project. This ensures knowledge sharing, maintains
               project continuity, and delivers a cohesive product.
             </p>
           </div>
         </div>
       </main>
-
-      <footer className="w-full bg-white/60 dark:bg-slate-800/60 backdrop-blur-3xl py-16 px-6 border-t border-white/40 dark:border-slate-700/40">
-        <div className="max-w-[1200px] mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-slate-900 dark:bg-slate-700 flex items-center justify-center">
-              <span className="material-symbols-outlined text-white text-sm">calendar_today</span>
-            </div>
-            <h2 className="text-slate-900 dark:text-white text-xl font-bold tracking-tight">11 Planner</h2>
-          </div>
-          <div className="flex gap-8 text-sm font-semibold text-slate-900 dark:text-white">
-            <Link className="hover:text-blue-600 dark:hover:text-blue-400 transition" href="/privacy">Privacy</Link>
-            <Link className="hover:text-blue-600 dark:hover:text-blue-400 transition" href="/terms">Terms</Link>
-            <Link className="hover:text-blue-600 dark:hover:text-blue-400 transition" href="/support">Support</Link>
-          </div>
-          <div className="flex flex-col items-center md:items-end gap-2">
-            <p className="text-slate-900 dark:text-white text-sm font-semibold">© 2026 11 Planner. All copyright rights reserved.</p>
-            <p className="text-slate-700 dark:text-slate-200 text-sm italic">Work smarter, not harder.</p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
