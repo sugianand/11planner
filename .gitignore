@@ -53,11 +53,13 @@ ENV/
 env/
 
 # video files
-frontend/public/nature/
-frontend/public/cafe/
-frontend/public/city/
-frontend/public/anime/
-frontend/public/abstract/
 *.mp4
 *.mov
 *.avi
+
+# allow tracked dashboard background videos
+!frontend/public/nature/*.mp4
+!frontend/public/cafe/*.mp4
+!frontend/public/city/*.mp4
+!frontend/public/anime/*.mp4
+!frontend/public/abstract/*.mp4
