@@ -307,6 +307,7 @@ const atmosphereCategories: AtmosphereCategory[] = [
 ];
 
 const backgroundCategories: FocusBackground["category"][] = atmosphereCategories;
+const FALLBACK_BACKGROUND_IMAGE = "/images/background.png";
 
 const soundscapes: Soundscape[] = [
   {
@@ -699,6 +700,7 @@ export default function Dashboard() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(0.6);
   const [videoError, setVideoError] = useState(false);
+  const [isBackgroundVideoReady, setIsBackgroundVideoReady] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const generatedAudioRef = useRef<{
     context: AudioContext;
@@ -1028,6 +1030,13 @@ export default function Dashboard() {
     [backgroundId]
   );
 
+  const shouldRenderBackgroundVideo = Boolean(activeBackground?.videoUrl) && !videoError;
+
+  useEffect(() => {
+    setVideoError(false);
+    setIsBackgroundVideoReady(false);
+  }, [activeBackground?.id]);
+
   const activeSound = useMemo(
     () => soundscapes.find((scene) => scene.id === soundId) ?? soundscapes[0],
     [soundId]
@@ -1198,8 +1207,8 @@ export default function Dashboard() {
                             muted
                             loop
                             playsInline
-                            autoPlay
-                            preload="metadata"
+                            poster={scene.imageUrl || FALLBACK_BACKGROUND_IMAGE}
+                            preload="none"
                           />
                         ) : scene.imageUrl ? (
                           <div
@@ -1310,7 +1319,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen relative overflow-hidden bg-transparent transition-colors duration-500 p-6 lg:p-10 flex flex-col gap-8">
       <div className="fixed inset-0 -z-20">
-        {activeBackground?.videoUrl ? (
+        {shouldRenderBackgroundVideo ? (
           <video
             key={activeBackground.id}
             className="h-full w-full object-cover"
@@ -1319,9 +1328,17 @@ export default function Dashboard() {
             muted
             loop
             playsInline
-            preload="auto"
-            onLoadStart={() => setVideoError(false)}
-            onError={() => setVideoError(true)}
+            poster={activeBackground.imageUrl || FALLBACK_BACKGROUND_IMAGE}
+            preload="metadata"
+            onLoadStart={() => {
+              setVideoError(false);
+              setIsBackgroundVideoReady(false);
+            }}
+            onCanPlay={() => setIsBackgroundVideoReady(true)}
+            onError={() => {
+              setVideoError(true);
+              setIsBackgroundVideoReady(false);
+            }}
           />
         ) : (
           <div
@@ -1329,21 +1346,29 @@ export default function Dashboard() {
             style={{
               backgroundImage: activeBackground?.imageUrl
                 ? `url(${activeBackground.imageUrl})`
-                : activeBackground?.id === "default"
-                  ? "none"
-                  : "radial-gradient(circle at top, rgba(34, 197, 94, 0.35), transparent 55%), radial-gradient(circle at 30% 40%, rgba(251, 191, 36, 0.3), transparent 45%), radial-gradient(circle at 80% 20%, rgba(56, 189, 248, 0.25), transparent 45%)",
-              backgroundColor: activeBackground?.id === "default" ? "#f8fafc" : undefined,
+                : videoError
+                  ? `url(${FALLBACK_BACKGROUND_IMAGE})`
+                  : activeBackground?.id === "default"
+                    ? "none"
+                    : "radial-gradient(circle at top, rgba(34, 197, 94, 0.35), transparent 55%), radial-gradient(circle at 30% 40%, rgba(251, 191, 36, 0.3), transparent 45%), radial-gradient(circle at 80% 20%, rgba(56, 189, 248, 0.25), transparent 45%)",
+              backgroundColor: activeBackground?.id === "default" && !videoError ? "#f8fafc" : undefined,
               backgroundSize: "cover",
               backgroundPosition: "center",
             }}
           />
         )}
       </div>
+      {shouldRenderBackgroundVideo && !isBackgroundVideoReady ? (
+        <div
+          className="fixed inset-0 -z-[15] bg-cover bg-center"
+          style={{ backgroundImage: `url(${activeBackground?.imageUrl || FALLBACK_BACKGROUND_IMAGE})` }}
+        />
+      ) : null}
       <div className="fixed inset-0 -z-10 bg-white/15 dark:bg-slate-950/55" />
 
       {videoError && (
         <div className="fixed bottom-6 right-6 z-20 bg-white/90 dark:bg-slate-900/90 text-slate-700 dark:text-slate-200 text-xs px-3 py-2 rounded-full shadow">
-          Video failed to load: {activeBackground?.videoUrl}
+          Video failed to load. Showing static fallback.
         </div>
       )}
 
