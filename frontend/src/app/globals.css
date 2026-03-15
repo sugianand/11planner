@@ -104,6 +104,28 @@ select {
   border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
+body.dashboard-ui-hidden nav[data-dashboard-nav="true"] {
+  transform: translateY(-100%);
+  opacity: 0;
+  transition: transform 480ms ease, opacity 480ms ease;
+}
+
+body.dashboard-ui-hidden nav[data-dashboard-nav="true"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -18px;
+  height: 18px;
+}
+
+body.dashboard-ui-hidden nav[data-dashboard-nav="true"]:hover,
+body.dashboard-ui-hidden nav[data-dashboard-nav="true"]:focus-within {
+  transform: translateY(0);
+  opacity: 1;
+  transition: transform 480ms ease, opacity 480ms ease;
+}
+
 @keyframes float {
   0% {
     transform: translateY(0px) rotate(0deg);

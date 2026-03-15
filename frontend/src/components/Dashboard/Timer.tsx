@@ -1,67 +1,39 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
+import { createPortal } from "react-dom";
 
 type TimerMode = "pomodoro" | "shortBreak" | "longBreak";
 
-export default function Timer() {
-    const [mode, setMode] = useState<TimerMode>("pomodoro");
-    const [timeLeft, setTimeLeft] = useState(25 * 60);
-    const [isActive, setIsActive] = useState(false);
+type TimerProps = {
+    mode: TimerMode;
+    timeLeft: number;
+    isActive: boolean;
+    customDurations: Record<TimerMode, number>;
+    onToggleTimer: () => void;
+    onResetTimer: () => void;
+    onModeChange: (nextMode: TimerMode) => void;
+    onSetCustomDurations: (next: Record<TimerMode, number>) => void;
+    onSaveSettings: () => void;
+};
+
+export default function Timer({
+    mode,
+    timeLeft,
+    isActive,
+    customDurations,
+    onToggleTimer,
+    onResetTimer,
+    onModeChange,
+    onSetCustomDurations,
+    onSaveSettings,
+}: TimerProps) {
     const [showSettings, setShowSettings] = useState(false);
-
-    // Custom durations (in minutes)
-    const [customDurations, setCustomDurations] = useState({
-        pomodoro: 25,
-        shortBreak: 5,
-        longBreak: 15,
-    });
-
-    // Use a ref for the interval so we can clear it easily
-    const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
     const modes = {
         pomodoro: { label: "Focus", minutes: customDurations.pomodoro, color: "text-slate-900 dark:text-white" },
         shortBreak: { label: "Short Break", minutes: customDurations.shortBreak, color: "text-teal-600 dark:text-teal-400" },
         longBreak: { label: "Long Break", minutes: customDurations.longBreak, color: "text-blue-600 dark:text-blue-400" },
-    };
-
-    useEffect(() => {
-        if (!isActive) {
-            return;
-        }
-
-        if (intervalRef.current) {
-            clearInterval(intervalRef.current);
-        }
-
-        intervalRef.current = setInterval(() => {
-            setTimeLeft((prev) => {
-                if (prev <= 1) {
-                    setIsActive(false);
-                    return 0;
-                }
-                return prev - 1;
-            });
-        }, 1000);
-
-        return () => {
-            if (intervalRef.current) clearInterval(intervalRef.current);
-        };
-    }, [isActive]);
-
-    const toggleTimer = () => setIsActive(!isActive);
-    const handleModeChange = (nextMode: TimerMode) => {
-        setMode(nextMode);
-        setIsActive(false);
-        if (intervalRef.current) clearInterval(intervalRef.current);
-        setTimeLeft(customDurations[nextMode] * 60);
-    };
-
-    const resetTimer = () => {
-        setIsActive(false);
-        if (intervalRef.current) clearInterval(intervalRef.current);
-        setTimeLeft(modes[mode].minutes * 60);
     };
 
     const formatTime = (seconds: number) => {
@@ -76,9 +48,7 @@ export default function Timer() {
     };
 
     const handleSaveSettings = () => {
-        setIsActive(false);
-        if (intervalRef.current) clearInterval(intervalRef.current);
-        setTimeLeft(customDurations[mode] * 60);
+        onSaveSettings();
         setShowSettings(false);
     };
 
@@ -139,7 +109,7 @@ export default function Timer() {
             {/* Controls */}
             <div className="flex items-center gap-6 mb-8">
                 <button
-                    onClick={resetTimer}
+                    onClick={onResetTimer}
                     className="w-12 h-12 rounded-full flex items-center justify-center bg-white dark:bg-slate-800 shadow-md text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:shadow-lg hover:scale-110 active:scale-95 transition-all duration-200"
                     aria-label="Reset Timer"
                 >
@@ -147,7 +117,7 @@ export default function Timer() {
                 </button>
 
                 <button
-                    onClick={toggleTimer}
+                    onClick={onToggleTimer}
                     className="w-20 h-20 rounded-full flex items-center justify-center bg-[#306844] hover:bg-[#255236] text-white shadow-xl transition transform hover:scale-105 active:scale-95"
                     aria-label={isActive ? "Pause Timer" : "Start Timer"}
                 >
@@ -170,7 +140,7 @@ export default function Timer() {
                 {(Object.keys(modes) as TimerMode[]).map((m) => (
                     <button
                         key={m}
-                        onClick={() => handleModeChange(m)}
+                        onClick={() => onModeChange(m)}
                         className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${mode === m
                             ? "bg-[#306844] text-white shadow-md"
                             : "text-slate-600 dark:text-slate-300 hover:bg-white/50 dark:hover:bg-slate-700/50"
@@ -182,8 +152,8 @@ export default function Timer() {
             </div>
 
             {/* Settings Modal */}
-            {showSettings && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setShowSettings(false)}>
+            {showSettings && typeof document !== "undefined" && createPortal(
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60]" onClick={() => setShowSettings(false)}>
                     <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 shadow-2xl max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
                         <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">Timer Settings</h2>
 
@@ -197,7 +167,7 @@ export default function Timer() {
                                     min="1"
                                     max="60"
                                     value={customDurations.pomodoro}
-                                    onChange={(e) => setCustomDurations({ ...customDurations, pomodoro: parseInt(e.target.value) || 25 })}
+                                    onChange={(e) => onSetCustomDurations({ ...customDurations, pomodoro: parseInt(e.target.value, 10) || 25 })}
                                     className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#306844] outline-none"
                                 />
                             </div>
@@ -211,7 +181,7 @@ export default function Timer() {
                                     min="1"
                                     max="30"
                                     value={customDurations.shortBreak}
-                                    onChange={(e) => setCustomDurations({ ...customDurations, shortBreak: parseInt(e.target.value) || 5 })}
+                                    onChange={(e) => onSetCustomDurations({ ...customDurations, shortBreak: parseInt(e.target.value, 10) || 5 })}
                                     className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#306844] outline-none"
                                 />
                             </div>
@@ -225,7 +195,7 @@ export default function Timer() {
                                     min="1"
                                     max="60"
                                     value={customDurations.longBreak}
-                                    onChange={(e) => setCustomDurations({ ...customDurations, longBreak: parseInt(e.target.value) || 15 })}
+                                    onChange={(e) => onSetCustomDurations({ ...customDurations, longBreak: parseInt(e.target.value, 10) || 15 })}
                                     className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#306844] outline-none"
                                 />
                             </div>
@@ -246,7 +216,8 @@ export default function Timer() {
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );

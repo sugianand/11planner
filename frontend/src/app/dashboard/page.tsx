@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import FocusDashboardPanel from "@/components/FocusDashboardPanel";
 import Footer from "@/components/Footer";
+import { useTimer, defaultTimerDurations } from "@/contexts/TimerContext";
 
 type AtmosphereCategory = "All" | "Anime" | "Nature" | "Cafe" | "City" | "Abstract";
 
@@ -52,7 +53,7 @@ const focusBackgrounds: FocusBackground[] = [
     description: "Standard app background used across all pages.",
     category: "All",
     videoUrl: "",
-    imageUrl: "",
+    imageUrl: "/images/background.png",
   },
   {
     id: "waterfall-forest",
@@ -609,14 +610,6 @@ const soundIconsById: Record<string, string> = {
   thunderstorm: "\u26C8\uFE0F",
 };
 
-const timerModes = {
-  pomodoro: { label: "Focus", minutes: 25 },
-  shortBreak: { label: "Short Break", minutes: 5 },
-  longBreak: { label: "Long Break", minutes: 15 },
-} as const;
-
-type TimerMode = keyof typeof timerModes;
-
 const getInitialTimerPosition = () => ({
   x: 32,
   y: typeof window === "undefined" ? 100 : Math.max(24, window.innerHeight - 400),
@@ -685,12 +678,24 @@ export default function Dashboard() {
   const [isUiHidden, setIsUiHidden] = useState(false);
   const [isUiTransparent, setIsUiTransparent] = useState(false);
   const [showMiniTimer, setShowMiniTimer] = useState(false);
+  const [showMiniTimerSettings, setShowMiniTimerSettings] = useState(false);
+
+  const {
+    timerMode,
+    timeLeft,
+    isTimerActive,
+    customTimerDurations,
+    timerModes,
+    toggleTimer,
+    handleTimerModeChange,
+    resetTimer,
+    applyTimerSettings,
+    setCustomTimerDurations,
+  } = useTimer();
+
   const [timerPosition, setTimerPosition] = useState(getInitialTimerPosition);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const [timerMode, setTimerMode] = useState<TimerMode>("pomodoro");
-  const [timeLeft, setTimeLeft] = useState(timerModes.pomodoro.minutes * 60);
-  const [isTimerActive, setIsTimerActive] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(0.6);
   const [videoError, setVideoError] = useState(false);
@@ -700,8 +705,20 @@ export default function Dashboard() {
     masterGain: GainNode;
     stop: () => void;
   } | null>(null);
-  const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const playbackRequestRef = useRef(0);
+
+  useEffect(() => {
+    const body = document.body;
+    if (isUiHidden) {
+      body.classList.add("dashboard-ui-hidden");
+    } else {
+      body.classList.remove("dashboard-ui-hidden");
+    }
+
+    return () => {
+      body.classList.remove("dashboard-ui-hidden");
+    };
+  }, [isUiHidden]);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     setIsDragging(true);
@@ -735,34 +752,6 @@ export default function Dashboard() {
       window.removeEventListener('mouseup', handleMouseUp);
     };
   }, [isDragging, dragOffset]);
-
-  const clearTimerInterval = useCallback(() => {
-    if (timerIntervalRef.current) {
-      clearInterval(timerIntervalRef.current);
-      timerIntervalRef.current = null;
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!isTimerActive) {
-      return;
-    }
-
-    timerIntervalRef.current = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearTimerInterval();
-          setIsTimerActive(false);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => {
-      clearTimerInterval();
-    };
-  }, [clearTimerInterval, isTimerActive]);
 
   const stopPlayback = useCallback(async (syncState: boolean = true) => {
     if (audioRef.current) {
@@ -1007,30 +996,9 @@ export default function Dashboard() {
     [createGeneratedSound, stopPlayback, volume]
   );
 
-  const toggleMiniTimer = () => {
-    if (isTimerActive) {
-      clearTimerInterval();
-      setIsTimerActive(false);
-      return;
-    }
-
-    if (timeLeft === 0) {
-      setTimeLeft(timerModes[timerMode].minutes * 60);
-    }
-    setIsTimerActive(true);
-  };
-
-  const handleTimerModeChange = (mode: TimerMode) => {
-    clearTimerInterval();
-    setTimerMode(mode);
-    setIsTimerActive(false);
-    setTimeLeft(timerModes[mode].minutes * 60);
-  };
-
-  const resetMiniTimer = () => {
-    clearTimerInterval();
-    setIsTimerActive(false);
-    setTimeLeft(timerModes[timerMode].minutes * 60);
+  const handleSaveMiniTimerSettings = () => {
+    applyTimerSettings();
+    setShowMiniTimerSettings(false);
   };
 
   const formatTime = (seconds: number) => {
@@ -1038,6 +1006,22 @@ export default function Dashboard() {
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
+
+  const hiddenUiSecondaryButtonClasses = isUiTransparent
+    ? "bg-white/30 dark:bg-slate-900/30 border-white/20 dark:border-slate-700/20 hover:bg-white/40 dark:hover:bg-slate-800/40"
+    : "bg-white/90 dark:bg-slate-900/90 border-white/60 dark:border-slate-700/60 hover:bg-white dark:hover:bg-slate-800";
+
+  const hiddenUiPrimaryButtonClasses = isUiTransparent
+    ? "bg-emerald-600/75 hover:bg-emerald-600/90 border border-emerald-300/25 backdrop-blur-xl"
+    : "bg-emerald-600 hover:bg-emerald-700";
+
+  const hiddenUiPanelClasses = isUiTransparent
+    ? "bg-white/30 dark:bg-slate-900/30 border-white/20 dark:border-slate-700/20"
+    : "bg-white/90 dark:bg-slate-900/90 border-white/60 dark:border-slate-700/60";
+
+  const hiddenUiModeStripClasses = isUiTransparent
+    ? "bg-white/35 dark:bg-slate-800/35 border border-white/25 dark:border-slate-700/25"
+    : "bg-slate-100 dark:bg-slate-800";
 
   const activeBackground = useMemo(
     () => focusBackgrounds.find((scene) => scene.id === backgroundId) ?? focusBackgrounds[0],
@@ -1114,10 +1098,9 @@ export default function Dashboard() {
 
   useEffect(() => {
     return () => {
-      clearTimerInterval();
       void stopPlayback(false);
     };
-  }, [clearTimerInterval, stopPlayback]);
+  }, [stopPlayback]);
 
   const atmospherePanel = (
     <div
@@ -1163,7 +1146,7 @@ export default function Dashboard() {
               onClick={() => setActiveTab("backgrounds")}
               className={`px-4 py-2 rounded-full text-sm font-semibold transition border ${activeTab === "backgrounds"
                 ? "bg-emerald-600 text-white border-emerald-600"
-                : "bg-white/80 dark:bg-slate-900/70 text-slate-700 dark:text-slate-200 border-white/40 dark:border-slate-700/40 hover:bg-white"
+                : "bg-white/80 dark:bg-slate-900/70 text-slate-700 dark:text-slate-200 border-white/40 dark:border-slate-700/40 hover:bg-white dark:hover:bg-slate-800"
                 }`}
             >
               Live Backgrounds
@@ -1172,7 +1155,7 @@ export default function Dashboard() {
               onClick={() => setActiveTab("sounds")}
               className={`px-4 py-2 rounded-full text-sm font-semibold transition border ${activeTab === "sounds"
                 ? "bg-emerald-600 text-white border-emerald-600"
-                : "bg-white/80 dark:bg-slate-900/70 text-slate-700 dark:text-slate-200 border-white/40 dark:border-slate-700/40 hover:bg-white"
+                : "bg-white/80 dark:bg-slate-900/70 text-slate-700 dark:text-slate-200 border-white/40 dark:border-slate-700/40 hover:bg-white dark:hover:bg-slate-800"
                 }`}
             >
               Sounds
@@ -1188,7 +1171,7 @@ export default function Dashboard() {
                     onClick={() => setActiveBackgroundCategory(category)}
                     className={`px-3 py-1.5 rounded-full text-xs font-semibold transition border ${category === activeBackgroundCategory
                       ? "bg-emerald-600 text-white border-emerald-600"
-                      : "bg-white/80 dark:bg-slate-900/70 text-slate-700 dark:text-slate-200 border-white/40 dark:border-slate-700/40 hover:bg-white"
+                      : "bg-white/80 dark:bg-slate-900/70 text-slate-700 dark:text-slate-200 border-white/40 dark:border-slate-700/40 hover:bg-white dark:hover:bg-slate-800"
                       }`}
                   >
                     {category}
@@ -1202,12 +1185,12 @@ export default function Dashboard() {
                     key={scene.id}
                     onClick={() => handleBackgroundSelect(scene.id)}
                     className={`text-center rounded-2xl border p-4 transition shadow-sm ${scene.id === activeBackground?.id
-                      ? "border-emerald-500 bg-emerald-50/80"
-                      : "border-white/40 bg-white/70 hover:bg-white"
+                      ? "border-emerald-500 bg-emerald-50/80 dark:bg-emerald-900/30"
+                      : "border-white/40 dark:border-slate-700/40 bg-white/70 dark:bg-slate-900/70 hover:bg-white dark:hover:bg-slate-800"
                       }`}
                   >
                     <div className="flex flex-col items-center gap-3">
-                      <div className="h-20 w-32 rounded-xl bg-slate-200/70 overflow-hidden">
+                      <div className="h-20 w-32 rounded-xl bg-slate-200/70 dark:bg-slate-700/70 overflow-hidden">
                         {scene.videoUrl ? (
                           <video
                             className="h-full w-full object-cover"
@@ -1228,10 +1211,10 @@ export default function Dashboard() {
                         )}
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-slate-900">{scene.label}</p>
-                        <p className="text-xs text-slate-600 mt-1">{scene.description}</p>
+                        <p className="text-sm font-semibold text-slate-900 dark:text-white">{scene.label}</p>
+                        <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">{scene.description}</p>
                         {!scene.videoUrl && !scene.imageUrl && scene.id !== "default" && (
-                          <p className="text-[11px] text-amber-600 mt-2">
+                          <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-2">
                             Add a video or image URL to enable a live background.
                           </p>
                         )}
@@ -1357,9 +1340,6 @@ export default function Dashboard() {
         )}
       </div>
       <div className="fixed inset-0 -z-10 bg-white/15 dark:bg-slate-950/55" />
-      <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(148,163,184,0.15)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.15)_1px,transparent_1px)] bg-[size:64px_64px] opacity-40" />
-      </div>
 
       {videoError && (
         <div className="fixed bottom-6 right-6 z-20 bg-white/90 dark:bg-slate-900/90 text-slate-700 dark:text-slate-200 text-xs px-3 py-2 rounded-full shadow">
@@ -1367,97 +1347,189 @@ export default function Dashboard() {
         </div>
       )}
 
-      {isUiHidden && (
-        <>
-          <div className="fixed bottom-8 right-8 z-50 flex items-center gap-3">
-            <button
-              onClick={() => setShowMiniTimer((prev) => !prev)}
-              className="rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-white/60 dark:border-slate-700/60 p-3 shadow-lg hover:bg-white dark:hover:bg-slate-800 transition"
-              title="Toggle Mini Timer"
-            >
-              <span className="material-symbols-outlined text-slate-700 dark:text-slate-200">timer</span>
-            </button>
-            <div className="rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-white/60 dark:border-slate-700/60 px-4 py-2 shadow-lg">
+      <div
+        className={`fixed bottom-8 right-8 z-50 flex items-center gap-3 transition-all duration-500 ease-out ${isUiHidden ? "translate-y-0 opacity-100" : "translate-y-16 opacity-0 pointer-events-none"}`}
+      >
+        <button
+          onClick={() => setShowMiniTimer((prev) => !prev)}
+          className={`h-12 w-12 rounded-full backdrop-blur-xl border shadow-lg transition flex items-center justify-center ${hiddenUiSecondaryButtonClasses}`}
+          title="Toggle Mini Timer"
+        >
+          <span className="material-symbols-outlined text-slate-700 dark:text-slate-200">timer</span>
+        </button>
+        <button
+          onClick={() => setIsUiHidden(false)}
+          className={`text-sm font-semibold px-5 py-3 rounded-full text-white transition shadow-lg ${hiddenUiPrimaryButtonClasses}`}
+        >
+          Show UI
+        </button>
+      </div>
+
+      <div
+        className={`fixed z-50 backdrop-blur-xl border rounded-3xl p-4 shadow-lg w-48 cursor-move select-none transition-all duration-300 ease-out origin-bottom-right ${hiddenUiPanelClasses} ${isUiHidden && showMiniTimer ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-90 translate-y-4 pointer-events-none"}`}
+          style={{
+            left: `${timerPosition.x}px`,
+            top: `${timerPosition.y}px`,
+          }}
+          onMouseDown={handleMouseDown}
+        >
+          <div className="flex flex-col items-center gap-3">
+            <div className="text-center">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{timerModes[timerMode].label}{timerMode === "pomodoro" ? " Session" : ""}</p>
+              <p className="text-3xl font-bold text-slate-900 dark:text-white">{formatTime(timeLeft)}</p>
+            </div>
+            <div className="flex items-center gap-2">
               <button
-                onClick={() => setIsUiHidden(false)}
-                className="text-sm font-semibold px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white transition"
+                onClick={resetTimer}
+                onMouseDown={(e) => e.stopPropagation()}
+                className="h-10 w-10 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition flex items-center justify-center"
               >
-                Show UI
+                <span className="material-symbols-outlined text-lg text-slate-700 dark:text-slate-200">restart_alt</span>
+              </button>
+              <button
+                onClick={toggleTimer}
+                onMouseDown={(e) => e.stopPropagation()}
+                className="h-12 w-12 rounded-full bg-emerald-600 hover:bg-emerald-700 transition flex items-center justify-center"
+              >
+                <span className="material-symbols-outlined text-xl text-white fill-current">{isTimerActive ? "pause" : "play_arrow"}</span>
+              </button>
+              <button
+                onClick={() => setShowMiniTimerSettings(true)}
+                onMouseDown={(e) => e.stopPropagation()}
+                className="h-10 w-10 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition flex items-center justify-center"
+              >
+                <span className="material-symbols-outlined text-lg text-slate-700 dark:text-slate-200">settings</span>
+              </button>
+            </div>
+            <div className={`flex items-center gap-1 rounded-full p-1 ${hiddenUiModeStripClasses}`}>
+              <button
+                onClick={() => handleTimerModeChange("pomodoro")}
+                onMouseDown={(e) => e.stopPropagation()}
+                className={`px-2 py-1 text-[10px] font-semibold rounded-full transition ${timerMode === "pomodoro" ? "bg-emerald-600 text-white" : "text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700"}`}
+              >
+                Focus
+              </button>
+              <button
+                onClick={() => handleTimerModeChange("shortBreak")}
+                onMouseDown={(e) => e.stopPropagation()}
+                className={`px-2 py-1 text-[10px] font-semibold rounded-full transition ${timerMode === "shortBreak" ? "bg-emerald-600 text-white" : "text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700"}`}
+              >
+                Short
+              </button>
+              <button
+                onClick={() => handleTimerModeChange("longBreak")}
+                onMouseDown={(e) => e.stopPropagation()}
+                className={`px-2 py-1 text-[10px] font-semibold rounded-full transition ${timerMode === "longBreak" ? "bg-emerald-600 text-white" : "text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700"}`}
+              >
+                Long
               </button>
             </div>
           </div>
+      </div>
 
-          {showMiniTimer && (
-            <div
-              className="fixed z-50 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-white/60 dark:border-slate-700/60 rounded-3xl p-4 shadow-lg w-48 cursor-move select-none"
-              style={{
-                left: `${timerPosition.x}px`,
-                top: `${timerPosition.y}px`,
-              }}
-              onMouseDown={handleMouseDown}
-            >
-              <div className="flex flex-col items-center gap-3">
-                <div className="text-center">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{timerModes[timerMode].label}{timerMode === "pomodoro" ? " Session" : ""}</p>
-                  <p className="text-3xl font-bold text-slate-900 dark:text-white">{formatTime(timeLeft)}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={resetMiniTimer}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-                  >
-                    <span className="material-symbols-outlined text-lg text-slate-700 dark:text-slate-200">restart_alt</span>
-                  </button>
-                  <button
-                    onClick={toggleMiniTimer}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    className="p-3 rounded-full bg-emerald-600 hover:bg-emerald-700 transition"
-                  >
-                    <span className="material-symbols-outlined text-xl text-white fill-current">{isTimerActive ? "pause" : "play_arrow"}</span>
-                  </button>
-                  <button
-                    onMouseDown={(e) => e.stopPropagation()}
-                    className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-                  >
-                    <span className="material-symbols-outlined text-lg text-slate-700 dark:text-slate-200">settings</span>
-                  </button>
-                </div>
-                <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-full p-1">
-                  <button
-                    onClick={() => handleTimerModeChange("pomodoro")}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    className={`px-2 py-1 text-[10px] font-semibold rounded-full transition ${timerMode === "pomodoro" ? "bg-emerald-600 text-white" : "text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700"}`}
-                  >
-                    Focus
-                  </button>
-                  <button
-                    onClick={() => handleTimerModeChange("shortBreak")}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    className={`px-2 py-1 text-[10px] font-semibold rounded-full transition ${timerMode === "shortBreak" ? "bg-emerald-600 text-white" : "text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700"}`}
-                  >
-                    Short
-                  </button>
-                  <button
-                    onClick={() => handleTimerModeChange("longBreak")}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    className={`px-2 py-1 text-[10px] font-semibold rounded-full transition ${timerMode === "longBreak" ? "bg-emerald-600 text-white" : "text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700"}`}
-                  >
-                    Long
-                  </button>
-                </div>
+      {showMiniTimerSettings && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          onClick={() => setShowMiniTimerSettings(false)}
+        >
+          <div
+            className="w-full max-w-md mx-4 rounded-3xl bg-white dark:bg-slate-800 p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">Timer Settings</h2>
+
+            <div className="space-y-5">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  Focus Duration (minutes)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="60"
+                  value={customTimerDurations.pomodoro}
+                  onChange={(e) => setCustomTimerDurations({
+                    ...customTimerDurations,
+                    pomodoro: parseInt(e.target.value, 10) || defaultTimerDurations.pomodoro,
+                  })}
+                  className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-[#306844]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  Short Break Duration (minutes)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="30"
+                  value={customTimerDurations.shortBreak}
+                  onChange={(e) => setCustomTimerDurations({
+                    ...customTimerDurations,
+                    shortBreak: parseInt(e.target.value, 10) || defaultTimerDurations.shortBreak,
+                  })}
+                  className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-[#306844]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  Long Break Duration (minutes)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="60"
+                  value={customTimerDurations.longBreak}
+                  onChange={(e) => setCustomTimerDurations({
+                    ...customTimerDurations,
+                    longBreak: parseInt(e.target.value, 10) || defaultTimerDurations.longBreak,
+                  })}
+                  className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-[#306844]"
+                />
               </div>
             </div>
-          )}
-        </>
-      )}
 
-      {!isUiHidden && (
-        <div className={`${isUiTransparent ? "opacity-70" : "opacity-100"} transition-opacity duration-300`}>
-          <FocusDashboardPanel atmospherePanel={atmospherePanel} />
+            <div className="mt-8 flex gap-3">
+              <button
+                onClick={() => setShowMiniTimerSettings(false)}
+                className="flex-1 rounded-lg bg-slate-200 dark:bg-slate-700 px-6 py-3 font-semibold text-slate-700 dark:text-slate-300 transition hover:bg-slate-300 dark:hover:bg-slate-600"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveMiniTimerSettings}
+                className="flex-1 rounded-lg bg-[#306844] px-6 py-3 font-semibold text-white transition hover:bg-[#255236] shadow-md"
+              >
+                Save
+              </button>
+            </div>
+          </div>
         </div>
       )}
-      <Footer />
+
+      <div className={`${isUiTransparent && !isUiHidden ? "opacity-70" : "opacity-100"} transition-opacity duration-300`}>
+        <FocusDashboardPanel
+          atmospherePanel={atmospherePanel}
+          uiHidden={isUiHidden}
+          timerMode={timerMode}
+          timeLeft={timeLeft}
+          isTimerActive={isTimerActive}
+          customTimerDurations={customTimerDurations}
+          onToggleTimer={toggleTimer}
+          onResetTimer={resetTimer}
+          onModeChange={handleTimerModeChange}
+          onSetCustomTimerDurations={setCustomTimerDurations}
+          onSaveTimerSettings={applyTimerSettings}
+        />
+      </div>
+
+      <div
+        className={`transition-all duration-500 ease-out ${isUiHidden ? "translate-y-20 opacity-0 pointer-events-none" : "translate-y-0 opacity-100"}`}
+      >
+        <Footer />
+      </div>
     </div>
   );
 }

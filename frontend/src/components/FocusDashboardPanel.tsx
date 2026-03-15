@@ -6,11 +6,35 @@ import Link from "next/link";
 import Timer from "@/components/Dashboard/Timer";
 import StatCard from "@/components/Dashboard/StatCard";
 
+type TimerMode = "pomodoro" | "shortBreak" | "longBreak";
+
 type FocusDashboardPanelProps = {
   atmospherePanel?: ReactNode;
+  uiHidden?: boolean;
+  timerMode: TimerMode;
+  timeLeft: number;
+  isTimerActive: boolean;
+  customTimerDurations: Record<TimerMode, number>;
+  onToggleTimer: () => void;
+  onResetTimer: () => void;
+  onModeChange: (mode: TimerMode) => void;
+  onSetCustomTimerDurations: (durations: Record<TimerMode, number>) => void;
+  onSaveTimerSettings: () => void;
 };
 
-export default function FocusDashboardPanel({ atmospherePanel }: FocusDashboardPanelProps) {
+export default function FocusDashboardPanel({
+  atmospherePanel,
+  uiHidden = false,
+  timerMode,
+  timeLeft,
+  isTimerActive,
+  customTimerDurations,
+  onToggleTimer,
+  onResetTimer,
+  onModeChange,
+  onSetCustomTimerDurations,
+  onSaveTimerSettings,
+}: FocusDashboardPanelProps) {
   const {
     userId,
     tasks,
@@ -43,9 +67,9 @@ export default function FocusDashboardPanel({ atmospherePanel }: FocusDashboardP
   });
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className={`flex flex-col gap-8 transition-opacity duration-500 ${uiHidden ? "pointer-events-none" : "pointer-events-auto"}`}>
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-2xl px-6 py-4 shadow-sm border border-white/60 dark:border-slate-700/60">
+        <div className={`bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-2xl px-6 py-4 shadow-sm border border-white/60 dark:border-slate-700/60 transition-all duration-500 ease-out ${uiHidden ? "-translate-x-20 opacity-0" : "translate-x-0 opacity-100"}`}>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
             Focus Dashboard
           </h1>
@@ -54,7 +78,7 @@ export default function FocusDashboardPanel({ atmospherePanel }: FocusDashboardP
           </p>
         </div>
 
-        <div className="flex gap-3 overflow-x-auto pb-2 max-w-full lg:max-w-2xl no-scrollbar">
+        <div className={`flex gap-3 overflow-x-auto pb-2 max-w-full lg:max-w-2xl no-scrollbar transition-all duration-500 ease-out ${uiHidden ? "translate-x-20 opacity-0" : "translate-x-0 opacity-100"}`}>
           {courses.length === 0 ? (
             <Link
               href="/courses"
@@ -82,7 +106,7 @@ export default function FocusDashboardPanel({ atmospherePanel }: FocusDashboardP
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        <div className="lg:col-span-3 flex flex-col gap-4">
+        <div className={`lg:col-span-3 flex flex-col gap-4 transition-all duration-500 ease-out ${uiHidden ? "-translate-x-20 opacity-0" : "translate-x-0 opacity-100"}`}>
           <StatCard
             label="Total Tasks"
             value={totalTasks}
@@ -99,13 +123,23 @@ export default function FocusDashboardPanel({ atmospherePanel }: FocusDashboardP
           />
         </div>
 
-        <div className="lg:col-span-6 flex justify-center">
-          <div className="w-full max-w-xl">
-            <Timer />
+        <div className={`lg:col-span-6 flex justify-center transition-all duration-500 ease-out ${uiHidden ? "opacity-0 scale-90" : "opacity-100 scale-100"}`}>
+          <div className="w-full max-w-xl transition-transform duration-500 ease-out">
+            <Timer
+              mode={timerMode}
+              timeLeft={timeLeft}
+              isActive={isTimerActive}
+              customDurations={customTimerDurations}
+              onToggleTimer={onToggleTimer}
+              onResetTimer={onResetTimer}
+              onModeChange={onModeChange}
+              onSetCustomDurations={onSetCustomTimerDurations}
+              onSaveSettings={onSaveTimerSettings}
+            />
           </div>
         </div>
 
-        <div className="lg:col-span-3 flex flex-col gap-4">
+        <div className={`lg:col-span-3 flex flex-col gap-4 transition-all duration-500 ease-out ${uiHidden ? "translate-x-20 opacity-0" : "translate-x-0 opacity-100"}`}>
           <StatCard
             label="Overdue"
             value={overdueTasks.length}
@@ -146,7 +180,7 @@ export default function FocusDashboardPanel({ atmospherePanel }: FocusDashboardP
       </div>
 
       {atmospherePanel ? (
-        <div className="w-full">
+        <div className={`w-full transition-all duration-500 ease-out ${uiHidden ? "translate-y-20 opacity-0" : "translate-y-0 opacity-100"}`}>
           {atmospherePanel}
         </div>
       ) : null}

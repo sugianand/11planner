@@ -40,18 +40,24 @@ export default function Navigation() {
   const isActive = (path: string) => pathname === path;
 
   return (
-    <nav className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md shadow-sm border-b border-white/40 dark:border-slate-700/40 sticky top-0 z-50">
+    <nav
+      data-dashboard-nav="true"
+      className="relative bg-white/60 dark:bg-slate-800/60 backdrop-blur-md shadow-sm border-b border-white/40 dark:border-slate-700/40 sticky top-0 z-50 transition-transform transition-opacity duration-500 ease-out"
+    >
       <div className="max-w-6xl mx-auto px-4 md:px-6 h-16 md:h-16">
         <div className="flex items-center justify-between h-full">
           {/* Logo */}
-          <div>
-            <Link href="/" className="flex items-center flex-shrink-0">
-              <img
-                src="/images/logo.png"
-                alt="11Planner Logo"
-                className="h-28 md:h-28 w-auto"
-              />
-            </Link>
+          <div className="relative flex items-center h-full w-fit">
+            <Link
+              href="/"
+              className="absolute inset-0 z-10"
+              aria-label="Go to home page"
+            />
+            <img
+              src="/images/logo.png"
+              alt="11Planner Logo"
+              className="h-28 w-auto pointer-events-none relative z-0 translate-y-1"
+            />
           </div>
 
           {/* Hamburger Menu Button */}

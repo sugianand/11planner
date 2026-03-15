@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Manrope } from "next/font/google";
 import { PlannerProvider } from "@/contexts/PlannerContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
+import { TimerProvider } from "@/contexts/TimerContext";
 import Navigation from "@/components/Navigation";
 import NotificationToasts from "@/components/NotificationToasts";
 import "./globals.css";
@@ -46,11 +47,13 @@ export default function RootLayout({
       >
         <ThemeProvider>
           <PlannerProvider>
-            <NotificationProvider>
-              <Navigation />
-              <NotificationToasts />
-              {children}
-            </NotificationProvider>
+            <TimerProvider>
+              <NotificationProvider>
+                <Navigation />
+                <NotificationToasts />
+                {children}
+              </NotificationProvider>
+            </TimerProvider>
           </PlannerProvider>
         </ThemeProvider>
       </body>
