@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
 from datetime import datetime
 
@@ -32,9 +32,8 @@ class Course(CourseBase):
     id: str
     user_id: str
     created_at: datetime
-    
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)
 
 # ========== Assignment Models ==========
 
@@ -61,9 +60,8 @@ class Assignment(AssignmentBase):
     user_id: str
     created_at: datetime
     completed: bool = False
-    
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)
 
 # ========== Task Models ==========
 
@@ -94,9 +92,8 @@ class Task(TaskBase):
     user_id: str
     created_at: datetime
     completed: bool = False
-    
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)
 
 # ========== Schedule Block Models ==========
 
@@ -123,9 +120,8 @@ class ScheduleBlock(ScheduleBlockBase):
     user_id: str
     created_at: datetime
     completed: bool = False
-    
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)
 
 # ========== Schedule Summary Models ==========
 
@@ -136,6 +132,5 @@ class WeeklyScheduleSummary(BaseModel):
     completed_tasks: int
     total_hours: float
     schedule_blocks: list[ScheduleBlock]
-    
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)
