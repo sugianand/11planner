@@ -6,6 +6,21 @@ import { ScheduleView } from "@/components/ScheduleView";
 import { Event } from "@/types/schedule";
 import Footer from "@/components/Footer";
 
+type GeneratedScheduleBlock = {
+  task_id: string;
+  start_time: string;
+  end_time: string;
+  duration_minutes: number;
+};
+
+type ScheduleStats = {
+  total_blocks: number;
+  total_hours: number;
+  days_span: number;
+  avg_hours_per_day: number;
+  valid: boolean;
+};
+
 
 export default function SchedulePage() {
   const {
@@ -18,8 +33,8 @@ export default function SchedulePage() {
   } = usePlanner();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [scheduleStats, setScheduleStats] = useState<any>(null);
-  const [generatedBlocks, setGeneratedBlocks] = useState<any[]>([]);
+  const [scheduleStats, setScheduleStats] = useState<ScheduleStats | null>(null);
+  const [generatedBlocks, setGeneratedBlocks] = useState<GeneratedScheduleBlock[]>([]);
 
 
   useEffect(() => {
@@ -45,8 +60,8 @@ export default function SchedulePage() {
       setGeneratedBlocks(data.blocks || []);
       setScheduleStats(data.stats);
       await loadScheduleBlocks();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to generate schedule");
     } finally {
       setLoading(false);
     }
@@ -92,8 +107,8 @@ export default function SchedulePage() {
         end_time: updatedEnd.toISOString(),
         duration_minutes: block.duration_minutes,
       });
-    } catch (err: any) {
-      setError(err.message || "Failed to move block");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to move block");
     }
   };
 

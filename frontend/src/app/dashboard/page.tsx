@@ -310,6 +310,40 @@ const backgroundCategories: FocusBackground["category"][] = atmosphereCategories
 const FALLBACK_BACKGROUND_IMAGE = "/images/background.png";
 const DASHBOARD_PREFS_KEY = "focus-dashboard-preferences-v1";
 
+type DashboardPrefs = {
+  backgroundId?: string;
+  soundId?: string;
+  volume?: number;
+  allowBackgroundVideo?: boolean;
+};
+
+const getStoredDashboardPrefs = (): DashboardPrefs | null => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(DASHBOARD_PREFS_KEY);
+    if (!raw) {
+      return null;
+    }
+    return JSON.parse(raw) as DashboardPrefs;
+  } catch {
+    return null;
+  }
+};
+
+const shouldReduceBackgroundVideo = (): boolean => {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+  const saveDataEnabled = Boolean(connection?.saveData);
+  return prefersReducedMotion || saveDataEnabled;
+};
+
 const soundscapes: Soundscape[] = [
   {
     id: "no-sound",
@@ -665,11 +699,21 @@ const createNoiseBuffer = (
 };
 
 export default function Dashboard() {
+  const initialPrefs = getStoredDashboardPrefs() ?? {};
+
   const [activeTab, setActiveTab] = useState<"backgrounds" | "sounds">("backgrounds");
-  const [backgroundId, setBackgroundId] = useState(focusBackgrounds[0]?.id ?? "");
-  const [soundId, setSoundId] = useState(
-    soundscapes.find((scene) => scene.id === "ambiance")?.id ?? soundscapes[0]?.id ?? ""
-  );
+  const [backgroundId, setBackgroundId] = useState(() => {
+    if (initialPrefs.backgroundId && focusBackgrounds.some((scene) => scene.id === initialPrefs.backgroundId)) {
+      return initialPrefs.backgroundId;
+    }
+    return focusBackgrounds[0]?.id ?? "";
+  });
+  const [soundId, setSoundId] = useState(() => {
+    if (initialPrefs.soundId && soundscapes.some((scene) => scene.id === initialPrefs.soundId)) {
+      return initialPrefs.soundId;
+    }
+    return soundscapes.find((scene) => scene.id === "ambiance")?.id ?? soundscapes[0]?.id ?? "";
+  });
   const [activeBackgroundCategory, setActiveBackgroundCategory] = useState<FocusBackground["category"]>(
     "All"
   );
@@ -699,10 +743,20 @@ export default function Dashboard() {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isPlaying, setIsPlaying] = useState(false);
-  const [volume, setVolume] = useState(0.6);
+  const [volume, setVolume] = useState(() => {
+    if (typeof initialPrefs.volume === "number" && Number.isFinite(initialPrefs.volume)) {
+      return Math.min(1, Math.max(0, initialPrefs.volume));
+    }
+    return 0.6;
+  });
   const [videoError, setVideoError] = useState(false);
   const [isBackgroundVideoReady, setIsBackgroundVideoReady] = useState(false);
-  const [allowBackgroundVideo, setAllowBackgroundVideo] = useState(true);
+  const [allowBackgroundVideo, setAllowBackgroundVideo] = useState(() => {
+    if (typeof initialPrefs.allowBackgroundVideo === "boolean") {
+      return initialPrefs.allowBackgroundVideo;
+    }
+    return !shouldReduceBackgroundVideo();
+  });
   const [loadedThumbnailPreviews, setLoadedThumbnailPreviews] = useState<Record<string, boolean>>({});
   const [failedThumbnailPreviews, setFailedThumbnailPreviews] = useState<Record<string, boolean>>({});
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -712,45 +766,6 @@ export default function Dashboard() {
     stop: () => void;
   } | null>(null);
   const playbackRequestRef = useRef(0);
-
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    try {
-      const raw = window.localStorage.getItem(DASHBOARD_PREFS_KEY);
-      if (!raw) {
-        return;
-      }
-
-      const parsed = JSON.parse(raw) as {
-        backgroundId?: string;
-        soundId?: string;
-        volume?: number;
-        allowBackgroundVideo?: boolean;
-      };
-
-      if (parsed.backgroundId && focusBackgrounds.some((scene) => scene.id === parsed.backgroundId)) {
-        setBackgroundId(parsed.backgroundId);
-      }
-
-      if (parsed.soundId && soundscapes.some((scene) => scene.id === parsed.soundId)) {
-        setSoundId(parsed.soundId);
-      }
-
-      if (typeof parsed.volume === "number" && Number.isFinite(parsed.volume)) {
-        const clamped = Math.min(1, Math.max(0, parsed.volume));
-        setVolume(clamped);
-      }
-
-      if (typeof parsed.allowBackgroundVideo === "boolean") {
-        setAllowBackgroundVideo(parsed.allowBackgroundVideo);
-      }
-    } catch {
-      // Ignore malformed local storage data and continue with defaults.
-    }
-  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -1090,25 +1105,6 @@ export default function Dashboard() {
 
   const shouldRenderBackgroundVideo = Boolean(activeBackground?.videoUrl) && !videoError && allowBackgroundVideo;
 
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
-    const saveDataEnabled = Boolean(connection?.saveData);
-
-    if (prefersReducedMotion || saveDataEnabled) {
-      setAllowBackgroundVideo(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    setVideoError(false);
-    setIsBackgroundVideoReady(false);
-  }, [activeBackground?.id]);
-
   const activeSound = useMemo(
     () => soundscapes.find((scene) => scene.id === soundId) ?? soundscapes[0],
     [soundId]
@@ -1132,6 +1128,7 @@ export default function Dashboard() {
 
   const handleBackgroundSelect = (sceneId: string) => {
     setVideoError(false);
+    setIsBackgroundVideoReady(false);
     setBackgroundId(sceneId);
   };
 
