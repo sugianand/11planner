@@ -3,7 +3,7 @@
 import Footer from "@/components/Footer";
 import { usePlanner } from "@/contexts/PlannerContext";
 import { supabase } from "@/lib/supabaseClient";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 type Preferences = {
@@ -22,10 +22,10 @@ const inputClassName =
 
 export default function Quiz() {
   const { preferences: savedPreferences, loadPreferences } = usePlanner();
+  const router = useRouter();
   const [step, setStep] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
   const [preferences, setPreferences] = useState<Preferences>({
     worktime: "",
     workdays: [],
@@ -68,7 +68,6 @@ export default function Quiz() {
 
   async function submitQuiz() {
     setErrorMessage("");
-    setSuccessMessage("");
 
     if (!currentPreferences.worktime || currentPreferences.workdays.length === 0 || !currentPreferences.workstyle || !currentPreferences.assignmentplan) {
       setErrorMessage("Please complete all required quiz fields before submitting.");
@@ -103,8 +102,8 @@ export default function Quiz() {
       return;
     }
 
-    setSuccessMessage("Preferences saved.");
     await loadPreferences();
+    router.replace("/profile/quiz/submitted");
   }
 
   const progress = Math.round((step / TOTAL_STEPS) * 100);
@@ -134,15 +133,6 @@ export default function Quiz() {
           {errorMessage && (
             <div className="mb-4 border border-rose-200 bg-rose-50 text-rose-700 rounded-xl p-3 text-sm">
               {errorMessage}
-            </div>
-          )}
-
-          {successMessage && (
-            <div className="mb-4 border border-emerald-200 bg-emerald-50 text-emerald-700 rounded-xl p-3 text-sm flex items-center justify-between gap-3">
-              <span>{successMessage}</span>
-              <Link href="/profile" className="font-semibold hover:underline">
-                Back to Profile
-              </Link>
             </div>
           )}
 
