@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import FocusDashboardPanel from "@/components/FocusDashboardPanel";
 import Footer from "@/components/Footer";
 import { useTimer, defaultTimerDurations } from "@/contexts/TimerContext";
@@ -1292,12 +1293,13 @@ export default function Dashboard() {
                       <div className="h-20 w-32 rounded-xl bg-slate-200/70 dark:bg-slate-700/70 overflow-hidden">
                         {scene.videoUrl ? (
                           <div className="relative h-full w-full">
-                            <img
+                            <Image
                               src={scene.imageUrl || FALLBACK_BACKGROUND_IMAGE}
                               alt={`${scene.label} thumbnail`}
+                              fill
                               className="absolute inset-0 h-full w-full object-cover"
                               loading="lazy"
-                              decoding="async"
+                              sizes="128px"
                             />
                             {allowBackgroundVideo && !failedThumbnailPreviews[scene.id] ? (
                               <video
