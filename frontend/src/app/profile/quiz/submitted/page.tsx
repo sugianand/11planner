@@ -2,13 +2,48 @@
 
 import Link from "next/link";
 import Footer from "@/components/Footer";
+import { usePlanner } from "@/contexts/PlannerContext";
+import { useEffect } from "react";
+
+const WORKTIME_LABELS: Record<string, string> = {
+  morning: "Morning",
+  afternoon: "Afternoon",
+  evening: "Evening",
+};
+
+const WORKSTYLE_LABELS: Record<string, string> = {
+  short: "Short Bursts",
+  classic: "Classic Pomodoro",
+  "deep-work": "Deep Work",
+  "full-immersion": "Full Immersion",
+};
+
+const ASSIGNMENT_LABELS: Record<string, string> = {
+  early: "Start Early",
+  deadline: "Deadline Sprint",
+  balanced: "Balanced",
+};
 
 export default function QuizSubmittedPage() {
+  const { preferences, loadPreferences } = usePlanner();
+
+  useEffect(() => {
+    loadPreferences();
+  }, [loadPreferences]);
+
+  const workTimeLabel = preferences?.worktime ? WORKTIME_LABELS[preferences.worktime] || preferences.worktime : "Not set";
+  const workStyleLabel = preferences?.workstyle ? WORKSTYLE_LABELS[preferences.workstyle] || preferences.workstyle : "Not set";
+  const assignmentLabel = preferences?.assignmentplan
+    ? ASSIGNMENT_LABELS[preferences.assignmentplan] || preferences.assignmentplan
+    : "Not set";
+  const workDaysLabel = preferences?.workdays?.length ? preferences.workdays.join(", ") : "Not set";
+
   return (
-    <div className="min-h-screen relative">
+    <div className="relative min-h-screen overflow-hidden flex flex-col">
       <div className="fixed inset-0 bg-focus-light dark:bg-focus-dark bg-cover bg-center -z-20"></div>
 
-      <div className="max-w-2xl mx-auto p-6">
+      <main className="w-full flex-1">
+      <div className="max-w-2xl mx-auto p-6 pb-12">
         <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-3xl p-8 shadow-sm border border-white/40 dark:border-slate-700/40">
           <div className="bg-white/60 dark:bg-slate-700/60 rounded-2xl p-8 border border-emerald-200/60 dark:border-emerald-800/50 text-center">
             <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-900/50 mb-4">
@@ -30,6 +65,16 @@ export default function QuizSubmittedPage() {
               You have successfully completed the preference quiz.
             </p>
 
+            <div className="mb-8 rounded-2xl border border-white/60 bg-white/70 p-4 text-left dark:border-slate-600/60 dark:bg-slate-800/45">
+              <p className="text-xs font-bold uppercase tracking-[0.15em] text-slate-500 dark:text-slate-300">Your Saved Summary</p>
+              <div className="mt-3 space-y-2 text-sm">
+                <p className="text-slate-700 dark:text-slate-200"><span className="font-semibold">Work Time:</span> {workTimeLabel}</p>
+                <p className="text-slate-700 dark:text-slate-200"><span className="font-semibold">Work Days:</span> {workDaysLabel}</p>
+                <p className="text-slate-700 dark:text-slate-200"><span className="font-semibold">Break Style:</span> {workStyleLabel}</p>
+                <p className="text-slate-700 dark:text-slate-200"><span className="font-semibold">Assignment Plan:</span> {assignmentLabel}</p>
+              </div>
+            </div>
+
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link
                 href="/profile"
@@ -47,8 +92,11 @@ export default function QuizSubmittedPage() {
           </div>
         </div>
       </div>
+      </main>
 
-      <Footer />
+      <div className="mt-auto">
+        <Footer />
+      </div>
     </div>
   );
 }

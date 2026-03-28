@@ -110,6 +110,10 @@ export default function CoursesPage() {
     .split(" ")
     .filter(Boolean);
 
+  const onlineCourses = courses.filter((course) => course.isOnline).length;
+  const inPersonCourses = courses.filter((course) => !course.isOnline).length;
+  const labCourses = courses.filter((course) => course.hasLab).length;
+
   const toggleDay = (day: string, checked: boolean) => {
     const nextDays = checked
       ? [...new Set([...selectedDays, day])]
@@ -166,14 +170,31 @@ export default function CoursesPage() {
     <div className="min-h-screen relative flex flex-col">
       <div className="fixed inset-0 bg-focus-light dark:bg-focus-dark bg-cover bg-center -z-20"></div>
 
-      <div className="max-w-6xl w-full mx-auto p-6 md:p-12 flex-1">
-        <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-3xl p-8 shadow-sm border border-white/40 dark:border-slate-700/40">
+      <div className="max-w-7xl w-full mx-auto p-6 md:p-10 flex-1">
+        <div className="bg-white/65 dark:bg-slate-800/65 backdrop-blur-xl rounded-3xl p-6 md:p-8 shadow-sm border border-white/40 dark:border-slate-700/40">
           {/* Header */}
-          <div className="flex justify-between items-center mb-8">
-            <div>
-              <h1 className="text-4xl font-bold text-slate-900 dark:text-white">Courses</h1>
-              <p className="text-slate-600 dark:text-slate-300 mt-2">Manage your courses and class information</p>
-            </div>
+          <div className="mb-8 rounded-2xl border border-white/50 dark:border-slate-700/50 bg-gradient-to-r from-white/80 via-white/70 to-emerald-50/70 dark:from-slate-900/80 dark:via-slate-900/70 dark:to-emerald-900/20 p-5 md:p-6">
+            <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+              <div>
+                <h1 className="text-4xl font-bold text-slate-900 dark:text-white">Courses</h1>
+                <p className="text-slate-600 dark:text-slate-300 mt-2">Manage your classes, meeting times, and lab schedules in one place.</p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-white/80 dark:bg-slate-900/70 border border-white/60 dark:border-slate-700/60 text-slate-700 dark:text-slate-200">
+                    Total: {courses.length}
+                  </span>
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-white/80 dark:bg-slate-900/70 border border-white/60 dark:border-slate-700/60 text-slate-700 dark:text-slate-200">
+                    Online: {onlineCourses}
+                  </span>
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-white/80 dark:bg-slate-900/70 border border-white/60 dark:border-slate-700/60 text-slate-700 dark:text-slate-200">
+                    In-Person: {inPersonCourses}
+                  </span>
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-white/80 dark:bg-slate-900/70 border border-white/60 dark:border-slate-700/60 text-slate-700 dark:text-slate-200">
+                    Labs: {labCourses}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center">
                 {!showForm && (
                   <button
                     onClick={() => {
@@ -200,6 +221,8 @@ export default function CoursesPage() {
                     New Course
                   </button>
                 )}
+              </div>
+            </div>
           </div>
 
           {/* Error Message */}
@@ -211,7 +234,7 @@ export default function CoursesPage() {
 
           {/* Form */}
           {showForm && (
-            <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-lg shadow-md p-6 mb-8 border border-slate-200 dark:border-slate-700/40">
+            <div className="bg-white/75 dark:bg-slate-900/75 backdrop-blur-xl rounded-2xl shadow-md p-6 mb-8 border border-slate-200/80 dark:border-slate-700/50">
               <h2 className="text-xl font-bold mb-4 text-slate-900 dark:text-white">
                 {editingId ? "Edit Course" : "Create New Course"}
               </h2>
@@ -221,7 +244,7 @@ export default function CoursesPage() {
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-3">
                     Upload a syllabus PDF to auto-fill information (optional)
                   </label>
-                  <label className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg cursor-pointer hover:border-blue-500 dark:hover:border-blue-400 transition bg-slate-50 dark:bg-slate-900/30">
+                  <label className="flex items-center justify-center w-full px-4 py-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl cursor-pointer hover:border-blue-500 dark:hover:border-blue-400 transition bg-slate-50/70 dark:bg-slate-900/30">
                     <div className="flex flex-col items-center justify-center">
                       <span className="material-symbols-outlined text-slate-600 dark:text-slate-300 mb-2">
                         cloud_upload
@@ -386,7 +409,7 @@ export default function CoursesPage() {
                 </div>
 
                 {formData.hasLab && (
-                  <div className="border border-slate-200 dark:border-slate-700/40 rounded-lg p-4 space-y-4">
+                  <div className="border border-slate-200/80 dark:border-slate-700/40 rounded-xl p-4 space-y-4 bg-white/60 dark:bg-slate-900/30">
                     <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Lab Information</h3>
                     
                     {!formData.labIsOnline && (
@@ -500,13 +523,13 @@ export default function CoursesPage() {
           )}
 
           {/* Courses Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
             {loading && courses.length === 0 ? (
               <div className="col-span-full text-center py-12">
                 <p className="text-slate-600 text-lg">Loading courses...</p>
               </div>
             ) : courses.length === 0 ? (
-              <div className="col-span-full bg-white/70 dark:bg-slate-900/70 rounded-lg p-8 text-center border border-slate-200 dark:border-slate-700/40">
+              <div className="col-span-full bg-white/75 dark:bg-slate-900/75 rounded-2xl p-8 text-center border border-slate-200/80 dark:border-slate-700/40">
                 <p className="text-slate-600 dark:text-slate-300 text-lg">
                   No courses added yet. Create one to get started!
                 </p>
@@ -515,16 +538,20 @@ export default function CoursesPage() {
               courses.map((course) => (
                 <div
                   key={course.id}
-                  className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-2xl shadow-sm p-6 border border-white/40 dark:border-slate-700/40 hover:bg-white/70 dark:hover:bg-slate-800/70 transition group relative overflow-hidden"
+                  className="bg-white/60 dark:bg-slate-800/55 backdrop-blur-md rounded-2xl shadow-sm p-6 border border-white/50 dark:border-slate-700/45 hover:bg-white/80 dark:hover:bg-slate-800/75 transition group relative overflow-hidden"
                 >
                   <div className="absolute top-0 left-0 w-1 h-full bg-[#306844]"></div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
-                    {course.name}
-                  </h3>
-                  <p className="text-sm font-bold uppercase tracking-wider text-[#306844] dark:text-green-400 mb-4">
-                    {course.code}
-                    {course.hasLab && <span className="ml-2 inline-block bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-200 text-xs font-semibold px-2 py-0.5 rounded">Lab</span>}
-                  </p>
+                  <div className="mb-4 flex items-start justify-between gap-3">
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
+                        {course.name}
+                      </h3>
+                      <p className="text-sm font-bold uppercase tracking-wider text-[#306844] dark:text-green-400">
+                        {course.code}
+                      </p>
+                    </div>
+                    {course.hasLab && <span className="inline-block bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-200 text-xs font-semibold px-2 py-0.5 rounded-full">Lab</span>}
+                  </div>
                   {course.professor && (
                     <div className="flex items-center gap-2 mb-2 text-slate-700 dark:text-slate-300">
                       <span className="material-symbols-outlined text-sm opacity-60">person</span>
@@ -543,7 +570,7 @@ export default function CoursesPage() {
                     </div>
                   )}
                   {course.description && (
-                    <p className="text-sm text-slate-600 dark:text-slate-300 mb-4 line-clamp-2 pl-6 border-l-2 border-slate-200 dark:border-slate-600 ml-1">
+                    <p className="text-sm text-slate-600 dark:text-slate-300 mb-4 line-clamp-2 pl-4 border-l-2 border-slate-200 dark:border-slate-600 ml-1">
                       {course.description}
                     </p>
                   )}

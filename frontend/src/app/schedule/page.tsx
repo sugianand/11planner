@@ -68,6 +68,9 @@ export default function SchedulePage() {
   };
 
   const pendingTasks = tasks.filter((t) => !t.completed);
+  const completedTasks = tasks.filter((t) => t.completed);
+  const overdueTasks = pendingTasks.filter((task) => new Date(task.deadline).getTime() < Date.now());
+  const scheduledTaskCount = new Set(scheduleBlocks.map((block) => block.task_id)).size;
 
   const scheduleEvents = useMemo(() => {
     const taskMap = new Map(tasks.map((task) => [task.id, task]));
@@ -117,35 +120,47 @@ export default function SchedulePage() {
       <div className="fixed inset-0 bg-focus-light dark:bg-focus-dark bg-cover bg-center -z-20"></div>
 
 
-      <div className="max-w-6xl mx-auto p-6 md:p-12">
-        <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm rounded-3xl shadow-sm p-8 mb-6 border border-white/40 dark:border-slate-700/40">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2 tracking-tight">
-                Schedule Generator
-              </h1>
-              <p className="text-slate-600 dark:text-slate-300 font-medium">
-                AI-powered schedule generation for optimal productivity
-              </p>
-            </div>
-          </div>
+      <div className="max-w-7xl mx-auto p-6 md:p-10">
+        <div className="bg-white/65 dark:bg-slate-800/65 backdrop-blur-xl rounded-3xl shadow-sm p-6 md:p-8 mb-6 border border-white/40 dark:border-slate-700/40">
+          <div className="rounded-2xl border border-white/50 dark:border-slate-700/50 bg-gradient-to-r from-white/80 via-white/70 to-emerald-50/70 dark:from-slate-900/80 dark:via-slate-900/70 dark:to-emerald-900/20 p-5 md:p-6">
+            <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+              <div>
+                <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-2 tracking-tight">
+                  Schedule Generator
+                </h1>
+                <p className="text-slate-600 dark:text-slate-300 font-medium">
+                  Generate and manage smart study blocks from your task workload.
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-white/80 dark:bg-slate-900/70 border border-white/60 dark:border-slate-700/60 text-slate-700 dark:text-slate-200">
+                    Pending: {pendingTasks.length}
+                  </span>
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-white/80 dark:bg-slate-900/70 border border-white/60 dark:border-slate-700/60 text-slate-700 dark:text-slate-200">
+                    Completed: {completedTasks.length}
+                  </span>
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-white/80 dark:bg-slate-900/70 border border-white/60 dark:border-slate-700/60 text-slate-700 dark:text-slate-200">
+                    Scheduled Tasks: {scheduledTaskCount}
+                  </span>
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-white/80 dark:bg-slate-900/70 border border-white/60 dark:border-slate-700/60 text-slate-700 dark:text-slate-200">
+                    Overdue: {overdueTasks.length}
+                  </span>
+                </div>
+              </div>
 
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-6 border-t border-slate-200/50 dark:border-slate-700/50">
-            <div>
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">
-                Generate Smart Schedule
-              </h2>
-              <p className="text-slate-600 dark:text-slate-300">
-                {pendingTasks.length} pending task{pendingTasks.length !== 1 ? "s" : ""} to schedule
-              </p>
+              <div className="flex flex-col items-start md:items-end gap-2">
+                <button
+                  onClick={generateSchedule}
+                  disabled={loading || pendingTasks.length === 0}
+                  className="bg-[#306844] hover:bg-[#255236] text-white font-bold py-2.5 px-6 rounded-xl transition shadow-lg shadow-green-900/10 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-sm">auto_awesome</span>
+                  {loading ? "Generating..." : "Generate Schedule"}
+                </button>
+                <p className="text-xs text-slate-600 dark:text-slate-300">
+                  {pendingTasks.length} pending task{pendingTasks.length !== 1 ? "s" : ""} ready for planning
+                </p>
+              </div>
             </div>
-            <button
-              onClick={generateSchedule}
-              disabled={loading || pendingTasks.length === 0}
-              className="bg-[#306844] hover:bg-[#255236] text-white font-semibold py-3 px-8 rounded-xl transition shadow-lg shadow-green-900/10 disabled:opacity-50 disabled:cursor-not-allowed text-lg"
-            >
-              {loading ? "Generating..." : "Generate Schedule"}
-            </button>
           </div>
         </div>
 

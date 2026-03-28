@@ -109,31 +109,58 @@ export default function TasksPage() {
     (a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime()
   );
 
+  const now = new Date();
+  const pendingTasks = assignments.filter((assignment) => !assignment.completed).length;
+  const completedTasks = assignments.filter((assignment) => assignment.completed).length;
+  const overdueTasks = assignments.filter(
+    (assignment) => !assignment.completed && new Date(assignment.deadline).getTime() < now.getTime()
+  ).length;
+
   return (
     <div className="min-h-screen relative flex flex-col">
       <div className="fixed inset-0 bg-focus-light dark:bg-focus-dark bg-cover bg-center -z-20"></div>
 
-      <div className="max-w-6xl w-full mx-auto p-6 md:p-12 flex-1">
-        <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-3xl p-8 shadow-sm border border-white/40 dark:border-slate-700/40">
+      <div className="max-w-7xl w-full mx-auto p-6 md:p-10 flex-1">
+        <div className="bg-white/65 dark:bg-slate-800/65 backdrop-blur-xl rounded-3xl p-6 md:p-8 shadow-sm border border-white/40 dark:border-slate-700/40">
           {/* Header */}
-          <div className="flex justify-between items-center mb-8">
-            <div>
-              <h1 className="text-4xl font-bold text-slate-900 dark:text-white">Assignments</h1>
-              <p className="text-slate-600 dark:text-slate-300 mt-2">
-                Manage your assignments — the schedule generator will break these into focus sessions
-              </p>
+          <div className="mb-8 rounded-2xl border border-white/50 dark:border-slate-700/50 bg-gradient-to-r from-white/80 via-white/70 to-emerald-50/70 dark:from-slate-900/80 dark:via-slate-900/70 dark:to-emerald-900/20 p-5 md:p-6">
+            <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+              <div>
+                <h1 className="text-4xl font-bold text-slate-900 dark:text-white">Tasks</h1>
+                <p className="text-slate-600 dark:text-slate-300 mt-2">
+                  Manage your tasks and deadlines to generate better study sessions.
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-white/80 dark:bg-slate-900/70 border border-white/60 dark:border-slate-700/60 text-slate-700 dark:text-slate-200">
+                    Total: {assignments.length}
+                  </span>
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-white/80 dark:bg-slate-900/70 border border-white/60 dark:border-slate-700/60 text-slate-700 dark:text-slate-200">
+                    Pending: {pendingTasks}
+                  </span>
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-white/80 dark:bg-slate-900/70 border border-white/60 dark:border-slate-700/60 text-slate-700 dark:text-slate-200">
+                    Completed: {completedTasks}
+                  </span>
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-white/80 dark:bg-slate-900/70 border border-white/60 dark:border-slate-700/60 text-slate-700 dark:text-slate-200">
+                    Overdue: {overdueTasks}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center">
+                <button
+                  onClick={() => {
+                    setShowForm(true); setEditingId(null);
+                    setFormData({ title: "", course_id: "", deadline: "", estimated_hours: 2, priority: 2, description: "", user_id: userId });
+                  }}
+                  disabled={courses.length === 0}
+                  title={courses.length === 0 ? "Add a course first to create tasks" : "Create a new task"}
+                  className="bg-[#306844] hover:bg-[#255236] text-white font-bold py-2.5 px-6 rounded-xl transition shadow-lg shadow-green-900/10 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span className="material-symbols-outlined text-sm">add</span>
+                  New Task
+                </button>
+              </div>
             </div>
-            <button
-              onClick={() => {
-                if (courses.length === 0) { alert("Please add a course first before creating assignments."); return; }
-                setShowForm(true); setEditingId(null);
-                setFormData({ title: "", course_id: "", deadline: "", estimated_hours: 2, priority: 2, description: "", user_id: userId });
-              }}
-              className="bg-[#306844] hover:bg-[#255236] text-white font-bold py-2.5 px-6 rounded-xl transition shadow-lg shadow-green-900/10 flex items-center gap-2"
-            >
-              <span className="material-symbols-outlined text-sm">add</span>
-              New Assignment
-            </button>
           </div>
 
           {/* Error Message */}
@@ -147,7 +174,7 @@ export default function TasksPage() {
           {courses.length === 0 && assignments.length === 0 && !showForm && (
             <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-lg p-8 text-center border border-slate-200 dark:border-slate-700/40 mb-6">
               <p className="text-slate-600 dark:text-slate-300 text-lg font-semibold mb-2">No courses added yet.</p>
-              <p className="text-slate-600 dark:text-slate-300 mb-4">Please add a course first before creating assignments.</p>
+              <p className="text-slate-600 dark:text-slate-300 mb-4">Please add a course first before creating tasks.</p>
               <a href="/courses" className="inline-flex items-center gap-2 bg-[#306844] hover:bg-[#255236] text-white font-semibold py-2.5 px-6 rounded-xl transition shadow-md">
                 <span className="material-symbols-outlined text-sm">school</span>
                 Go to Courses
@@ -159,12 +186,12 @@ export default function TasksPage() {
           {showForm && (
             <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-lg shadow-md p-6 mb-8 border border-slate-200 dark:border-slate-700/40">
               <h2 className="text-xl font-bold mb-4 text-slate-900 dark:text-white">
-                {editingId ? "Edit Assignment" : "Create New Assignment"}
+                {editingId ? "Edit Task" : "Create New Task"}
               </h2>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Assignment Title *</label>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Task Title *</label>
                     <input type="text" value={formData.title || ""} onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                       placeholder="e.g., Finish calculus homework"
                       className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800" />
@@ -209,7 +236,7 @@ export default function TasksPage() {
                 <div className="flex gap-3">
                   <button type="submit" disabled={loading}
                     className="bg-[#306844] hover:bg-[#255236] text-white font-bold py-2.5 px-6 rounded-xl transition shadow-md disabled:opacity-50">
-                    {loading ? "Saving..." : editingId ? "Update Assignment" : "Create Assignment"}
+                    {loading ? "Saving..." : editingId ? "Update Task" : "Create Task"}
                   </button>
                   <button type="button" onClick={() => { setShowForm(false); setEditingId(null); }}
                     className="bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-700 dark:text-white font-semibold py-2.5 px-6 rounded-xl transition border border-slate-200 dark:border-slate-600">
@@ -225,12 +252,12 @@ export default function TasksPage() {
             <div className="space-y-4">
               {loading && assignments.length === 0 ? (
                 <div className="text-center py-12">
-                  <p className="text-slate-600 dark:text-slate-300 text-lg">Loading assignments...</p>
+                  <p className="text-slate-600 dark:text-slate-300 text-lg">Loading tasks...</p>
                 </div>
               ) : sortedAssignments.length === 0 ? (
                 <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-lg p-8 text-center border border-slate-200 dark:border-slate-700/40">
                   <p className="text-slate-600 dark:text-slate-300 text-lg">
-                    No assignments yet. Create one or import from Canvas!
+                    No tasks yet. Create one or import from Canvas!
                   </p>
                 </div>
               ) : (

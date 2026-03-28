@@ -26,7 +26,7 @@ export default function StatCard({
     return (
         <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-3xl p-4 shadow-sm border border-white/40 dark:border-slate-700/40 hover:bg-white/80 dark:hover:bg-slate-700/80 transition-all group">
             <div className="flex items-start justify-between mb-4">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <h3 className="text-sm font-semibold tracking-normal text-slate-500 dark:text-slate-300">
                     {label}
                 </h3>
                 {icon && (

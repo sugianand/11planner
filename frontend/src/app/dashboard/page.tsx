@@ -651,7 +651,7 @@ const soundIconsById: Record<string, string> = {
 
 const getInitialTimerPosition = () => ({
   x: 32,
-  y: typeof window === "undefined" ? 100 : Math.max(24, window.innerHeight - 400),
+  y: 100,
 });
 
 const createNoiseBuffer = (
@@ -702,21 +702,9 @@ const createNoiseBuffer = (
 };
 
 export default function Dashboard() {
-  const initialPrefs = getStoredDashboardPrefs() ?? {};
-
   const [activeTab, setActiveTab] = useState<"backgrounds" | "sounds">("backgrounds");
-  const [backgroundId, setBackgroundId] = useState(() => {
-    if (initialPrefs.backgroundId && focusBackgrounds.some((scene) => scene.id === initialPrefs.backgroundId)) {
-      return initialPrefs.backgroundId;
-    }
-    return focusBackgrounds[0]?.id ?? "";
-  });
-  const [soundId, setSoundId] = useState(() => {
-    if (initialPrefs.soundId && soundscapes.some((scene) => scene.id === initialPrefs.soundId)) {
-      return initialPrefs.soundId;
-    }
-    return soundscapes.find((scene) => scene.id === "ambiance")?.id ?? soundscapes[0]?.id ?? "";
-  });
+  const [backgroundId, setBackgroundId] = useState(() => focusBackgrounds[0]?.id ?? "");
+  const [soundId, setSoundId] = useState(() => soundscapes.find((scene) => scene.id === "ambiance")?.id ?? soundscapes[0]?.id ?? "");
   const [activeBackgroundCategory, setActiveBackgroundCategory] = useState<FocusBackground["category"]>(
     "All"
   );
@@ -743,23 +731,15 @@ export default function Dashboard() {
   } = useTimer();
 
   const [timerPosition, setTimerPosition] = useState(getInitialTimerPosition);
+  const hasAutoPositionedTimerRef = useRef(false);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isPlaying, setIsPlaying] = useState(false);
-  const [volume, setVolume] = useState(() => {
-    if (typeof initialPrefs.volume === "number" && Number.isFinite(initialPrefs.volume)) {
-      return Math.min(1, Math.max(0, initialPrefs.volume));
-    }
-    return 0.6;
-  });
+  const [volume, setVolume] = useState(0.6);
   const [videoError, setVideoError] = useState(false);
   const [isBackgroundVideoReady, setIsBackgroundVideoReady] = useState(false);
-  const [allowBackgroundVideo, setAllowBackgroundVideo] = useState(() => {
-    if (typeof initialPrefs.allowBackgroundVideo === "boolean") {
-      return initialPrefs.allowBackgroundVideo;
-    }
-    return !shouldReduceBackgroundVideo();
-  });
+  const [allowBackgroundVideo, setAllowBackgroundVideo] = useState(true);
+  const [prefsLoaded, setPrefsLoaded] = useState(false);
   const [loadedThumbnailPreviews, setLoadedThumbnailPreviews] = useState<Record<string, boolean>>({});
   const [failedThumbnailPreviews, setFailedThumbnailPreviews] = useState<Record<string, boolean>>({});
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -771,7 +751,31 @@ export default function Dashboard() {
   const playbackRequestRef = useRef(0);
 
   useEffect(() => {
-    if (typeof window === "undefined") {
+    const storedPrefs = getStoredDashboardPrefs() ?? {};
+
+    if (storedPrefs.backgroundId && focusBackgrounds.some((scene) => scene.id === storedPrefs.backgroundId)) {
+      setBackgroundId(storedPrefs.backgroundId);
+    }
+
+    if (storedPrefs.soundId && soundscapes.some((scene) => scene.id === storedPrefs.soundId)) {
+      setSoundId(storedPrefs.soundId);
+    }
+
+    if (typeof storedPrefs.volume === "number" && Number.isFinite(storedPrefs.volume)) {
+      setVolume(Math.min(1, Math.max(0, storedPrefs.volume)));
+    }
+
+    if (typeof storedPrefs.allowBackgroundVideo === "boolean") {
+      setAllowBackgroundVideo(storedPrefs.allowBackgroundVideo);
+    } else {
+      setAllowBackgroundVideo(!shouldReduceBackgroundVideo());
+    }
+
+    setPrefsLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (!prefsLoaded || typeof window === "undefined") {
       return;
     }
 
@@ -783,7 +787,7 @@ export default function Dashboard() {
     };
 
     window.localStorage.setItem(DASHBOARD_PREFS_KEY, JSON.stringify(payload));
-  }, [backgroundId, soundId, volume, allowBackgroundVideo]);
+  }, [backgroundId, soundId, volume, allowBackgroundVideo, prefsLoaded]);
 
   useEffect(() => {
     const body = document.body;
@@ -797,6 +801,23 @@ export default function Dashboard() {
       body.classList.remove("dashboard-ui-hidden");
     };
   }, [isUiHidden]);
+
+  useEffect(() => {
+    if (hasAutoPositionedTimerRef.current) {
+      return;
+    }
+
+    hasAutoPositionedTimerRef.current = true;
+    setTimerPosition((prev) => {
+      if (prev.x !== 32 || prev.y !== 100) {
+        return prev;
+      }
+      return {
+        x: 32,
+        y: Math.max(24, window.innerHeight - 400),
+      };
+    });
+  }, []);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     setIsDragging(true);
