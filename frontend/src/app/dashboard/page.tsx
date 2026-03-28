@@ -45,6 +45,7 @@ type Soundscape = {
   | "pinkNoise"
   | "brownNoise";
   audioUrl?: string;
+  startAtSeconds?: number;
 };
 
 const focusBackgrounds: FocusBackground[] = [
@@ -508,6 +509,7 @@ const soundscapes: Soundscape[] = [
     category: "Ambiance",
     engine: "abstract",
     audioUrl: "/sounds/ambiance/outer-space.mp3",
+    startAtSeconds: 20,
   },
   {
     id: "birds-chirping",
@@ -1038,6 +1040,23 @@ export default function Dashboard() {
         const audio = new Audio(scene.audioUrl);
         audio.loop = true;
         audio.volume = volume;
+
+        const configuredStart = scene.startAtSeconds;
+        if (typeof configuredStart === "number" && Number.isFinite(configuredStart) && configuredStart > 0) {
+          const seekToConfiguredStart = () => {
+            const safeUpperBound = Number.isFinite(audio.duration) && audio.duration > 0
+              ? Math.max(0, audio.duration - 0.25)
+              : configuredStart;
+            audio.currentTime = Math.min(configuredStart, safeUpperBound);
+          };
+
+          if (audio.readyState >= 1) {
+            seekToConfiguredStart();
+          } else {
+            audio.addEventListener("loadedmetadata", seekToConfiguredStart, { once: true });
+          }
+        }
+
         try {
           await audio.play();
 
@@ -1251,8 +1270,8 @@ export default function Dashboard() {
 
           {activeTab === "backgrounds" && (
             <div className="w-full flex flex-col items-center gap-4">
-              <div className="w-full flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-                <div className="flex flex-wrap justify-center lg:justify-start gap-2">
+              <div className="w-full grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                <div className="flex flex-wrap justify-center gap-2 col-start-2">
                   {backgroundCategories.map((category) => (
                     <button
                       key={category}
@@ -1270,7 +1289,7 @@ export default function Dashboard() {
                 <button
                   onClick={() => setAllowBackgroundVideo((prev) => !prev)}
                   title="Performance Mode keeps static backgrounds to reduce CPU and bandwidth usage"
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition self-center lg:self-auto ${!allowBackgroundVideo
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition justify-self-end col-start-3 ${!allowBackgroundVideo
                     ? "bg-emerald-600 text-white border-emerald-600"
                     : "border-slate-200/80 dark:border-slate-700/80 text-slate-600 dark:text-slate-300 hover:bg-white/80 dark:hover:bg-slate-800/80"
                     }`}

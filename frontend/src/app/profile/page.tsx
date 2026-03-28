@@ -14,7 +14,7 @@ type ProfileData = {
 
 
 export default function ProfilePage() {
-  const { tasks, courses } = usePlanner();
+  const { tasks, courses, preferences, loadPreferences } = usePlanner();
   const [email, setEmail] = useState<string | null>(null);
   const [profile, setProfile] = useState<ProfileData | null>(null);
 
@@ -53,10 +53,20 @@ export default function ProfilePage() {
     fetchProfile();
   }, []);
 
+  useEffect(() => {
+    loadPreferences();
+  }, [loadPreferences]);
+
 
   const completedTasks = tasks.filter((t) => t.completed).length;
   const totalTasks = tasks.length;
   const completionRate = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
+  const hasTakenQuiz = Boolean(
+    preferences?.worktime &&
+    preferences?.workdays?.length &&
+    preferences?.workstyle &&
+    preferences?.assignmentplan
+  );
 
   return (
     <div className="min-h-screen relative">
@@ -112,11 +122,16 @@ export default function ProfilePage() {
               </div>
 
               <div className="pt-2">
+                {hasTakenQuiz && (
+                  <p className="text-emerald-700 dark:text-emerald-400 text-sm font-semibold mb-2">
+                    Quiz already taken.
+                  </p>
+                )}
                 <Link
                   href="/profile/quiz"
                   className="inline-block bg-[#306844] hover:bg-[#255236] text-white font-semibold py-2.5 px-6 rounded-lg transition shadow-md hover:shadow-lg"
                 >
-                  Take Preference Quiz
+                  {hasTakenQuiz ? "Take Quiz Again" : "Take Preference Quiz"}
                 </Link>
               </div>
             </div>

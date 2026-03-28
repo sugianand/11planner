@@ -12,7 +12,6 @@ import {
   UserPreferences,
 } from "@/types";
 import {
-  assignmentAPI,
   scheduleAPI,
 } from "@/lib/api";
 
@@ -91,6 +90,23 @@ type SupabaseTaskRow = {
   created_at: string;
 };
 
+type SupabaseAssignmentRow = {
+  id: string;
+  user_id: string;
+  title: string;
+  course_id: string | null;
+  deadline: string;
+  description: string | null;
+  priority: number | null;
+  estimated_hours: number | null;
+  status: string | null;
+  points: number | null;
+  url: string | null;
+  source: string | null;
+  completed: boolean | null;
+  created_at: string;
+};
+
 function parseCourseDays(value: string): string[] {
   return value
     .split(/[,\s]+/)
@@ -165,6 +181,25 @@ function mapTaskRowToModel(row: SupabaseTaskRow): Task {
     priority: row.priority_level ?? 2,
     description: row.description || "",
     completed: row.status === "completed",
+    created_at: row.created_at,
+  };
+}
+
+function mapAssignmentRowToModel(row: SupabaseAssignmentRow): Assignment {
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    title: row.title,
+    course_id: row.course_id || undefined,
+    deadline: row.deadline,
+    description: row.description || "",
+    priority: row.priority ?? 2,
+    estimated_hours: row.estimated_hours ?? 1,
+    status: row.status || "pending",
+    points: row.points ?? undefined,
+    url: row.url || undefined,
+    source: row.source || "manual",
+    completed: row.completed ?? false,
     created_at: row.created_at,
   };
 }
@@ -383,10 +418,20 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
   // ========== Assignments ==========
   const loadAssignments = useCallback(async () => {
     try {
+      if (userId === "user_demo") {
+        setAssignments([]);
+        return;
+      }
       setLoading(true);
       setError(null);
-      const data = await assignmentAPI.getByUser(userId);
-      setAssignments(data);
+      const { data, error: queryError } = await supabase
+        .from("assignments")
+        .select("*")
+        .eq("user_id", userId)
+        .order("deadline", { ascending: true });
+
+      if (queryError) throw queryError;
+      setAssignments((data as SupabaseAssignmentRow[]).map(mapAssignmentRowToModel));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load assignments");
     } finally {
@@ -397,8 +442,33 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
   const createAssignment = useCallback(
     async (assignment: AssignmentCreate) => {
       try {
+        if (userId === "user_demo") {
+          throw new Error("Please sign in to save assignments.");
+        }
         setLoading(true);
-        const newAssignment = await assignmentAPI.create(assignment);
+        const payload = {
+          user_id: assignment.user_id || userId,
+          title: assignment.title,
+          course_id: assignment.course_id || null,
+          deadline: assignment.deadline,
+          description: assignment.description || null,
+          priority: assignment.priority ?? 2,
+          estimated_hours: assignment.estimated_hours ?? 1,
+          status: assignment.status || "pending",
+          points: assignment.points ?? null,
+          url: assignment.url || null,
+          source: assignment.source || "manual",
+          completed: false,
+        };
+
+        const { data, error: insertError } = await supabase
+          .from("assignments")
+          .insert(payload)
+          .select("*")
+          .single();
+
+        if (insertError) throw insertError;
+        const newAssignment = mapAssignmentRowToModel(data as SupabaseAssignmentRow);
         setAssignments((prev) => [...prev, newAssignment]);
         return newAssignment;
       } catch (err) {
@@ -408,17 +478,40 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
       }
     },
-    []
+    [userId]
   );
 
   const updateAssignment = useCallback(
     async (id: string, assignment: Partial<Assignment>) => {
       try {
+        if (userId === "user_demo") {
+          throw new Error("Please sign in to update assignments.");
+        }
         setLoading(true);
-        await assignmentAPI.update(id, assignment);
-        setAssignments((prev) =>
-          prev.map((a) => (a.id === id ? { ...a, ...assignment } : a))
-        );
+        const updatePayload: Record<string, unknown> = {};
+        if (assignment.title !== undefined) updatePayload.title = assignment.title;
+        if (assignment.course_id !== undefined) updatePayload.course_id = assignment.course_id || null;
+        if (assignment.deadline !== undefined) updatePayload.deadline = assignment.deadline;
+        if (assignment.description !== undefined) updatePayload.description = assignment.description || null;
+        if (assignment.priority !== undefined) updatePayload.priority = assignment.priority;
+        if (assignment.estimated_hours !== undefined) updatePayload.estimated_hours = assignment.estimated_hours;
+        if (assignment.status !== undefined) updatePayload.status = assignment.status;
+        if (assignment.points !== undefined) updatePayload.points = assignment.points ?? null;
+        if (assignment.url !== undefined) updatePayload.url = assignment.url || null;
+        if (assignment.source !== undefined) updatePayload.source = assignment.source;
+        if (assignment.completed !== undefined) updatePayload.completed = assignment.completed;
+
+        const { data, error: updateError } = await supabase
+          .from("assignments")
+          .update(updatePayload)
+          .eq("id", id)
+          .eq("user_id", userId)
+          .select("*")
+          .single();
+
+        if (updateError) throw updateError;
+        const updated = mapAssignmentRowToModel(data as SupabaseAssignmentRow);
+        setAssignments((prev) => prev.map((a) => (a.id === id ? updated : a)));
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to update assignment");
         throw err;
@@ -426,13 +519,22 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
       }
     },
-    []
+    [userId]
   );
 
   const deleteAssignment = useCallback(async (id: string) => {
     try {
+      if (userId === "user_demo") {
+        throw new Error("Please sign in to delete assignments.");
+      }
       setLoading(true);
-      await assignmentAPI.delete(id);
+      const { error: deleteError } = await supabase
+        .from("assignments")
+        .delete()
+        .eq("id", id)
+        .eq("user_id", userId);
+
+      if (deleteError) throw deleteError;
       setAssignments((prev) => prev.filter((a) => a.id !== id));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete assignment");
@@ -440,7 +542,7 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   // ========== Tasks ==========
   const loadTasks = useCallback(async () => {
