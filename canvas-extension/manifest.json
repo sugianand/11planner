@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "11Planner – Canvas Assignment Sync",
+  "name": "11Planner – Canvas Smart Sync",
   "version": "1.0.0",
-  "description": "Extracts assignments from Canvas LMS and syncs them to 11Planner.",
+  "description": "Extracts courses and assignments from Canvas LMS and syncs them to 11Planner.",
   "permissions": [
     "storage",
     "activeTab",

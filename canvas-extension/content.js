@@ -113,6 +113,32 @@ function buildCourseMap() {
     return map;
 }
 
+function extractCourses() {
+    const courseMap = buildCourseMap();
+    const courses = Object.entries(courseMap).map(([contextCode, name]) => {
+        const numMatch = contextCode.match(/course_(\d+)/);
+        const code = numMatch ? `C${numMatch[1]}` : name.slice(0, 4).toUpperCase();
+        return {
+            name,
+            code,
+            contextCode,
+        };
+    });
+
+    // Also infer a course from breadcrumbs on course-specific pages
+    const crumb = document.querySelector('#breadcrumbs li:nth-child(2) a');
+    const crumbName = crumb ? getVisibleText(crumb) : '';
+    if (crumbName && !courses.some(c => c.name.toLowerCase() === crumbName.toLowerCase())) {
+        courses.push({
+            name: crumbName,
+            code: crumbName.slice(0, 4).toUpperCase(),
+            contextCode: null,
+        });
+    }
+
+    return courses;
+}
+
 /** ───── AGENDA VIEW ───── */
 function extractFromAgenda() {
     const assignments = [];
@@ -309,7 +335,13 @@ function extractAssignments() {
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message.action === 'extract') {
         const assignments = extractAssignments();
-        sendResponse({ assignments, count: assignments.length });
+        const courses = extractCourses();
+        sendResponse({
+            assignments,
+            courses,
+            count: assignments.length,
+            courseCount: courses.length,
+        });
     }
     return true;
 });

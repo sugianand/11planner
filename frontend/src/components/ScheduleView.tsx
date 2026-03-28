@@ -3,6 +3,8 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { ViewMode, Event, DayData } from '@/types/schedule';
 import { getDaysInMonth, getWeekDays, getDayData, getMonthsInYear } from '@/utils/dateUtils';
+import { exportEventsToICS } from '@/utils/icsUtils';
+import { usePlanner } from '@/contexts/PlannerContext';
 import { DayView } from './DayView';
 import { WeekView } from './WeekView';
 import { MonthView } from './MonthView';
@@ -14,6 +16,7 @@ interface ScheduleViewProps {
 }
 
 export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEventMove }) => {
+  const { userId } = usePlanner();
   const [viewMode, setViewMode] = useState<ViewMode>('monthly');
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [weekDays, setWeekDays] = useState<DayData[]>(getWeekDays(currentDate));
@@ -76,6 +79,20 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
     updateDate(new Date());
   }, []);
 
+  const handleExportICS = useCallback(() => {
+    exportEventsToICS(eventList, '11planner-schedule.ics');
+  }, [eventList]);
+
+  const handleSubscribe = useCallback(() => {
+    if (!userId) {
+      alert("Please log in to sync your calendar.");
+      return;
+    }
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+    const webcalUrl = backendUrl.replace(/^https?:\/\//, 'webcal://') + `/api/schedule-blocks/${userId}/calendar.ics`;
+    window.location.href = webcalUrl;
+  }, [userId]);
+
   const handleViewModeChange = (mode: ViewMode) => {
     setViewMode(mode);
   };
@@ -109,6 +126,22 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Schedule</h1>
           <div className="flex gap-2">
+            <button
+              onClick={handleSubscribe}
+              className="px-4 py-2 text-sm font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors flex items-center gap-2"
+              title="Add this calendar directly to macOS Calendar or Outlook"
+            >
+              <span className="material-symbols-outlined text-sm">sync</span>
+              Subscribe (Live)
+            </button>
+            <button
+              onClick={handleExportICS}
+              className="px-4 py-2 text-sm font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors flex items-center gap-2"
+              title="Download backup file"
+            >
+              <span className="material-symbols-outlined text-sm">download</span>
+              Export
+            </button>
             <button
               onClick={handleToday}
               className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-slate-200 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600"

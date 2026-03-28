@@ -8,6 +8,7 @@ const SUPABASE_URL = 'https://ddszcujvbvvihwsrkzsk.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkc3pjdWp2YnZ2aWh3c3JrenNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAxNjIzNDYsImV4cCI6MjA4NTczODM0Nn0.HfSG1DHiGG3Riv_JVFvFBWJggy40tPS4iAavIDKjs1o';
 
 let extractedAssignments = [];
+let extractedCourses = [];
 
 // ── UI helpers ──
 function showStatus(message, type) {
@@ -94,13 +95,16 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ── Preview renderer ──
-    function renderPreview(assignments) {
+    function renderPreview(assignments, courses) {
         const preview = document.getElementById('preview');
         const list = document.getElementById('previewList');
+        const courseList = document.getElementById('courseList');
         const syncCount = document.getElementById('syncCount');
+        const courseCount = document.getElementById('courseCount');
         const syncBtn = document.getElementById('syncBtn');
 
         list.innerHTML = '';
+        courseList.innerHTML = '';
         if (assignments.length === 0) {
             preview.style.display = 'none';
             syncBtn.style.display = 'none';
@@ -125,8 +129,16 @@ document.addEventListener('DOMContentLoaded', () => {
             list.appendChild(item);
         });
 
+        courses.forEach(c => {
+            const chip = document.createElement('span');
+            chip.className = 'course-chip';
+            chip.textContent = c.name;
+            courseList.appendChild(chip);
+        });
+
         preview.style.display = 'block';
         syncCount.textContent = assignments.length;
+        courseCount.textContent = courses.length;
         syncBtn.style.display = 'block';
     }
 
@@ -145,23 +157,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (chrome.runtime.lastError || !response) {
                     showStatus('Could not extract. Make sure you are on a Canvas page.', 'error');
                     btn.disabled = false;
-                    btn.textContent = '🎓 Extract Assignments';
+                    btn.textContent = '🎓 Extract Courses & Assignments';
                     return;
                 }
                 extractedAssignments = response.assignments || [];
+                extractedCourses = response.courses || [];
                 if (extractedAssignments.length === 0) {
                     showStatus('No assignments found on this page.', 'info');
                 } else {
-                    showStatus(`Found ${extractedAssignments.length} assignment(s).`, 'success');
+                    showStatus(`Found ${extractedAssignments.length} assignment(s) and ${extractedCourses.length} course(s).`, 'success');
                 }
-                renderPreview(extractedAssignments);
+                renderPreview(extractedAssignments, extractedCourses);
                 btn.disabled = false;
-                btn.textContent = '🎓 Extract Assignments';
+                btn.textContent = '🎓 Extract Courses & Assignments';
             });
         } catch (err) {
             showStatus(`Error: ${err.message}`, 'error');
             btn.disabled = false;
-            btn.textContent = '🎓 Extract Assignments';
+            btn.textContent = '🎓 Extract Courses & Assignments';
         }
     });
 
@@ -171,7 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.disabled = true;
         showStatus('Syncing to 11Planner…', 'info');
 
-        chrome.runtime.sendMessage({ action: 'sync', assignments: extractedAssignments }, response => {
+        chrome.runtime.sendMessage({ action: 'sync', assignments: extractedAssignments, courses: extractedCourses }, response => {
             if (response.success) {
                 showStatus(`✅ ${response.message || `Synced ${response.count} assignments!`}`, 'success');
             } else {

@@ -43,6 +43,11 @@ class AssignmentBase(BaseModel):
     deadline: datetime
     description: Optional[str] = None
     priority: int = 2  # 1-5 scale
+    estimated_hours: float = 1.0
+    status: str = "pending"
+    points: Optional[float] = None
+    url: Optional[str] = None
+    source: Optional[str] = "manual"
 
 class AssignmentCreate(AssignmentBase):
     user_id: str
@@ -53,6 +58,10 @@ class AssignmentUpdate(BaseModel):
     deadline: Optional[datetime] = None
     description: Optional[str] = None
     priority: Optional[int] = None
+    estimated_hours: Optional[float] = None
+    status: Optional[str] = None
+    points: Optional[float] = None
+    url: Optional[str] = None
     completed: Optional[bool] = None
 
 class Assignment(AssignmentBase):
