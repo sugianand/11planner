@@ -7,6 +7,7 @@ import { TimerProvider } from "@/contexts/TimerContext";
 import Navigation from "@/components/Navigation";
 import NotificationToasts from "@/components/NotificationToasts";
 import "./globals.css";
+import "@material-symbols/font-400/outlined.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
