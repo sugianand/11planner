@@ -2,6 +2,8 @@ from fastapi import APIRouter, HTTPException
 from typing import List, Optional
 from app.models import Assignment, AssignmentCreate, AssignmentUpdate
 from datetime import datetime
+from datetime import timezone
+from zoneinfo import ZoneInfo
 from uuid import uuid4
 import os
 
@@ -185,6 +187,8 @@ class ExtensionAssignment(PydanticBase):
     type: Optional[str] = None
     url: Optional[str] = None
     description: Optional[str] = None
+    estimatedHours: Optional[float] = None
+    priorityLevel: Optional[object] = None
 
 class ExtensionCourse(PydanticBase):
     name: str
@@ -195,18 +199,81 @@ class SyncRequest(PydanticBase):
     userId: str
     assignments: List[ExtensionAssignment]
     courses: Optional[List[ExtensionCourse]] = None
+    clientTimeZone: Optional[str] = None
+    client_timezone: Optional[str] = None
 
 
 @router.post("/sync")
 async def sync_assignments(sync_request: SyncRequest):
     """
     Called by the Canvas Chrome extension.
-    Finds-or-creates courses and assignments from Canvas data.
-    Idempotent: won't create duplicates (checks title + user_id).
+    Finds-or-creates courses and tasks from Canvas data.
+    Idempotent: won't create duplicates (checks task_title + user_id).
     """
     supabase = get_supabase()
     synced_count = 0
     synced_courses = 0
+    local_server_tz = datetime.now().astimezone().tzinfo
+
+    def normalize_estimated_hours(value: object) -> float:
+        try:
+            hours = float(value)
+        except Exception:
+            hours = 1.0
+        hours = max(0.5, min(16.0, hours))
+        return round(hours * 2) / 2
+
+    def normalize_priority_level(value: object) -> int:
+        if value is None:
+            return 3
+
+        if isinstance(value, str):
+            lookup = {
+                "low": 1,
+                "medium": 3,
+                "med": 3,
+                "high": 4,
+                "urgent": 5,
+                "critical": 5,
+            }
+            mapped = lookup.get(value.strip().lower())
+            if mapped is not None:
+                return mapped
+
+        try:
+            lvl = int(float(value))
+        except Exception:
+            return 3
+
+        return max(1, min(5, lvl))
+
+    def to_deadline_iso(value: Optional[str]) -> str:
+        if not value:
+            return datetime.now(timezone.utc).isoformat()
+
+        from dateutil import parser as dtparser
+
+        parsed_deadline = dtparser.parse(value)
+
+        # IMPORTANT:
+        # Treat the incoming value as the user's local wall-clock time from Canvas,
+        # even if a timezone suffix is present. Canvas sources can mix offsets and
+        # produce 1-hour drift around DST boundaries. We preserve clock time first.
+        parsed_naive = parsed_deadline.replace(tzinfo=None)
+
+        tz_name = sync_request.clientTimeZone or sync_request.client_timezone
+        if tz_name:
+            try:
+                localized = parsed_naive.replace(tzinfo=ZoneInfo(tz_name))
+                return localized.astimezone(timezone.utc).isoformat()
+            except Exception:
+                pass
+
+        if local_server_tz is not None:
+            localized = parsed_naive.replace(tzinfo=local_server_tz)
+            return localized.astimezone(timezone.utc).isoformat()
+
+        return parsed_naive.isoformat()
 
     def resolve_or_create_course(course_name: str) -> Optional[str]:
         clean_name = (course_name or "General").strip()
@@ -268,55 +335,53 @@ async def sync_assignments(sync_request: SyncRequest):
 
         # upsert: update if exists, insert if new
         existing = (
-            supabase.table("assignments")
+            supabase.table("tasks")
             .select("id")
             .eq("user_id", sync_request.userId)
-            .eq("title", ext.title)
+            .eq("task_title", ext.title)
             .limit(1)
             .execute()
         )
 
         try:
-            if ext.dueDate:
-                from dateutil import parser as dtparser
-                deadline_dt = dtparser.parse(ext.dueDate).replace(tzinfo=None)
-            else:
-                deadline_dt = datetime.now()
+            deadline_iso = to_deadline_iso(ext.dueDate)
         except Exception:
-            deadline_dt = datetime.now()
+            deadline_iso = datetime.now(timezone.utc).isoformat()
 
         # skip past-due assignments
         if deadline_dt < datetime.now():
             continue
 
         if existing.data:
-            # update existing
-            supabase.table("assignments").update({
-                "deadline": deadline_dt.isoformat(),
-                "course_id": course_id,
-                "url": ext.url,
-                "points": ext.points,
+            # Update the existing task with fresh date/details
+            estimated_hours = normalize_estimated_hours(ext.estimatedHours)
+            priority_level = normalize_priority_level(ext.priorityLevel)
+            supabase.table("tasks").update({
+                "deadline_at": deadline_iso,
+                "description": ext.description or (f"Imported from Canvas. URL: {ext.url}" if ext.url else None),
+                "priority_level": priority_level,
+                "estimated_hours": estimated_hours,
+                "status": "pending",
                 "source": "canvas",
             }).eq("id", existing.data[0]["id"]).execute()
         else:
-            supabase.table("assignments").insert({
+            estimated_hours = normalize_estimated_hours(ext.estimatedHours)
+            priority_level = normalize_priority_level(ext.priorityLevel)
+            supabase.table("tasks").insert({
                 "user_id": sync_request.userId,
-                "title": ext.title,
+                "task_title": ext.title,
                 "course_id": course_id,
-                "deadline": deadline_dt.isoformat(),
+                "deadline_at": deadline_iso,
                 "description": ext.description or (f"Imported from Canvas. URL: {ext.url}" if ext.url else None),
-                "priority": 3,
-                "estimated_hours": 1.0,
+                "priority_level": priority_level,
+                "estimated_hours": estimated_hours,
                 "status": "pending",
-                "completed": False,
-                "points": ext.points,
-                "url": ext.url,
                 "source": "canvas",
             }).execute()
             synced_count += 1
 
     return {
-        "message": f"Successfully synced {synced_count} new assignments and {synced_courses} courses",
+        "message": f"Successfully synced {synced_count} new tasks and {synced_courses} courses",
         "count": synced_count,
         "courses": synced_courses,
     }

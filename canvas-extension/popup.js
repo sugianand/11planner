@@ -1,13 +1,13 @@
 /**
  * 11Planner Canvas Extension – Popup Script
- * Handles login via Supabase Auth and assignment extraction/sync.
+ * Handles login via Supabase Auth and task extraction/sync.
  */
 
 // ── Supabase config (anon key is safe to embed in client code) ──
 const SUPABASE_URL = 'https://ddszcujvbvvihwsrkzsk.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkc3pjdWp2YnZ2aWh3c3JrenNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAxNjIzNDYsImV4cCI6MjA4NTczODM0Nn0.HfSG1DHiGG3Riv_JVFvFBWJggy40tPS4iAavIDKjs1o';
 
-let extractedAssignments = [];
+let extractedTasks = [];
 let extractedCourses = [];
 
 // ── UI helpers ──
@@ -88,14 +88,14 @@ document.addEventListener('DOMContentLoaded', () => {
         chrome.storage.local.remove(['userId', 'userEmail'], () => {
             showPanel(false);
             document.getElementById('status').className = 'status';
-            extractedAssignments = [];
+            extractedTasks = [];
             document.getElementById('preview').style.display = 'none';
             document.getElementById('syncBtn').style.display = 'none';
         });
     });
 
     // ── Preview renderer ──
-    function renderPreview(assignments, courses) {
+    function renderPreview(tasks, courses) {
         const preview = document.getElementById('preview');
         const list = document.getElementById('previewList');
         const courseList = document.getElementById('courseList');
@@ -105,13 +105,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         list.innerHTML = '';
         courseList.innerHTML = '';
-        if (assignments.length === 0) {
+        if (tasks.length === 0) {
             preview.style.display = 'none';
             syncBtn.style.display = 'none';
             return;
         }
 
-        assignments.forEach(a => {
+        tasks.forEach(a => {
             const item = document.createElement('div');
             item.className = 'preview-item';
             let dueStr;
@@ -122,9 +122,12 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 dueStr = '⚠️ No date found';
             }
+                        const estHours = Number.isFinite(a.estimatedHours) ? `${a.estimatedHours.toFixed(1)}h` : '1.0h';
+            const priority = Number.isFinite(a.priorityLevel) ? a.priorityLevel : 3;
             item.innerHTML = `
           <div class="title">${a.title}</div>
           <div class="meta" style="color:${a.dueDate ? '' : '#ef4444'}">${a.course || 'Unknown'} · ${dueStr}</div>
+                    <div class="meta">Estimated: ${estHours} · Priority: ${priority}/5</div>
         `;
             list.appendChild(item);
         });
@@ -137,7 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         preview.style.display = 'block';
-        syncCount.textContent = assignments.length;
+        syncCount.textContent = tasks.length;
         courseCount.textContent = courses.length;
         syncBtn.style.display = 'block';
     }
@@ -157,24 +160,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (chrome.runtime.lastError || !response) {
                     showStatus('Could not extract. Make sure you are on a Canvas page.', 'error');
                     btn.disabled = false;
-                    btn.textContent = '🎓 Extract Courses & Assignments';
+                    btn.textContent = '🎓 Extract Courses & Tasks';
                     return;
                 }
-                extractedAssignments = response.assignments || [];
+                extractedTasks = response.assignments || [];
                 extractedCourses = response.courses || [];
-                if (extractedAssignments.length === 0) {
-                    showStatus('No assignments found on this page.', 'info');
+                if (extractedTasks.length === 0) {
+                    showStatus('No tasks found on this page.', 'info');
                 } else {
-                    showStatus(`Found ${extractedAssignments.length} assignment(s) and ${extractedCourses.length} course(s).`, 'success');
+                    showStatus(`Found ${extractedTasks.length} task(s) and ${extractedCourses.length} course(s).`, 'success');
                 }
-                renderPreview(extractedAssignments, extractedCourses);
+                renderPreview(extractedTasks, extractedCourses);
                 btn.disabled = false;
-                btn.textContent = '🎓 Extract Courses & Assignments';
+                btn.textContent = '🎓 Extract Courses & Tasks';
             });
         } catch (err) {
             showStatus(`Error: ${err.message}`, 'error');
             btn.disabled = false;
-            btn.textContent = '🎓 Extract Courses & Assignments';
+            btn.textContent = '🎓 Extract Courses & Tasks';
         }
     });
 
@@ -184,9 +187,9 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.disabled = true;
         showStatus('Syncing to 11Planner…', 'info');
 
-        chrome.runtime.sendMessage({ action: 'sync', assignments: extractedAssignments, courses: extractedCourses }, response => {
+        chrome.runtime.sendMessage({ action: 'sync', assignments: extractedTasks, courses: extractedCourses }, response => {
             if (response.success) {
-                showStatus(`✅ ${response.message || `Synced ${response.count} assignments!`}`, 'success');
+                showStatus(`✅ ${response.message || `Synced ${response.count} tasks!`}`, 'success');
             } else {
                 showStatus(`❌ ${response.error}`, 'error');
             }

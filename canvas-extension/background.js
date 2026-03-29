@@ -17,24 +17,33 @@ async function getSettings() {
     });
 }
 
-// POST assignments + extracted courses to the 11Planner backend
+// POST extracted items to the 11Planner backend as tasks
 async function syncAssignments(assignments, courses = []) {
     const { backendUrl, userId } = await getSettings();
+    const clientTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || null;
 
-    console.log('[11Planner] Sync settings:', { backendUrl, userId });
+    console.log('[11Planner] Sync settings:', { backendUrl, userId, clientTimeZone });
     console.log('[11Planner] Syncing', assignments.length, 'assignments and', courses.length, 'courses');
 
     if (!userId || userId.trim() === '') {
         return { success: false, error: 'No user ID set. Open settings (⚙️) and paste your Supabase user UUID.' };
     }
 
-    const body = JSON.stringify({ userId: userId.trim(), assignments, courses });
+    const body = JSON.stringify({
+        userId: userId.trim(),
+        assignments,
+        courses,
+        clientTimeZone,
+    });
 
     // Remove any trailing slashes from the configured backend URL to prevent //api paths
     const cleanUrl = backendUrl.replace(/\/+$/, '');
     
     // Try both localhost and 127.0.0.1 (Chrome MV3 service workers sometimes can't resolve localhost DNS)
     const urlsToTry = [
+        `${cleanUrl}/api/tasks/sync`,
+        `${cleanUrl.replace('localhost', '127.0.0.1')}/api/tasks/sync`,
+        // Backward-compatible fallback
         `${cleanUrl}/api/assignments/sync`,
         `${cleanUrl.replace('localhost', '127.0.0.1')}/api/assignments/sync`,
     ];
