@@ -99,10 +99,10 @@ export default function TasksPage() {
   );
 
   const now = new Date();
-  const pendingTasks = assignments.filter((assignment) => !assignment.completed).length;
-  const completedTasks = assignments.filter((assignment) => assignment.completed).length;
-  const overdueTasks = assignments.filter(
-    (assignment) => !assignment.completed && new Date(assignment.deadline).getTime() < now.getTime()
+  const pendingTasks = tasks.filter((task) => !task.completed).length;
+  const completedTasks = tasks.filter((task) => task.completed).length;
+  const overdueTasks = tasks.filter(
+    (task) => !task.completed && new Date(task.deadline).getTime() < now.getTime()
   ).length;
 
   return (
@@ -121,7 +121,7 @@ export default function TasksPage() {
                 </p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <span className="px-3 py-1 rounded-full text-xs font-semibold bg-white/80 dark:bg-slate-900/70 border border-white/60 dark:border-slate-700/60 text-slate-700 dark:text-slate-200">
-                    Total: {assignments.length}
+                    Total: {tasks.length}
                   </span>
                   <span className="px-3 py-1 rounded-full text-xs font-semibold bg-white/80 dark:bg-slate-900/70 border border-white/60 dark:border-slate-700/60 text-slate-700 dark:text-slate-200">
                     Pending: {pendingTasks}
@@ -219,7 +219,7 @@ export default function TasksPage() {
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Description</label>
                   <textarea value={formData.description || ""} onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Additional details about the assignment" rows={3}
+                    placeholder="Additional details about the task" rows={3}
                     className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800" />
                 </div>
                 <div className="flex gap-3">

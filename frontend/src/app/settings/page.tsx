@@ -39,7 +39,10 @@ const readStoredNumber = (key: string, fallback: number): number => {
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
-  const isMounted = typeof window !== "undefined";
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => {
+    setIsMounted(true);
+}, []);
   const {
     notificationsEnabled,
     setNotificationsEnabled,
@@ -48,9 +51,16 @@ export default function SettingsPage() {
     permission,
     requestPermission,
   } = useNotification();
-  const [emailUpdates, setEmailUpdates] = useState(() => readStoredBoolean("emailUpdates", true));
-  const [weeklyReport, setWeeklyReport] = useState(() => readStoredBoolean("weeklyReport", true));
-  const [dailyLimit, setDailyLimit] = useState(() => readStoredNumber("dailyLimit", 4));
+  const [emailUpdates, setEmailUpdates] = useState(true);
+  const [weeklyReport, setWeeklyReport] = useState(true);
+  const [dailyLimit, setDailyLimit] = useState(4);
+
+  useEffect(() => {
+    setEmailUpdates(readStoredBoolean("emailUpdates", true));
+    setWeeklyReport(readStoredBoolean("weeklyReport", true));
+    setDailyLimit(readStoredNumber("dailyLimit", 4));
+  }, []);
+
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [savedSettings, setSavedSettings] = useState({
     theme: theme as Theme,
