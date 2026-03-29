@@ -1,13 +1,7 @@
 /**
  * 11Planner Canvas Extension – Content Script
- * Extracts assignments from Canvas LMS calendar (Agenda view recommended).
  */
 
-/**
- * Get visible text only — strips Canvas screenreader-only spans.
- * Canvas injects hidden spans like <span class="screenreader-only">Assignment Title:</span>
- * that pollute textContent. We skip those.
- */
 function getVisibleText(el) {
     if (!el) return '';
     let text = '';
@@ -16,7 +10,7 @@ function getVisibleText(el) {
             text += node.textContent;
         } else if (node.nodeType === Node.ELEMENT_NODE) {
             const cls = node.className || '';
-            // Skip screenreader-only and visually-hidden elements
+            // Skip hidden elements
             if (cls.includes('screenreader-only') || cls.includes('screen-reader') ||
                 cls.includes('sr-only') || cls.includes('hidden')) return;
             text += getVisibleText(node);
@@ -25,10 +19,7 @@ function getVisibleText(el) {
     return text.trim();
 }
 
-/**
- * Parse a human-readable date string (Canvas heading format) into YYYY-MM-DD.
- * Handles: "Tue, Mar 10", "Mar 10, 2026", "Today", "Tomorrow"
- */
+// Parse date heading text into YYYY-MM-DD
 function parseDateHeading(text) {
     if (!text) return null;
     text = text.trim();
@@ -40,14 +31,14 @@ function parseDateHeading(text) {
         return t.toISOString().split('T')[0];
     }
 
-    // Try direct parse — works for "Mar 10, 2026"
+    // try direct parse
     const direct = new Date(text);
     if (!isNaN(direct.getTime())) return direct.toISOString().split('T')[0];
 
-    // "Tue, Mar 10" — no year, so add current or next year
+    // no year given, add current or next year
     const noYear = new Date(`${text}, ${today.getFullYear()}`);
     if (!isNaN(noYear.getTime())) {
-        // If it's in the past by more than a month, assume next year
+        // past by >1 month = next year
         const diff = noYear - today;
         if (diff < -30 * 24 * 3600 * 1000) {
             const nextYear = new Date(`${text}, ${today.getFullYear() + 1}`);
@@ -59,10 +50,7 @@ function parseDateHeading(text) {
     return null;
 }
 
-/**
- * Parse a time string from Canvas agenda like "Due 5:30pm", "11:59pm", "4:00pm"
- * Returns { hours, minutes } or null.
- */
+// Parse time string → { hours, minutes } or null
 function parseTimeText(text) {
     if (!text) return null;
     const m = text.match(/(\d{1,2}):(\d{2})\s*(am|pm)/i);
@@ -78,7 +66,7 @@ function parseTimeText(text) {
 function buildISOFromDateAndTime(dateStr, timeObj) {
     if (!dateStr) return null;
     try {
-        const d = new Date(dateStr + 'T00:00:00'); // force local midnight, avoid UTC shift
+        const d = new Date(dateStr + 'T00:00:00');
         if (isNaN(d.getTime())) return null;
         if (timeObj) {
             d.setHours(timeObj.hours, timeObj.minutes, 0, 0);
@@ -89,31 +77,119 @@ function buildISOFromDateAndTime(dateStr, timeObj) {
     } catch (_) { return null; }
 }
 
-/**
- * Build course ID → course name from the Canvas calendar sidebar.
- */
+// Build course_ID → course name map from Canvas page
 function buildCourseMap() {
     const map = {};
-    document.querySelectorAll('[data-context-code], .context_list_context').forEach(el => {
+
+    // check Canvas global ENV variables
+    try {
+        const env = window.ENV || {};
+
+        (env.CALENDAR_CONTEXTS || []).forEach(ctx => {
+            if (ctx.asset_string && ctx.asset_string.startsWith('course_')) {
+                map[ctx.asset_string] = ctx.name || ctx.course_code || ctx.asset_string;
+            }
+        });
+
+        if (env.CONTEXTS) {
+            Object.values(env.CONTEXTS).forEach(ctx => {
+                const key = ctx.asset_string || ctx.id;
+                if (key && String(key).startsWith('course_') && !map[key]) {
+                    map[key] = ctx.name || ctx.short_name || ctx.course_code || key;
+                }
+            });
+        }
+
+        if (env.COURSE && env.COURSE.id && env.COURSE.name) {
+            map[`course_${env.COURSE.id}`] = env.COURSE.name;
+        }
+    } catch (_) { }
+
+    // scan events for group_course_ classes, then fetch names from Canvas API
+    if (Object.keys(map).length === 0) {
+        const courseIds = new Set();
+        document.querySelectorAll('.fc-event, [class*="group_course_"]').forEach(el => {
+            const classes = el.className || '';
+            const match = classes.match(/group_course_(\d+)/);
+            if (match) courseIds.add(match[1]);
+        });
+
+        if (courseIds.size > 0) {
+
+            try {
+                const xhr = new XMLHttpRequest();
+                xhr.open('GET', '/api/v1/courses?per_page=100&enrollment_state=active', false);
+                xhr.send();
+                if (xhr.status === 200) {
+                    const courses = JSON.parse(xhr.responseText);
+                    courses.forEach(c => {
+                        const code = `course_${c.id}`;
+                        map[code] = c.name || c.course_code || code;
+                    });
+                    console.log('[11Planner] Got course names from Canvas API:', Object.keys(map).length);
+                }
+            } catch (e) {
+                console.log('[11Planner] Canvas API fetch failed:', e.message);
+            }
+
+            // fallback placeholder for IDs not in API response
+            courseIds.forEach(id => {
+                const code = `course_${id}`;
+                if (!map[code]) map[code] = `Course ${id}`;
+            });
+        }
+    }
+
+    // check data-context attributes
+    document.querySelectorAll('[data-context-code], [data-context], .context_list_context').forEach(el => {
         const code = el.getAttribute('data-context-code') || el.getAttribute('data-context');
-        if (!code || !code.startsWith('course_')) return;
-        const nameEl = el.querySelector('.context-list-course-title, label, span') || el;
+        if (!code || !code.startsWith('course_') || map[code]) return;
+        const nameEl = el.querySelector('.context-list-course-title, .name, label, span, a') || el;
         const name = getVisibleText(nameEl);
         if (name && name.length > 2) map[code] = name;
     });
-    document.querySelectorAll('#context-list li, .calendar_list li').forEach(li => {
+
+    // sidebar course links
+    document.querySelectorAll('#context-list li, .calendar_list li, .ContextList li, [class*="calendar"] li, [class*="context"] li').forEach(li => {
         const anchor = li.querySelector('a[href*="/courses/"]');
         if (!anchor) return;
         const m = anchor.getAttribute('href')?.match(/\/courses\/(\d+)/);
         if (!m) return;
         const code = `course_${m[1]}`;
-        const name = getVisibleText(li.querySelector('.context-list-course-title, .name') || anchor);
-        if (name && name.length > 2 && !map[code]) map[code] = name;
+        if (map[code] && !map[code].startsWith('Course ')) return;
+        const name = getVisibleText(li.querySelector('.name, label, span') || anchor);
+        if (name && name.length > 2) map[code] = name;
     });
+
+    console.log('[11Planner] Built course map with', Object.keys(map).length, 'courses:', JSON.stringify(map));
     return map;
 }
 
-/** ───── AGENDA VIEW ───── */
+// Walk up DOM looking for group_course_XXXXX class
+function getCourseCodeFromClasses(el) {
+    if (!el) return null;
+
+    let current = el;
+    while (current && current !== document.body) {
+        const classes = current.className || '';
+        const match = classes.match(/group_course_(\d+)/);
+        if (match) return `course_${match[1]}`;
+        current = current.parentElement;
+    }
+    return null;
+}
+
+// Get course name from a /courses/ID URL
+function extractCourseFromUrl(url, courseMap) {
+    if (!url) return null;
+    const m = url.match(/\/courses\/(\d+)/);
+    if (!m) return null;
+    const code = `course_${m[1]}`;
+    if (courseMap[code]) return courseMap[code];
+    return null;
+}
+
+// ===== AGENDA VIEW =====
 function extractFromAgenda() {
     const assignments = [];
     const courseMap = buildCourseMap();
@@ -121,13 +197,13 @@ function extractFromAgenda() {
 
     let currentDateStr = null;
 
-    // Canvas agenda: alternating fc-list-day and fc-list-item rows in a table
+
     const rows = document.querySelectorAll('tr.fc-list-day, tr.fc-list-item');
     console.log('[11Planner] Agenda rows found:', rows.length);
 
     rows.forEach(row => {
         if (row.classList.contains('fc-list-day')) {
-            // Try data-date on the row or any descendant first
+
             let d = row.getAttribute('data-date');
             if (!d) {
                 const withDate = row.querySelector('[data-date]');
@@ -136,7 +212,7 @@ function extractFromAgenda() {
             if (d) {
                 currentDateStr = d;
             } else {
-                // Parse from visible text heading: "Tue, Mar 10"
+                // fallback: parse from heading text
                 const headingEl = row.querySelector(
                     '.fc-list-day-text, .fc-list-heading-main, td, th'
                 );
@@ -148,25 +224,57 @@ function extractFromAgenda() {
         }
 
         if (row.classList.contains('fc-list-item')) {
-            // Time cell
+
             const timeEl = row.querySelector('td.fc-list-item-time, .fc-list-item-time');
             const timeText = getVisibleText(timeEl);
 
-            // Title — get only <a> href/text to avoid screenreader garbage
+            // title from anchor text
             const titleAnchor = row.querySelector('td.fc-list-item-title a, .fc-list-item-title a');
             const titleEl = row.querySelector('td.fc-list-item-title, .fc-list-item-title');
 
-            // Prefer anchor visible text, fallback to title cell visible text
+
             const title = getVisibleText(titleAnchor || titleEl);
             const url = titleAnchor?.getAttribute('href') || window.location.href;
 
             if (!title || title.length < 2) return;
 
-            // Course
-            const contextCode = row.getAttribute('data-context-code') || '';
-            const course = courseMap[contextCode] || 'General';
+            // resolve course name
+            let course = 'General';
 
-            // Build due date
+            // CSS class match
+            const classCode = getCourseCodeFromClasses(row) ||
+                getCourseCodeFromClasses(titleAnchor) ||
+                getCourseCodeFromClasses(row.querySelector('.fc-event, .fc-event-dot, [class*="group_course"]'));
+            if (classCode && courseMap[classCode]) {
+                course = courseMap[classCode];
+            }
+
+            // data-context-code
+            if (course === 'General') {
+                const contextCode = row.getAttribute('data-context-code') || '';
+                if (contextCode && courseMap[contextCode]) course = courseMap[contextCode];
+            }
+
+            // data-context
+            if (course === 'General') {
+                const ctx = row.getAttribute('data-context') || '';
+                if (ctx && courseMap[ctx]) course = courseMap[ctx];
+            }
+
+            // parent context
+            if (course === 'General') {
+                const parentCtx = row.closest('[data-context-code], [data-context]');
+                const pCode = parentCtx?.getAttribute('data-context-code') || parentCtx?.getAttribute('data-context') || '';
+                if (pCode && courseMap[pCode]) course = courseMap[pCode];
+            }
+
+            // URL-based lookup
+            if (course === 'General' && url) {
+                const fromUrl = extractCourseFromUrl(url, courseMap);
+                if (fromUrl) course = fromUrl;
+            }
+
+
             const timeObj = parseTimeText(timeText);
             const dueDate = buildISOFromDateAndTime(currentDateStr, timeObj);
 
@@ -178,7 +286,7 @@ function extractFromAgenda() {
     return assignments;
 }
 
-/** ───── ASSIGNMENTS LIST PAGE ───── */
+// ===== ASSIGNMENTS LIST PAGE =====
 function extractFromAssignmentsPage() {
     const assignments = [];
     const courseName = (() => {
@@ -209,27 +317,16 @@ function extractFromAssignmentsPage() {
     return assignments;
 }
 
-/** ───── MONTH/WEEK CALENDAR VIEW ─────
- * FullCalendar 3 (Canvas) structure per week:
- *   .fc-row.fc-week
- *     .fc-bg > table > tbody > tr > td.fc-day[data-date] × 7   (background dates)
- *     .fc-content-skeleton > table > tbody
- *       tr  (header with day numbers)
- *       tr  (event row 1)
- *       tr  (event row 2, if needed)
- *         td > .fc-event-container > a.fc-event
- *
- * Strategy: for each .fc-event, walk up to .fc-row.fc-week,
- * then look in that week's .fc-bg for td.fc-day at the same cellIndex.
- */
+// ===== MONTH/WEEK CALENDAR VIEW =====
 function extractFromCalendar() {
     const assignments = [];
+    const courseMap = buildCourseMap();
 
     document.querySelectorAll('.fc-event').forEach(event => {
         const rawTitle = getVisibleText(event.querySelector('.fc-title') || event);
         if (!rawTitle || rawTitle.length < 2) return;
 
-        // Parse time prefix from title ("4p Chemistry HW" → 16:00)
+        // parse time prefix from title
         const timeMatch = rawTitle.match(/^(\d{1,2})(?::(\d{2}))?\s*(a|p)\s/i);
         let timeObj = null;
         if (timeMatch) {
@@ -242,28 +339,46 @@ function extractFromCalendar() {
         const cleanTitle = rawTitle.replace(/^\d{1,2}(?::\d{2})?\s*[ap]\s*/i, '').trim();
         if (!cleanTitle) return;
 
-        // ── Find the event's column (day-of-week) ──
+        // find event column
         const eventTd = event.closest('td');
         if (!eventTd) return;
         const colIdx = eventTd.cellIndex; // 0=Sun … 6=Sat
 
-        // ── Walk up to the week container ──
+        // walk up to week container
         const fcWeek = event.closest('.fc-row.fc-week, .fc-week, [class*="fc-week"]');
         if (!fcWeek) {
             console.log('[11Planner] No .fc-week found for:', cleanTitle);
             return;
         }
 
-        // ── Get the date from the background grid at the same column ──
-        // .fc-bg contains td.fc-day[data-date] in column order 0-6
+        // get date from background grid
         const bgDayCells = fcWeek.querySelectorAll('.fc-bg td.fc-day[data-date]');
         const dateStr = bgDayCells[colIdx]?.getAttribute('data-date');
 
-        console.log('[11Planner]', cleanTitle, '| col:', colIdx, '| bgDayCells:', bgDayCells.length, '| date:', dateStr);
+        // resolve course
+        let course = 'General';
+        const classCode = getCourseCodeFromClasses(event);
+        if (classCode && courseMap[classCode]) {
+            course = courseMap[classCode];
+        }
+        if (course === 'General') {
+            const contextCode = event.getAttribute('data-context-code') ||
+                event.getAttribute('data-context') ||
+                event.closest('[data-context-code]')?.getAttribute('data-context-code') ||
+                event.closest('[data-context]')?.getAttribute('data-context') || '';
+            if (contextCode && courseMap[contextCode]) course = courseMap[contextCode];
+        }
+        if (course === 'General') {
+            const href = event.getAttribute('href') || event.querySelector('a')?.getAttribute('href') || '';
+            const fromUrl = extractCourseFromUrl(href, courseMap);
+            if (fromUrl) course = fromUrl;
+        }
+
+        console.log('[11Planner]', cleanTitle, '| col:', colIdx, '| date:', dateStr, '| course:', course);
 
         const dueDate = buildISOFromDateAndTime(dateStr, timeObj);
         const href = event.getAttribute('href') || event.querySelector('a')?.getAttribute('href') || window.location.href;
-        assignments.push({ title: cleanTitle, dueDate, course: 'General', url: href, extractedFrom: 'calendar_month' });
+        assignments.push({ title: cleanTitle, dueDate, course, url: href, extractedFrom: 'calendar_month' });
     });
 
     return assignments;
@@ -294,7 +409,7 @@ function extractAssignments() {
         ];
     }
 
-    // Deduplicate by title
+    // deduplicate
     const seen = new Set();
     const deduped = found.filter(a => {
         if (seen.has(a.title)) return false;

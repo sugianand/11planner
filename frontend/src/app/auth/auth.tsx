@@ -28,10 +28,6 @@ export default function AuthPage() {
   const [mode, setMode] = useState<Mode>("login");
   const [form, setForm] = useState<FormState>(initialForm);
 
-  function goToNextPage(): void {
-    window.location.href = "/";
-  }
-
   useEffect(() => {
     async function checkSession() {
       try {
@@ -75,6 +71,13 @@ export default function AuthPage() {
       return updatedForm;
     });
   }
+
+
+
+  function goToNextPage(): void {
+    window.location.href = "frontend/src/app/page.tsx";
+  }
+
   async function registerUser(): Promise<void> {
     const { username, email, dob, password, confirmPassword } = form;
 
@@ -132,6 +135,11 @@ export default function AuthPage() {
     }
 
     goToNextPage();
+  }
+
+  async function logout(): Promise<void> {
+    await supabase.auth.signOut();
+    window.location.href = "/login";
   }
 
   return (

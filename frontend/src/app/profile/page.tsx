@@ -32,7 +32,7 @@ export default function ProfilePage() {
           return;
         }
 
-        setEmail(user.email ?? null);
+        setEmail(user.email);
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
           .select("firstname, lastname")

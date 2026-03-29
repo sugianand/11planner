@@ -282,149 +282,164 @@ async def generate_schedule(user_id: str):
     - Break times (15 min between blocks)
     - Focus blocks (2-4 hours max)
     """
-    supabase = get_supabase()
+    try:
+        supabase = get_supabase()
 
-    tasks_result = (
-        supabase.table("tasks")
-        .select("*")
-        .eq("user_id", user_id)
-        .neq("status", "completed")
-        .execute()
-    )
-    task_rows = tasks_result.data or []
-    if not task_rows:
-        return {"message": "No pending tasks to schedule", "blocks": [], "stats": {"valid": True}}
-
-    profile_result = (
-        supabase.table("profiles")
-        .select("worktime, workdays, workstyle, additional_info, assignmentplan")
-        .eq("id", user_id)
-        .limit(1)
-        .execute()
-    )
-    profile_row = (profile_result.data or [{}])[0]
-    work_start, work_end = work_window_from_profile(profile_row.get("worktime"))
-    prefs = Preferences(
-        workdays=profile_row.get("workdays") or [
-            "Monday",
-            "Tuesday",
-            "Wednesday",
-            "Thursday",
-            "Friday",
-        ],
-        work_start=work_start,
-        work_end=work_end,
-        study_limit_hours=4,
-        workstyle=profile_row.get("workstyle"),
-        additional_info=profile_row.get("additional_info"),
-        assignment_plan=profile_row.get("assignmentplan"),
-    )
-
-    task_objects = [
-        Task(
-            id=row["id"],
-            title=row.get("task_title") or "Untitled Task",
-            assignment_id=row.get("assignment_id"),
-            course_id=row.get("course_id"),
-            deadline=parse_dt(row["deadline_at"]),
-            estimated_hours=float(row.get("estimated_hours") or 1),
-            priority=int(row.get("priority_level") or 2),
-            description=row.get("description"),
-            user_id=row["user_id"],
-            created_at=parse_dt(row["created_at"]) if row.get("created_at") else datetime.now(),
-            completed=(row.get("status") == "completed"),
+        # Fetch pending tasks
+        tasks_result = (
+            supabase.table("tasks")
+            .select("*")
+            .eq("user_id", user_id)
+            .neq("status", "completed")
+            .execute()
         )
-        for row in task_rows
-    ]
-    task_title_by_id = {task.id: task.title for task in task_objects}
+        task_rows = tasks_result.data or []
+        if not task_rows:
+            return {"message": "No pending tasks to schedule", "blocks": [], "stats": {"valid": True}}
 
-    static_busy_result = (
-        supabase.table("schedule_blocks")
-        .select("id, starts_at, ends_at, title, source_task_id")
-        .eq("user_id", user_id)
-        .is_("source_task_id", "null")
-        .execute()
-    )
-    busy = [
-        BusyBlock(
-            start=parse_dt(row["starts_at"]),
-            end=parse_dt(row["ends_at"]),
-            title=row.get("title") or "Busy",
+        # Fetch user preferences/profile
+        profile_result = (
+            supabase.table("profiles")
+            .select("worktime, workdays, workstyle, additional_info, assignmentplan")
+            .eq("id", user_id)
+            .limit(1)
+            .execute()
         )
-        for row in (static_busy_result.data or [])
-        if row.get("starts_at") and row.get("ends_at")
-    ]
+        profile_row = (profile_result.data or [{}])[0]
+        work_start, work_end = work_window_from_profile(profile_row.get("worktime"))
+        prefs = Preferences(
+            workdays=profile_row.get("workdays") or [
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday",
+            ],
+            work_start=work_start,
+            work_end=work_end,
+            study_limit_hours=4,
+            workstyle=profile_row.get("workstyle"),
+            additional_info=profile_row.get("additional_info"),
+            assignment_plan=profile_row.get("assignmentplan"),
+        )
 
-    courses_result = (
-        supabase.table("courses")
-        .select("course_name, course_days, start_time, end_time")
-        .eq("user_id", user_id)
-        .execute()
-    )
-    now = datetime.now()
-    max_deadline = max((task.deadline for task in task_objects), default=now)
-    planning_end = max(max_deadline, now + timedelta(days=14))
-    busy.extend(build_course_busy_blocks(courses_result.data or [], now, planning_end))
+        # Convert task rows to Task objects
+        task_objects = [
+            Task(
+                id=row["id"],
+                title=row.get("task_title") or "Untitled Task",
+                assignment_id=row.get("assignment_id"),
+                course_id=row.get("course_id"),
+                deadline=parse_dt(row["deadline_at"]),
+                estimated_hours=float(row.get("estimated_hours") or 1),
+                priority=int(row.get("priority_level") or 2),
+                description=row.get("description"),
+                user_id=row["user_id"],
+                created_at=parse_dt(row["created_at"]) if row.get("created_at") else datetime.now(),
+                completed=(row.get("status") == "completed"),
+            )
+            for row in task_rows
+        ]
+        task_title_by_id = {task.id: task.title for task in task_objects}
 
-    generator = ScheduleGenerator(
-        max_hours_per_day=float(prefs.study_limit_hours),
-        focus_block_hours=focus_hours_from_workstyle(profile_row.get("workstyle")),
-    )
-    generated = generator.generate_schedule(task_objects, prefs, busy=busy, ai_plan=ai__optimizer)
-    validation = generator.validate_schedule(generated)
+        # Fetch busy blocks (non-task blocks)
+        static_busy_result = (
+            supabase.table("schedule_blocks")
+            .select("id, starts_at, ends_at, title, source_task_id")
+            .eq("user_id", user_id)
+            .is_("source_task_id", "null")
+            .execute()
+        )
+        busy = [
+            BusyBlock(
+                start=parse_dt(row["starts_at"]),
+                end=parse_dt(row["ends_at"]),
+                title=row.get("title") or "Busy",
+            )
+            for row in (static_busy_result.data or [])
+            if row.get("starts_at") and row.get("ends_at")
+        ]
 
+        # Fetch courses and build busy blocks for course times
+        courses_result = (
+            supabase.table("courses")
+            .select("course_name, course_days, start_time, end_time")
+            .eq("user_id", user_id)
+            .execute()
+        )
+        now = datetime.now()
+        max_deadline = max((task.deadline for task in task_objects), default=now)
+        planning_end = max(max_deadline, now + timedelta(days=14))
+        busy.extend(build_course_busy_blocks(courses_result.data or [], now, planning_end))
 
-    (
-        supabase.table("schedule_blocks")
-        .delete()
-        .eq("user_id", user_id)
-        .eq("block_type", "study")
-        .execute()
-    )
+        # Generate schedule
+        generator = ScheduleGenerator(
+            max_hours_per_day=float(prefs.study_limit_hours),
+            focus_block_hours=focus_hours_from_workstyle(profile_row.get("workstyle")),
+        )
+        generated = generator.generate_schedule(task_objects, prefs, busy=busy, ai_plan=ai__optimizer)
+        validation = generator.validate_schedule(generated)
 
-    if not generated:
+        # Delete old schedule blocks
+        (
+            supabase.table("schedule_blocks")
+            .delete()
+            .eq("user_id", user_id)
+            .eq("block_type", "study")
+            .execute()
+        )
+
+        if not generated:
+            return {
+                "message": "No schedule blocks generated",
+                "blocks": [],
+                "stats": validation,
+            }
+
+        # Insert new schedule blocks
+        generation_id = str(uuid4())
+        insert_payload = [
+            {
+                "user_id": user_id,
+                "starts_at": block.start_time.isoformat(),
+                "ends_at": block.end_time.isoformat(),
+                "block_type": "study",
+                "title": task_title_by_id.get(block.task_id, "Study Session"),
+                "course_id": next((t.course_id for t in task_objects if t.id == block.task_id), None),
+                "source_task_id": block.task_id,
+                "generation_id": generation_id,
+            }
+            for block in generated
+        ]
+        insert_result = (
+            supabase.table("schedule_blocks")
+            .insert(insert_payload)
+            .execute()
+        )
+        inserted_rows = (
+            supabase.table("schedule_blocks")
+            .select("*")
+            .eq("user_id", user_id)
+            .eq("generation_id", generation_id)
+            .order("starts_at")
+            .execute()
+            .data
+            or []
+        )
+        response_blocks = [map_schedule_block_row(row) for row in inserted_rows]
+
         return {
-            "message": "No schedule blocks generated",
-            "blocks": [],
+            "message": "Schedule generated successfully",
+            "blocks": response_blocks,
             "stats": validation,
         }
-
-    generation_id = str(uuid4())
-    insert_payload = [
-        {
-            "user_id": user_id,
-            "starts_at": block.start_time.isoformat(),
-            "ends_at": block.end_time.isoformat(),
-            "block_type": "study",
-            "title": task_title_by_id.get(block.task_id, "Study Session"),
-            "course_id": next((t.course_id for t in task_objects if t.id == block.task_id), None),
-            "source_task_id": block.task_id,
-            "generation_id": generation_id,
-        }
-        for block in generated
-    ]
-    insert_result = (
-        supabase.table("schedule_blocks")
-        .insert(insert_payload)
-        .execute()
-    )
-    inserted_rows = (
-        supabase.table("schedule_blocks")
-        .select("*")
-        .eq("user_id", user_id)
-        .eq("generation_id", generation_id)
-        .order("starts_at")
-        .execute()
-        .data
-        or []
-    )
-    response_blocks = [map_schedule_block_row(row) for row in inserted_rows]
-
-    return {
-        "message": "Schedule generated successfully",
-        "blocks": response_blocks,
-        "stats": validation,
-    }
+    
+    except Exception as e:
+        import traceback
+        error_msg = f"Schedule generation error: {str(e)}"
+        traceback.print_exc()
+        print(error_msg)
+        raise HTTPException(status_code=500, detail=error_msg)
 
 @router.get("/schedule/stats/{user_id}")
 async def get_schedule_stats(user_id: str):

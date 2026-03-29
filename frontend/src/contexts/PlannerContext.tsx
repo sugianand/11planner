@@ -69,12 +69,6 @@ type SupabaseCourseRow = {
   course_code: string;
   professor: string | null;
   description: string | null;
-  is_online: boolean;
-  has_lab: boolean;
-  lab_day: string | null;
-  lab_start_time: string | null;
-  lab_end_time: string | null;
-  lab_is_online: boolean;
   created_at: string;
 };
 
@@ -144,12 +138,6 @@ function mapCourseRowToModel(row: SupabaseCourseRow): Course {
     endTime: row.end_time || "",
     professor: row.professor || "",
     description: row.description || "",
-    isOnline: row.is_online,
-    hasLab: row.has_lab,
-    labDay: row.lab_day || "",
-    labStartTime: row.lab_start_time || "",
-    labEndTime: row.lab_end_time || "",
-    labIsOnline: row.lab_is_online,
     created_at: row.created_at,
   };
 }
@@ -275,17 +263,11 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
           user_id: course.user_id || userId,
           course_name: course.name,
           course_days: parseCourseDays(course.courseDate),
-          start_time: !course.isOnline ? normalizeTimeForDb(course.startTime) : null,
-          end_time: !course.isOnline ? normalizeTimeForDb(course.endTime) : null,
+          start_time: normalizeTimeForDb(course.startTime),
+          end_time: normalizeTimeForDb(course.endTime),
           course_code: course.code,
           professor: course.professor || null,
           description: course.description || null,
-          is_online: course.isOnline || false,
-          has_lab: course.hasLab || false,
-          lab_day: course.hasLab ? course.labDay : null,
-          lab_start_time: course.hasLab && !course.labIsOnline ? normalizeTimeForDb(course.labStartTime || "") : null,
-          lab_end_time: course.hasLab && !course.labIsOnline ? normalizeTimeForDb(course.labEndTime || "") : null,
-          lab_is_online: course.labIsOnline || false,
         };
 
         const { data, error: insertError } = await supabase
@@ -318,27 +300,10 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
       if (course.name !== undefined) updatePayload.course_name = course.name;
       if (course.code !== undefined) updatePayload.course_code = course.code;
       if (course.courseDate !== undefined) updatePayload.course_days = parseCourseDays(course.courseDate);
-      if (course.startTime !== undefined) updatePayload.start_time = course.isOnline ? null : normalizeTimeForDb(course.startTime);
-      if (course.endTime !== undefined) updatePayload.end_time = course.isOnline ? null : normalizeTimeForDb(course.endTime);
+      if (course.startTime !== undefined) updatePayload.start_time = normalizeTimeForDb(course.startTime);
+      if (course.endTime !== undefined) updatePayload.end_time = normalizeTimeForDb(course.endTime);
       if (course.professor !== undefined) updatePayload.professor = course.professor || null;
       if (course.description !== undefined) updatePayload.description = course.description || null;
-      
-      // Handle online/lab fields
-      if (course.isOnline !== undefined) updatePayload.is_online = course.isOnline;
-      if (course.hasLab !== undefined) {
-        updatePayload.has_lab = course.hasLab;
-        // If hasLab is false, clear all lab fields
-        if (!course.hasLab) {
-          updatePayload.lab_day = null;
-          updatePayload.lab_start_time = null;
-          updatePayload.lab_end_time = null;
-          updatePayload.lab_is_online = false;
-        }
-      }
-      if (course.labDay !== undefined) updatePayload.lab_day = course.hasLab ? course.labDay : null;
-      if (course.labStartTime !== undefined) updatePayload.lab_start_time = course.hasLab && !course.labIsOnline ? normalizeTimeForDb(course.labStartTime) : null;
-      if (course.labEndTime !== undefined) updatePayload.lab_end_time = course.hasLab && !course.labIsOnline ? normalizeTimeForDb(course.labEndTime) : null;
-      if (course.labIsOnline !== undefined) updatePayload.lab_is_online = course.labIsOnline;
 
       const { error: updateError } = await supabase
         .from("courses")
@@ -415,7 +380,28 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     async (id: string, assignment: Partial<Assignment>) => {
       try {
         setLoading(true);
-        await assignmentAPI.update(id, assignment);
+        // build update payload
+        const updatePayload: Record<string, unknown> = {};
+        if (assignment.title !== undefined) updatePayload.title = assignment.title;
+        if (assignment.course_id !== undefined) updatePayload.course_id = assignment.course_id || null;
+        if (assignment.deadline !== undefined) updatePayload.deadline = assignment.deadline;
+        if (assignment.description !== undefined) updatePayload.description = assignment.description || null;
+        if (assignment.priority !== undefined) updatePayload.priority = assignment.priority;
+        if (assignment.estimated_hours !== undefined) updatePayload.estimated_hours = assignment.estimated_hours;
+        if (assignment.status !== undefined) updatePayload.status = assignment.status;
+        if (assignment.completed !== undefined) {
+          updatePayload.completed = assignment.completed;
+          updatePayload.status = assignment.completed ? "completed" : "pending";
+        }
+        if (assignment.points !== undefined) updatePayload.points = assignment.points;
+        if (assignment.url !== undefined) updatePayload.url = assignment.url;
+
+        const { error: updateError } = await supabase
+          .from("assignments")
+          .update(updatePayload)
+          .eq("id", id);
+
+        if (updateError) throw updateError;
         setAssignments((prev) =>
           prev.map((a) => (a.id === id ? { ...a, ...assignment } : a))
         );
@@ -537,6 +523,28 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     }
   }, [userId]);
 
+  const deleteTask = useCallback(async (id: string) => {
+    try {
+      if (userId === "user_demo") {
+        throw new Error("Please sign in to delete tasks.");
+      }
+      setLoading(true);
+      const { error: deleteError } = await supabase
+        .from("tasks")
+        .delete()
+        .eq("id", id)
+        .eq("user_id", userId);
+
+      if (deleteError) throw deleteError;
+      setTasks((prev) => prev.filter((t) => t.id !== id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete task");
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [userId]);
+
   // ========== Schedule Blocks ==========
   const loadScheduleBlocks = useCallback(async () => {
     try {
@@ -550,42 +558,6 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     }
   }, [userId]);
-
-  const deleteTask = useCallback(async (id: string) => {
-    try {
-      if (userId === "user_demo") {
-        throw new Error("Please sign in to delete tasks.");
-      }
-      setLoading(true);
-
-      // Delete associated schedule blocks first
-      await supabase
-        .from("schedule_blocks")
-        .delete()
-        .eq("source_task_id", id)
-        .eq("user_id", userId);
-
-      // Then delete the task
-      const { error: deleteError } = await supabase
-        .from("tasks")
-        .delete()
-        .eq("id", id)
-        .eq("user_id", userId);
-
-      if (deleteError) throw deleteError;
-
-      // Update local state
-      setTasks((prev) => prev.filter((t) => t.id !== id));
-
-      // Refresh schedule blocks to remove deleted task's blocks from UI
-      await loadScheduleBlocks();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete task");
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, [userId, loadScheduleBlocks]);
 
   const updateScheduleBlock = useCallback(async (id: string, block: Partial<ScheduleBlock>) => {
     try {

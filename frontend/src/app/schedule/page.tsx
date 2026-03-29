@@ -31,22 +31,47 @@ export default function SchedulePage() {
     setLoading(true);
     setError(null);
 
+    // Validate userId is loaded
+    if (!userId || userId === "") {
+      setError("User not loaded. Please refresh the page.");
+      setLoading(false);
+      return;
+    }
+
     try {
+      console.log(`Generating schedule for user: ${userId}`);
+      
       const response = await fetch(
         `http://localhost:8000/api/schedule/generate/${userId}`,
-        { method: "POST" }
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
       );
 
+      console.log(`Response status: ${response.status}`);
+      
       if (!response.ok) {
-        throw new Error("Failed to generate schedule");
+        const errorData = await response.json().catch(() => ({}));
+        console.error("Schedule generation error:", errorData);
+        throw new Error(
+          errorData.detail || 
+          errorData.message || 
+          "Failed to generate schedule"
+        );
       }
 
       const data = await response.json();
+      console.log("Schedule generated successfully:", data);
+      
       setGeneratedBlocks(data.blocks || []);
       setScheduleStats(data.stats);
       await loadScheduleBlocks();
     } catch (err: any) {
-      setError(err.message);
+      console.error("Error generating schedule:", err);
+      setError(err.message || "An unexpected error occurred");
     } finally {
       setLoading(false);
     }
@@ -123,11 +148,17 @@ export default function SchedulePage() {
               <p className="text-slate-600 dark:text-slate-300">
                 {pendingTasks.length} pending task{pendingTasks.length !== 1 ? "s" : ""} to schedule
               </p>
+              {pendingTasks.length === 0 && (
+                <p className="text-sm text-amber-600 dark:text-amber-400 mt-2 font-medium">
+                  💡 Create tasks first to generate a schedule
+                </p>
+              )}
             </div>
             <button
               onClick={generateSchedule}
               disabled={loading || pendingTasks.length === 0}
               className="bg-[#306844] hover:bg-[#255236] text-white font-semibold py-3 px-8 rounded-xl transition shadow-lg shadow-green-900/10 disabled:opacity-50 disabled:cursor-not-allowed text-lg"
+              title={pendingTasks.length === 0 ? "Create at least one task to generate a schedule" : ""}
             >
               {loading ? "Generating..." : "Generate Schedule"}
             </button>
@@ -136,7 +167,18 @@ export default function SchedulePage() {
 
         {error && (
           <div className="bg-rose-50/80 dark:bg-rose-900/20 border border-rose-200/60 dark:border-rose-800/60 rounded-2xl p-4 mb-6">
-            <p className="text-rose-800 dark:text-rose-200">Error: {error}</p>
+            <p className="text-rose-800 dark:text-rose-200">
+              <strong>Error:</strong> {error}
+            </p>
+          </div>
+        )}
+
+        {/* Debug Info */}
+        {process.env.NODE_ENV === "development" && (
+          <div className="bg-blue-50/80 dark:bg-blue-900/20 border border-blue-200/60 dark:border-blue-800/60 rounded-2xl p-4 mb-6 text-xs">
+            <p className="text-blue-800 dark:text-blue-200">
+              <strong>Debug:</strong> userId={userId}, pending_tasks={pendingTasks.length}, loading={loading}
+            </p>
           </div>
         )}
 

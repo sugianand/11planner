@@ -246,7 +246,7 @@ async def sync_assignments(sync_request: SyncRequest):
                 continue
             course_id = fetch_res.data[0]["id"]
 
-        # 2. Upsert assignment — update deadline if already exists
+        # upsert: update if exists, insert if new
         existing = (
             supabase.table("assignments")
             .select("id")
@@ -265,10 +265,15 @@ async def sync_assignments(sync_request: SyncRequest):
         except Exception:
             deadline_dt = datetime.now()
 
+        # skip past-due assignments
+        if deadline_dt < datetime.now():
+            continue
+
         if existing.data:
-            # Update the existing assignment with fresh date/url/points
+            # update existing
             supabase.table("assignments").update({
                 "deadline": deadline_dt.isoformat(),
+                "course_id": course_id,
                 "url": ext.url,
                 "points": ext.points,
                 "source": "canvas",
