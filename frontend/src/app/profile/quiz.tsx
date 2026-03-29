@@ -3,7 +3,7 @@
 import Footer from "@/components/Footer";
 import { usePlanner } from "@/contexts/PlannerContext";
 import { supabase } from "@/lib/supabaseClient";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 type Preferences = {
@@ -16,16 +16,37 @@ type Preferences = {
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const TOTAL_STEPS = 5;
+const STEP_LABELS = ["Work Time", "Work Days", "Break Style", "Assignments", "Extra Notes"];
+
+const WORKTIME_OPTIONS = [
+  { value: "morning", label: "Morning", description: "6am-12pm" },
+  { value: "afternoon", label: "Afternoon", description: "12pm-6pm" },
+  { value: "evening", label: "Evening", description: "6pm-12am" },
+];
+
+const WORKSTYLE_OPTIONS = [
+  { value: "short", label: "Short Bursts", description: "15-20 min sessions" },
+  { value: "classic", label: "Classic Pomodoro", description: "25-30 min sessions" },
+  { value: "deep-work", label: "Deep Work", description: "45-60 min sessions" },
+  { value: "full-immersion", label: "Full Immersion", description: "90+ min sessions" },
+];
+
+const ASSIGNMENT_OPTIONS = [
+  { value: "early", label: "Start Early", description: "Small chunks over multiple days" },
+  { value: "deadline", label: "Deadline Sprint", description: "One larger effort close to due date" },
+  { value: "balanced", label: "Balanced", description: "A few focused sessions spread out" },
+];
 
 const inputClassName =
-  "w-full border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2.5 bg-white/80 dark:bg-slate-800/80 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#306844] outline-none transition";
+  "w-full rounded-xl border border-slate-300/85 bg-white/85 px-4 py-2.5 text-slate-900 transition-all duration-200 outline-none focus:border-[#306844] focus:ring-2 focus:ring-[#306844]/30 dark:border-slate-600/80 dark:bg-slate-800/80 dark:text-white";
 
 export default function Quiz() {
   const { preferences: savedPreferences, loadPreferences } = usePlanner();
+  const router = useRouter();
+
   const [step, setStep] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
   const [preferences, setPreferences] = useState<Preferences>({
     worktime: "",
     workdays: [],
@@ -42,13 +63,14 @@ export default function Quiz() {
   const currentPreferences: Preferences =
     !hasEdited && savedPreferences
       ? {
-        worktime: savedPreferences.worktime,
-        workdays: savedPreferences.workdays,
-        workstyle: savedPreferences.workstyle,
-        assignmentplan: savedPreferences.assignmentplan,
-        additionalInfo: savedPreferences.additionalInfo,
-      }
+          worktime: savedPreferences.worktime,
+          workdays: savedPreferences.workdays,
+          workstyle: savedPreferences.workstyle,
+          assignmentplan: savedPreferences.assignmentplan,
+          additionalInfo: savedPreferences.additionalInfo,
+        }
       : preferences;
+  const progress = Math.round((step / TOTAL_STEPS) * 100);
 
   function nextStep() {
     setStep((prev) => Math.min(prev + 1, TOTAL_STEPS));
@@ -68,9 +90,13 @@ export default function Quiz() {
 
   async function submitQuiz() {
     setErrorMessage("");
-    setSuccessMessage("");
 
-    if (!currentPreferences.worktime || currentPreferences.workdays.length === 0 || !currentPreferences.workstyle || !currentPreferences.assignmentplan) {
+    if (
+      !currentPreferences.worktime ||
+      currentPreferences.workdays.length === 0 ||
+      !currentPreferences.workstyle ||
+      !currentPreferences.assignmentplan
+    ) {
       setErrorMessage("Please complete all required quiz fields before submitting.");
       return;
     }
@@ -86,199 +112,299 @@ export default function Quiz() {
     }
 
     setIsSaving(true);
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        worktime: currentPreferences.worktime,
-        workdays: currentPreferences.workdays,
-        workstyle: currentPreferences.workstyle,
-        assignmentplan: currentPreferences.assignmentplan,
-        additional_info: currentPreferences.additionalInfo,
-      })
-      .eq("id", user.id);
-    setIsSaving(false);
 
-    if (error) {
-      setErrorMessage(error.message);
+    const payload = {
+      worktime: currentPreferences.worktime,
+      workdays: currentPreferences.workdays,
+      workstyle: currentPreferences.workstyle,
+      assignmentplan: currentPreferences.assignmentplan,
+      additional_info: currentPreferences.additionalInfo,
+    };
+
+    const { data: updatedRows, error: updateError } = await supabase
+      .from("profiles")
+      .update(payload)
+      .eq("id", user.id)
+      .select("id");
+
+    if (updateError) {
+      setIsSaving(false);
+      setErrorMessage(updateError.message);
       return;
     }
 
-    setSuccessMessage("Preferences saved.");
+    if (!updatedRows || updatedRows.length === 0) {
+      const { error: upsertError } = await supabase
+        .from("profiles")
+        .upsert({ id: user.id, ...payload }, { onConflict: "id" });
+
+      if (upsertError) {
+        setIsSaving(false);
+        setErrorMessage(upsertError.message);
+        return;
+      }
+    }
+
+    setIsSaving(false);
     await loadPreferences();
+    router.replace("/profile/quiz/submitted");
   }
 
-  const progress = Math.round((step / TOTAL_STEPS) * 100);
-
   return (
-    <div className="min-h-screen relative">
-      <div className="fixed inset-0 bg-focus-light dark:bg-focus-dark bg-cover bg-center -z-20"></div>
+    <div className="relative flex min-h-screen flex-col overflow-hidden">
+      <div className="fixed inset-0 -z-30 bg-focus-light bg-cover bg-center dark:bg-focus-dark" />
+      <div className="pointer-events-none fixed inset-0 -z-20 bg-[radial-gradient(circle_at_15%_20%,rgba(16,185,129,0.22),transparent_38%),radial-gradient(circle_at_82%_16%,rgba(56,189,248,0.2),transparent_34%),radial-gradient(circle_at_45%_90%,rgba(99,102,241,0.15),transparent_42%)]" />
+      <div className="pointer-events-none fixed inset-0 -z-10 bg-gradient-to-b from-white/25 via-white/10 to-white/45 dark:from-slate-900/35 dark:via-slate-900/15 dark:to-slate-950/55" />
 
-      <div className="max-w-3xl mx-auto p-6">
-        <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-3xl p-8 shadow-sm border border-white/40 dark:border-slate-700/40">
-          <div className="bg-white/50 dark:bg-slate-700/50 rounded-2xl shadow-sm p-8 mb-6 border border-white/40 dark:border-slate-600/40 border-t-4 border-t-[#306844]">
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Personalization Quiz</h1>
-              <span className="text-sm font-semibold text-[#306844] bg-[#306844]/10 px-3 py-1 rounded-full">
-                Step {step} of {TOTAL_STEPS}
-              </span>
-            </div>
+      <main className="w-full flex-1">
+        <div className="mx-auto max-w-4xl p-4 pb-12 sm:p-6 lg:p-8">
+          <div className="rounded-3xl border border-white/45 bg-white/50 p-4 shadow-[0_30px_120px_-48px_rgba(15,23,42,0.5)] backdrop-blur-xl dark:border-slate-700/50 dark:bg-slate-900/45 sm:p-7">
+            <div className="quiz-panel rounded-3xl border border-white/50 bg-white/65 p-5 shadow-sm dark:border-slate-700/55 dark:bg-slate-800/55 sm:p-7">
+                <div className="rounded-2xl border border-white/55 bg-white/75 p-5 shadow-sm dark:border-slate-700/60 dark:bg-slate-900/35 sm:p-6">
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Personalization Quiz</h1>
+                    <span className="rounded-full border border-emerald-200/80 bg-emerald-50/80 px-3 py-1 text-xs font-bold uppercase tracking-wider text-emerald-700 dark:border-emerald-500/35 dark:bg-emerald-500/10 dark:text-emerald-300">
+                      Step {step} of {TOTAL_STEPS}
+                    </span>
+                  </div>
 
-            <div className="w-full bg-slate-200 dark:bg-slate-600/50 rounded-full h-2.5 overflow-hidden">
-              <div
-                className="bg-gradient-to-r from-[#306844] to-[#3d8658] h-2.5 rounded-full transition-all duration-300"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          </div>
+                  <div className="mb-4 grid grid-cols-5 gap-2">
+                    {STEP_LABELS.map((label, index) => {
+                      const stepNumber = index + 1;
+                      const isCurrent = step === stepNumber;
+                      const isDone = step > stepNumber;
+                      return (
+                        <div
+                          key={label}
+                          className={`rounded-xl border px-2 py-2 text-center text-[11px] font-semibold transition ${
+                            isCurrent
+                              ? "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-300"
+                              : isDone
+                              ? "border-slate-200 bg-white/80 text-slate-700 dark:border-slate-600 dark:bg-slate-800/60 dark:text-slate-200"
+                              : "border-slate-200/70 bg-white/55 text-slate-400 dark:border-slate-700 dark:bg-slate-900/25 dark:text-slate-400"
+                          }`}
+                        >
+                          {label}
+                        </div>
+                      );
+                    })}
+                  </div>
 
-          {errorMessage && (
-            <div className="mb-4 border border-rose-200 bg-rose-50 text-rose-700 rounded-xl p-3 text-sm">
-              {errorMessage}
-            </div>
-          )}
-
-          {successMessage && (
-            <div className="mb-4 border border-emerald-200 bg-emerald-50 text-emerald-700 rounded-xl p-3 text-sm flex items-center justify-between gap-3">
-              <span>{successMessage}</span>
-              <Link href="/profile" className="font-semibold hover:underline">
-                Back to Profile
-              </Link>
-            </div>
-          )}
-
-          <div className="bg-white/50 dark:bg-slate-700/50 rounded-2xl shadow-sm p-8 border border-white/40 dark:border-slate-600/40">
-            {step === 1 && (
-              <div>
-                <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Preferred Work Time</h2>
-                <p className="text-slate-600 dark:text-slate-300 mb-5">When do you feel most productive?</p>
-                <select
-                  className={inputClassName}
-                  value={currentPreferences.worktime}
-                  onChange={(e) => {
-                    setHasEdited(true);
-                    setPreferences({ ...currentPreferences, worktime: e.target.value });
-                  }}
-                >
-                  <option value="">Select</option>
-                  <option value="morning">Morning (6am-12pm)</option>
-                  <option value="afternoon">Afternoon (12pm-6pm)</option>
-                  <option value="evening">Evening (6pm-12am)</option>
-                </select>
-              </div>
-            )}
-
-            {step === 2 && (
-              <div>
-                <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Preferred Work Days</h2>
-                <p className="text-slate-600 dark:text-slate-300 mb-5">Pick the days you usually like to work.</p>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {DAYS.map((day) => (
-                    <label
-                      key={day}
-                      className="flex items-center gap-2 rounded-lg px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white/80 dark:bg-slate-800/80 text-slate-900 dark:text-white"
-                    >
-                      <input
-                        type="checkbox"
-                        value={day}
-                        checked={currentPreferences.workdays.includes(day)}
-                        onChange={(e) => toggleWorkday(day, e.target.checked)}
-                        className="accent-[#306844]"
-                      />
-                      <span>{day}</span>
-                    </label>
-                  ))}
+                  <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-200/85 dark:bg-slate-700/55">
+                    <div
+                      className="h-2.5 rounded-full bg-gradient-to-r from-[#306844] via-[#2f7f54] to-[#5ac693] transition-all duration-500"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
                 </div>
-              </div>
-            )}
 
-            {step === 3 && (
-              <div>
-                <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Break Timings</h2>
-                <p className="text-slate-600 dark:text-slate-300 mb-5">How long can you focus before taking a break?</p>
-                <select
-                  className={inputClassName}
-                  value={currentPreferences.workstyle}
-                  onChange={(e) => {
-                    setHasEdited(true);
-                    setPreferences({ ...currentPreferences, workstyle: e.target.value });
-                  }}
-                >
-                  <option value="">Select</option>
-                  <option value="short">15-20 minutes (short bursts)</option>
-                  <option value="classic">25-30 minutes (classic Pomodoro)</option>
-                  <option value="deep-work">45-60 minutes (deep work)</option>
-                  <option value="full-immersion">90+ minutes (full immersion)</option>
-                </select>
-              </div>
-            )}
+                {errorMessage && (
+                  <div className="mt-4 rounded-xl border border-rose-300/70 bg-rose-50/90 p-3 text-sm font-medium text-rose-700 dark:border-rose-500/45 dark:bg-rose-500/10 dark:text-rose-300">
+                    {errorMessage}
+                  </div>
+                )}
 
-            {step === 4 && (
-              <div>
-                <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Assignment Plan</h2>
-                <p className="text-slate-600 dark:text-slate-300 mb-5">How do you prefer to approach assignments?</p>
-                <select
-                  className={inputClassName}
-                  value={currentPreferences.assignmentplan}
-                  onChange={(e) => {
-                    setHasEdited(true);
-                    setPreferences({ ...currentPreferences, assignmentplan: e.target.value });
-                  }}
-                >
-                  <option value="">How do you prefer to do assignments?</option>
-                  <option value="early">Start early and do a little each day</option>
-                  <option value="deadline">One big session close to the deadline</option>
-                  <option value="balanced">Balanced: a few sessions that are spread out</option>
-                </select>
-              </div>
-            )}
+                <div className="mt-4 rounded-2xl border border-white/55 bg-white/75 p-5 shadow-sm dark:border-slate-700/60 dark:bg-slate-900/35 sm:p-6">
+                  {step === 1 && (
+                    <div>
+                      <h2 className="mb-2 text-2xl font-black text-slate-900 dark:text-white">Preferred Work Time</h2>
+                      <p className="mb-5 text-slate-600 dark:text-slate-300">When do you usually feel your focus is strongest?</p>
 
-            {step === 5 && (
-              <div>
-                <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Additional Information</h2>
-                <p className="text-slate-600 dark:text-slate-300 mb-5">Optional notes to improve your planning suggestions.</p>
-                <textarea
-                  className={inputClassName}
-                  rows={6}
-                  value={currentPreferences.additionalInfo}
-                  onChange={(e) => {
-                    setHasEdited(true);
-                    setPreferences({ ...currentPreferences, additionalInfo: e.target.value });
-                  }}
-                  placeholder="Anything else you'd like us to know? (Optional)"
-                />
-              </div>
-            )}
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        {WORKTIME_OPTIONS.map((option) => {
+                          const isSelected = currentPreferences.worktime === option.value;
+                          return (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() => {
+                                setHasEdited(true);
+                                setPreferences({ ...currentPreferences, worktime: option.value });
+                              }}
+                              className={`rounded-2xl border p-4 text-left transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 ${
+                                isSelected
+                                  ? "border-emerald-300 bg-emerald-50/85 shadow-sm dark:border-emerald-500/45 dark:bg-emerald-500/10"
+                                  : "border-slate-200/80 bg-white/90 hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md dark:border-slate-700/75 dark:bg-slate-800/65 dark:hover:border-emerald-500/35"
+                              }`}
+                            >
+                              <p className="font-bold text-slate-900 dark:text-white">{option.label}</p>
+                              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{option.description}</p>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
 
-            <div className="pt-6 mt-6 border-t border-slate-200 dark:border-slate-600 flex items-center justify-between">
-              <button
-                onClick={prevStep}
-                disabled={step === 1 || isSaving}
-                className="px-5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-500 text-slate-700 dark:text-slate-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Previous
-              </button>
+                  {step === 2 && (
+                    <div>
+                      <h2 className="mb-2 text-2xl font-black text-slate-900 dark:text-white">Preferred Work Days</h2>
+                      <p className="mb-5 text-slate-600 dark:text-slate-300">Pick your usual study days for better schedule generation.</p>
 
-              {step < TOTAL_STEPS ? (
-                <button
-                  onClick={nextStep}
-                  className="bg-[#306844] hover:bg-[#255236] text-white font-semibold py-2.5 px-6 rounded-lg transition shadow-md hover:shadow-lg"
-                >
-                  Next
-                </button>
-              ) : (
-                <button
-                  onClick={submitQuiz}
-                  disabled={isSaving}
-                  className="bg-[#306844] hover:bg-[#255236] text-white font-semibold py-2.5 px-6 rounded-lg transition shadow-md hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  {isSaving ? "Saving..." : "Submit"}
-                </button>
-              )}
+                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                        {DAYS.map((day) => {
+                          const checked = currentPreferences.workdays.includes(day);
+                          return (
+                            <label
+                              key={day}
+                              className={`flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-semibold transition ${
+                                checked
+                                  ? "border-emerald-300 bg-emerald-50/85 text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-300"
+                                  : "border-slate-200/80 bg-white/90 text-slate-700 hover:border-emerald-200 dark:border-slate-700/75 dark:bg-slate-800/65 dark:text-slate-200"
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                value={day}
+                                checked={checked}
+                                onChange={(e) => toggleWorkday(day, e.target.checked)}
+                                className="h-4 w-4 accent-[#306844]"
+                              />
+                              <span>{day}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {step === 3 && (
+                    <div>
+                      <h2 className="mb-2 text-2xl font-black text-slate-900 dark:text-white">Break Timings</h2>
+                      <p className="mb-5 text-slate-600 dark:text-slate-300">How long can you focus before needing a break?</p>
+
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {WORKSTYLE_OPTIONS.map((option) => {
+                          const isSelected = currentPreferences.workstyle === option.value;
+                          return (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() => {
+                                setHasEdited(true);
+                                setPreferences({ ...currentPreferences, workstyle: option.value });
+                              }}
+                              className={`rounded-2xl border p-4 text-left transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 ${
+                                isSelected
+                                  ? "border-emerald-300 bg-emerald-50/85 shadow-sm dark:border-emerald-500/45 dark:bg-emerald-500/10"
+                                  : "border-slate-200/80 bg-white/90 hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md dark:border-slate-700/75 dark:bg-slate-800/65 dark:hover:border-emerald-500/35"
+                              }`}
+                            >
+                              <p className="font-bold text-slate-900 dark:text-white">{option.label}</p>
+                              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{option.description}</p>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {step === 4 && (
+                    <div>
+                      <h2 className="mb-2 text-2xl font-black text-slate-900 dark:text-white">Assignment Plan</h2>
+                      <p className="mb-5 text-slate-600 dark:text-slate-300">How do you usually like to approach assignment work?</p>
+
+                      <div className="space-y-3">
+                        {ASSIGNMENT_OPTIONS.map((option) => {
+                          const isSelected = currentPreferences.assignmentplan === option.value;
+                          return (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() => {
+                                setHasEdited(true);
+                                setPreferences({ ...currentPreferences, assignmentplan: option.value });
+                              }}
+                              className={`w-full rounded-2xl border p-4 text-left transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 ${
+                                isSelected
+                                  ? "border-emerald-300 bg-emerald-50/85 shadow-sm dark:border-emerald-500/45 dark:bg-emerald-500/10"
+                                  : "border-slate-200/80 bg-white/90 hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md dark:border-slate-700/75 dark:bg-slate-800/65 dark:hover:border-emerald-500/35"
+                              }`}
+                            >
+                              <p className="font-bold text-slate-900 dark:text-white">{option.label}</p>
+                              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{option.description}</p>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {step === 5 && (
+                    <div>
+                      <h2 className="mb-2 text-2xl font-black text-slate-900 dark:text-white">Additional Information</h2>
+                      <p className="mb-5 text-slate-600 dark:text-slate-300">Share anything that can help us personalize your plan better.</p>
+                      <textarea
+                        className={inputClassName}
+                        rows={6}
+                        value={currentPreferences.additionalInfo}
+                        onChange={(e) => {
+                          setHasEdited(true);
+                          setPreferences({ ...currentPreferences, additionalInfo: e.target.value });
+                        }}
+                        placeholder="Examples: part-time work, commute schedule, peak stress days, etc."
+                      />
+                    </div>
+                  )}
+
+                  <div className="mt-7 flex items-center justify-between border-t border-slate-200 pt-6 dark:border-slate-700/65">
+                    <button
+                      onClick={prevStep}
+                      disabled={step === 1 || isSaving}
+                      className="rounded-xl border border-slate-300 bg-white/90 px-5 py-2.5 font-semibold text-slate-700 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600/75 dark:bg-slate-800/75 dark:text-slate-200"
+                    >
+                      Previous
+                    </button>
+
+                    {step < TOTAL_STEPS ? (
+                      <button
+                        onClick={nextStep}
+                        className="rounded-xl bg-[#306844] px-6 py-2.5 font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#255236] hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+                      >
+                        Next
+                      </button>
+                    ) : (
+                      <button
+                        onClick={submitQuiz}
+                        disabled={isSaving}
+                        className="rounded-xl bg-[#306844] px-6 py-2.5 font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#255236] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+                      >
+                        {isSaving ? "Saving..." : "Submit"}
+                      </button>
+                    )}
+                  </div>
+                </div>
             </div>
           </div>
+
+          <style jsx>{`
+            .quiz-panel {
+              animation: quizFadeIn 500ms cubic-bezier(0.22, 1, 0.36, 1);
+            }
+
+            @keyframes quizFadeIn {
+              from {
+                opacity: 0;
+                transform: translateY(12px);
+              }
+              to {
+                opacity: 1;
+                transform: translateY(0);
+              }
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+              .quiz-panel {
+                animation: none;
+              }
+            }
+          `}</style>
         </div>
+      </main>
+
+      <div className="mt-auto">
+        <Footer />
       </div>
-      <Footer />
     </div>
   );
 }

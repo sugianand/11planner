@@ -17,18 +17,18 @@ async function getSettings() {
     });
 }
 
-// POST assignments to the 11Planner backend
-async function syncAssignments(assignments) {
+// POST assignments + extracted courses to the 11Planner backend
+async function syncAssignments(assignments, courses = []) {
     const { backendUrl, userId } = await getSettings();
 
     console.log('[11Planner] Sync settings:', { backendUrl, userId });
-    console.log('[11Planner] Syncing', assignments.length, 'assignments');
+    console.log('[11Planner] Syncing', assignments.length, 'assignments and', courses.length, 'courses');
 
     if (!userId || userId.trim() === '') {
         return { success: false, error: 'No user ID set. Open settings (⚙️) and paste your Supabase user UUID.' };
     }
 
-    const body = JSON.stringify({ userId: userId.trim(), assignments });
+    const body = JSON.stringify({ userId: userId.trim(), assignments, courses });
 
     // Remove any trailing slashes from the configured backend URL to prevent //api paths
     const cleanUrl = backendUrl.replace(/\/+$/, '');
@@ -75,7 +75,7 @@ async function syncAssignments(assignments) {
 // Listen for messages from the popup
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message.action === 'sync') {
-        syncAssignments(message.assignments).then(sendResponse);
+        syncAssignments(message.assignments, message.courses || []).then(sendResponse);
         return true; // keep channel open
     }
     if (message.action === 'saveSettings') {

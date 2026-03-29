@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import FocusDashboardPanel from "@/components/FocusDashboardPanel";
 import Footer from "@/components/Footer";
 import { useTimer, defaultTimerDurations } from "@/contexts/TimerContext";
@@ -44,6 +45,7 @@ type Soundscape = {
   | "pinkNoise"
   | "brownNoise";
   audioUrl?: string;
+  startAtSeconds?: number;
 };
 
 const focusBackgrounds: FocusBackground[] = [
@@ -308,6 +310,41 @@ const atmosphereCategories: AtmosphereCategory[] = [
 
 const backgroundCategories: FocusBackground["category"][] = atmosphereCategories;
 const FALLBACK_BACKGROUND_IMAGE = "/images/background.png";
+const DASHBOARD_PREFS_KEY = "focus-dashboard-preferences-v1";
+
+type DashboardPrefs = {
+  backgroundId?: string;
+  soundId?: string;
+  volume?: number;
+  allowBackgroundVideo?: boolean;
+};
+
+const getStoredDashboardPrefs = (): DashboardPrefs | null => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(DASHBOARD_PREFS_KEY);
+    if (!raw) {
+      return null;
+    }
+    return JSON.parse(raw) as DashboardPrefs;
+  } catch {
+    return null;
+  }
+};
+
+const shouldReduceBackgroundVideo = (): boolean => {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+  const saveDataEnabled = Boolean(connection?.saveData);
+  return prefersReducedMotion || saveDataEnabled;
+};
 
 const soundscapes: Soundscape[] = [
   {
@@ -472,6 +509,7 @@ const soundscapes: Soundscape[] = [
     category: "Ambiance",
     engine: "abstract",
     audioUrl: "/sounds/ambiance/outer-space.mp3",
+    startAtSeconds: 20,
   },
   {
     id: "birds-chirping",
@@ -613,7 +651,7 @@ const soundIconsById: Record<string, string> = {
 
 const getInitialTimerPosition = () => ({
   x: 32,
-  y: typeof window === "undefined" ? 100 : Math.max(24, window.innerHeight - 400),
+  y: 100,
 });
 
 const createNoiseBuffer = (
@@ -665,10 +703,8 @@ const createNoiseBuffer = (
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<"backgrounds" | "sounds">("backgrounds");
-  const [backgroundId, setBackgroundId] = useState(focusBackgrounds[0]?.id ?? "");
-  const [soundId, setSoundId] = useState(
-    soundscapes.find((scene) => scene.id === "ambiance")?.id ?? soundscapes[0]?.id ?? ""
-  );
+  const [backgroundId, setBackgroundId] = useState(() => focusBackgrounds[0]?.id ?? "");
+  const [soundId, setSoundId] = useState(() => soundscapes.find((scene) => scene.id === "ambiance")?.id ?? soundscapes[0]?.id ?? "");
   const [activeBackgroundCategory, setActiveBackgroundCategory] = useState<FocusBackground["category"]>(
     "All"
   );
@@ -695,12 +731,17 @@ export default function Dashboard() {
   } = useTimer();
 
   const [timerPosition, setTimerPosition] = useState(getInitialTimerPosition);
+  const hasAutoPositionedTimerRef = useRef(false);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(0.6);
   const [videoError, setVideoError] = useState(false);
   const [isBackgroundVideoReady, setIsBackgroundVideoReady] = useState(false);
+  const [allowBackgroundVideo, setAllowBackgroundVideo] = useState(true);
+  const [prefsLoaded, setPrefsLoaded] = useState(false);
+  const [loadedThumbnailPreviews, setLoadedThumbnailPreviews] = useState<Record<string, boolean>>({});
+  const [failedThumbnailPreviews, setFailedThumbnailPreviews] = useState<Record<string, boolean>>({});
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const generatedAudioRef = useRef<{
     context: AudioContext;
@@ -708,6 +749,45 @@ export default function Dashboard() {
     stop: () => void;
   } | null>(null);
   const playbackRequestRef = useRef(0);
+
+  useEffect(() => {
+    const storedPrefs = getStoredDashboardPrefs() ?? {};
+
+    if (storedPrefs.backgroundId && focusBackgrounds.some((scene) => scene.id === storedPrefs.backgroundId)) {
+      setBackgroundId(storedPrefs.backgroundId);
+    }
+
+    if (storedPrefs.soundId && soundscapes.some((scene) => scene.id === storedPrefs.soundId)) {
+      setSoundId(storedPrefs.soundId);
+    }
+
+    if (typeof storedPrefs.volume === "number" && Number.isFinite(storedPrefs.volume)) {
+      setVolume(Math.min(1, Math.max(0, storedPrefs.volume)));
+    }
+
+    if (typeof storedPrefs.allowBackgroundVideo === "boolean") {
+      setAllowBackgroundVideo(storedPrefs.allowBackgroundVideo);
+    } else {
+      setAllowBackgroundVideo(!shouldReduceBackgroundVideo());
+    }
+
+    setPrefsLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (!prefsLoaded || typeof window === "undefined") {
+      return;
+    }
+
+    const payload = {
+      backgroundId,
+      soundId,
+      volume,
+      allowBackgroundVideo,
+    };
+
+    window.localStorage.setItem(DASHBOARD_PREFS_KEY, JSON.stringify(payload));
+  }, [backgroundId, soundId, volume, allowBackgroundVideo, prefsLoaded]);
 
   useEffect(() => {
     const body = document.body;
@@ -721,6 +801,23 @@ export default function Dashboard() {
       body.classList.remove("dashboard-ui-hidden");
     };
   }, [isUiHidden]);
+
+  useEffect(() => {
+    if (hasAutoPositionedTimerRef.current) {
+      return;
+    }
+
+    hasAutoPositionedTimerRef.current = true;
+    setTimerPosition((prev) => {
+      if (prev.x !== 32 || prev.y !== 100) {
+        return prev;
+      }
+      return {
+        x: 32,
+        y: Math.max(24, window.innerHeight - 400),
+      };
+    });
+  }, []);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     setIsDragging(true);
@@ -964,6 +1061,23 @@ export default function Dashboard() {
         const audio = new Audio(scene.audioUrl);
         audio.loop = true;
         audio.volume = volume;
+
+        const configuredStart = scene.startAtSeconds;
+        if (typeof configuredStart === "number" && Number.isFinite(configuredStart) && configuredStart > 0) {
+          const seekToConfiguredStart = () => {
+            const safeUpperBound = Number.isFinite(audio.duration) && audio.duration > 0
+              ? Math.max(0, audio.duration - 0.25)
+              : configuredStart;
+            audio.currentTime = Math.min(configuredStart, safeUpperBound);
+          };
+
+          if (audio.readyState >= 1) {
+            seekToConfiguredStart();
+          } else {
+            audio.addEventListener("loadedmetadata", seekToConfiguredStart, { once: true });
+          }
+        }
+
         try {
           await audio.play();
 
@@ -1030,12 +1144,7 @@ export default function Dashboard() {
     [backgroundId]
   );
 
-  const shouldRenderBackgroundVideo = Boolean(activeBackground?.videoUrl) && !videoError;
-
-  useEffect(() => {
-    setVideoError(false);
-    setIsBackgroundVideoReady(false);
-  }, [activeBackground?.id]);
+  const shouldRenderBackgroundVideo = Boolean(activeBackground?.videoUrl) && !videoError && allowBackgroundVideo;
 
   const activeSound = useMemo(
     () => soundscapes.find((scene) => scene.id === soundId) ?? soundscapes[0],
@@ -1060,7 +1169,16 @@ export default function Dashboard() {
 
   const handleBackgroundSelect = (sceneId: string) => {
     setVideoError(false);
+    setIsBackgroundVideoReady(false);
     setBackgroundId(sceneId);
+  };
+
+  const markThumbnailLoaded = (sceneId: string) => {
+    setLoadedThumbnailPreviews((prev) => ({ ...prev, [sceneId]: true }));
+  };
+
+  const markThumbnailFailed = (sceneId: string) => {
+    setFailedThumbnailPreviews((prev) => ({ ...prev, [sceneId]: true }));
   };
 
   const handleVolumeChange = (nextVolume: number) => {
@@ -1173,19 +1291,32 @@ export default function Dashboard() {
 
           {activeTab === "backgrounds" && (
             <div className="w-full flex flex-col items-center gap-4">
-              <div className="flex flex-wrap justify-center gap-2">
-                {backgroundCategories.map((category) => (
-                  <button
-                    key={category}
-                    onClick={() => setActiveBackgroundCategory(category)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-semibold transition border ${category === activeBackgroundCategory
-                      ? "bg-emerald-600 text-white border-emerald-600"
-                      : "bg-white/80 dark:bg-slate-900/70 text-slate-700 dark:text-slate-200 border-white/40 dark:border-slate-700/40 hover:bg-white dark:hover:bg-slate-800"
-                      }`}
-                  >
-                    {category}
-                  </button>
-                ))}
+              <div className="w-full grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                <div className="flex flex-wrap justify-center gap-2 col-start-2">
+                  {backgroundCategories.map((category) => (
+                    <button
+                      key={category}
+                      onClick={() => setActiveBackgroundCategory(category)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold transition border ${category === activeBackgroundCategory
+                        ? "bg-emerald-600 text-white border-emerald-600"
+                        : "bg-white/80 dark:bg-slate-900/70 text-slate-700 dark:text-slate-200 border-white/40 dark:border-slate-700/40 hover:bg-white dark:hover:bg-slate-800"
+                        }`}
+                    >
+                      {category}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => setAllowBackgroundVideo((prev) => !prev)}
+                  title="Performance Mode keeps static backgrounds to reduce CPU and bandwidth usage"
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition justify-self-end col-start-3 ${!allowBackgroundVideo
+                    ? "bg-emerald-600 text-white border-emerald-600"
+                    : "border-slate-200/80 dark:border-slate-700/80 text-slate-600 dark:text-slate-300 hover:bg-white/80 dark:hover:bg-slate-800/80"
+                    }`}
+                >
+                  Performance Mode {!allowBackgroundVideo ? "On" : "Off"}
+                </button>
               </div>
 
               <div className="grid w-full gap-4 grid-cols-2 md:grid-cols-4 lg:grid-cols-5">
@@ -1201,15 +1332,29 @@ export default function Dashboard() {
                     <div className="flex flex-col items-center gap-3">
                       <div className="h-20 w-32 rounded-xl bg-slate-200/70 dark:bg-slate-700/70 overflow-hidden">
                         {scene.videoUrl ? (
-                          <video
-                            className="h-full w-full object-cover"
-                            src={scene.videoUrl}
-                            muted
-                            loop
-                            playsInline
-                            poster={scene.imageUrl || FALLBACK_BACKGROUND_IMAGE}
-                            preload="none"
-                          />
+                          <div className="relative h-full w-full">
+                            <Image
+                              src={scene.imageUrl || FALLBACK_BACKGROUND_IMAGE}
+                              alt={`${scene.label} thumbnail`}
+                              fill
+                              className="absolute inset-0 h-full w-full object-cover"
+                              loading="lazy"
+                              sizes="128px"
+                            />
+                            {allowBackgroundVideo && !failedThumbnailPreviews[scene.id] ? (
+                              <video
+                                className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${loadedThumbnailPreviews[scene.id] ? "opacity-100" : "opacity-0"}`}
+                                src={scene.videoUrl}
+                                muted
+                                loop
+                                playsInline
+                                autoPlay
+                                preload="metadata"
+                                onLoadedData={() => markThumbnailLoaded(scene.id)}
+                                onError={() => markThumbnailFailed(scene.id)}
+                              />
+                            ) : null}
+                          </div>
                         ) : scene.imageUrl ? (
                           <div
                             className="h-full w-full bg-cover bg-center"
@@ -1251,39 +1396,54 @@ export default function Dashboard() {
                   </button>
                 ))}
               </div>
-              <div className="w-full overflow-x-auto pb-2">
-                <div className="flex w-max min-w-full justify-center gap-3 px-1">
-                  {filteredSoundscapes.map((scene) => {
-                    const isActive = scene.id === activeSound?.id;
-                    const icon = soundIconsById[scene.id] ?? soundCategoryIcons[scene.category];
+              <div className="grid w-full gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                {filteredSoundscapes.map((scene) => {
+                  const isActive = scene.id === activeSound?.id;
+                  const icon = soundIconsById[scene.id] ?? soundCategoryIcons[scene.category];
 
-                    return (
-                      <button
-                        key={scene.id}
-                        onClick={() => {
-                          void handleSoundSelect(scene.id);
-                        }}
-                        className={`min-w-[220px] rounded-2xl border px-4 py-3 text-left transition ${isActive
-                          ? "border-emerald-500 bg-emerald-50/90 dark:bg-emerald-900/30"
-                          : "border-white/40 bg-white/75 dark:bg-slate-900/70 hover:bg-white dark:hover:bg-slate-800"
-                          }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="text-base leading-none">{icon}</span>
-                          <span className={`text-sm font-semibold ${isActive ? "text-emerald-800 dark:text-emerald-200" : "text-slate-800 dark:text-slate-100"}`}>
-                            {scene.label}
+                  return (
+                    <button
+                      key={scene.id}
+                      onClick={() => {
+                        void handleSoundSelect(scene.id);
+                      }}
+                      className={`rounded-xl border p-3 text-left transition shadow-sm ${isActive
+                        ? "border-emerald-500 bg-emerald-50/90 dark:bg-emerald-900/30"
+                        : "border-white/40 dark:border-slate-700/40 bg-white/75 dark:bg-slate-900/70 hover:bg-white dark:hover:bg-slate-800"
+                        }`}
+                    >
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className={`h-8 w-8 rounded-full flex items-center justify-center text-base ${isActive
+                            ? "bg-emerald-200/70 dark:bg-emerald-800/60"
+                            : "bg-slate-200/70 dark:bg-slate-700/70"
+                            }`}>
+                            <span className="leading-none">{icon}</span>
+                          </div>
+                          <span className="text-[9px] uppercase tracking-wider font-semibold text-slate-500 dark:text-slate-400 bg-white/70 dark:bg-slate-800/70 px-1.5 py-0.5 rounded-full border border-white/50 dark:border-slate-700/50">
+                            {scene.category}
                           </span>
                         </div>
-                        <div className="mt-2 flex items-center gap-2">
+
+                        <div>
+                          <p className={`text-sm font-semibold ${isActive ? "text-emerald-800 dark:text-emerald-200" : "text-slate-800 dark:text-slate-100"}`}>
+                            {scene.label}
+                          </p>
+                          <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5 line-clamp-1">
+                            {scene.description}
+                          </p>
+                        </div>
+
+                        <div className="mt-0.5 flex items-center gap-2">
                           <span className={`material-symbols-outlined text-base ${isActive && isPlaying ? "text-emerald-600" : "text-slate-400 dark:text-slate-500"}`}>
                             {isActive && isPlaying ? "volume_up" : "volume_off"}
                           </span>
                           <span className={`h-px flex-1 ${isActive ? "bg-emerald-400/80" : "bg-slate-400/50 dark:bg-slate-600/70"}`} />
                         </div>
-                      </button>
-                    );
-                  })}
-                </div>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
               <div className="flex flex-col items-center gap-3">
                 <div className="flex items-center gap-3">
@@ -1317,7 +1477,7 @@ export default function Dashboard() {
   );
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-transparent transition-colors duration-500 p-6 lg:p-10 flex flex-col gap-8">
+    <div className="min-h-screen relative overflow-hidden bg-transparent transition-colors duration-500 px-6 lg:px-10 pt-6 lg:pt-10 pb-0 flex flex-col">
       <div className="fixed inset-0 -z-20">
         {shouldRenderBackgroundVideo ? (
           <video
@@ -1346,12 +1506,12 @@ export default function Dashboard() {
             style={{
               backgroundImage: activeBackground?.imageUrl
                 ? `url(${activeBackground.imageUrl})`
-                : videoError
+                : videoError || !allowBackgroundVideo
                   ? `url(${FALLBACK_BACKGROUND_IMAGE})`
                   : activeBackground?.id === "default"
                     ? "none"
                     : "radial-gradient(circle at top, rgba(34, 197, 94, 0.35), transparent 55%), radial-gradient(circle at 30% 40%, rgba(251, 191, 36, 0.3), transparent 45%), radial-gradient(circle at 80% 20%, rgba(56, 189, 248, 0.25), transparent 45%)",
-              backgroundColor: activeBackground?.id === "default" && !videoError ? "#f8fafc" : undefined,
+              backgroundColor: activeBackground?.id === "default" && !videoError && allowBackgroundVideo ? "#f8fafc" : undefined,
               backgroundSize: "cover",
               backgroundPosition: "center",
             }}
@@ -1369,6 +1529,12 @@ export default function Dashboard() {
       {videoError && (
         <div className="fixed bottom-6 right-6 z-20 bg-white/90 dark:bg-slate-900/90 text-slate-700 dark:text-slate-200 text-xs px-3 py-2 rounded-full shadow">
           Video failed to load. Showing static fallback.
+        </div>
+      )}
+
+      {!allowBackgroundVideo && activeBackground?.videoUrl && (
+        <div className="fixed bottom-6 right-6 z-20 bg-white/90 dark:bg-slate-900/90 text-slate-700 dark:text-slate-200 text-xs px-3 py-2 rounded-full shadow">
+          Performance Mode is on. Using static backgrounds.
         </div>
       )}
 
@@ -1534,7 +1700,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className={`${isUiTransparent && !isUiHidden ? "opacity-70" : "opacity-100"} transition-opacity duration-300`}>
+      <div className={`${isUiTransparent && !isUiHidden ? "opacity-70" : "opacity-100"} transition-opacity duration-300 flex-1 pb-8 md:pb-10`}>
         <FocusDashboardPanel
           atmospherePanel={atmospherePanel}
           uiHidden={isUiHidden}
@@ -1551,7 +1717,7 @@ export default function Dashboard() {
       </div>
 
       <div
-        className={`transition-all duration-500 ease-out ${isUiHidden ? "translate-y-20 opacity-0 pointer-events-none" : "translate-y-0 opacity-100"}`}
+        className={`mt-auto -mx-6 lg:-mx-10 transition-all duration-500 ease-out ${isUiHidden ? "translate-y-20 opacity-0 pointer-events-none" : "translate-y-0 opacity-100"}`}
       >
         <Footer />
       </div>

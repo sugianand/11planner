@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { useEffect, useState } from "react";
@@ -53,9 +54,11 @@ export default function Navigation() {
               className="absolute inset-0 z-10"
               aria-label="Go to home page"
             />
-            <img
+            <Image
               src="/images/logo.png"
               alt="11Planner Logo"
+              width={224}
+              height={112}
               className="h-28 w-auto pointer-events-none relative z-0 translate-y-1"
             />
           </div>

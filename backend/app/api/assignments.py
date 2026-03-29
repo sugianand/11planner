@@ -186,9 +186,15 @@ class ExtensionAssignment(PydanticBase):
     url: Optional[str] = None
     description: Optional[str] = None
 
+class ExtensionCourse(PydanticBase):
+    name: str
+    code: Optional[str] = None
+    contextCode: Optional[str] = None
+
 class SyncRequest(PydanticBase):
     userId: str
     assignments: List[ExtensionAssignment]
+    courses: Optional[List[ExtensionCourse]] = None
 
 
 @router.post("/sync")
@@ -200,51 +206,65 @@ async def sync_assignments(sync_request: SyncRequest):
     """
     supabase = get_supabase()
     synced_count = 0
+    synced_courses = 0
 
-    for ext in sync_request.assignments:
-        # 1. Resolve or create course (search both old 'course_name' and new 'name' columns)
-        course_name = (ext.course or "General").strip()
+    def resolve_or_create_course(course_name: str) -> Optional[str]:
+        clean_name = (course_name or "General").strip()
+        if not clean_name:
+            clean_name = "General"
+
         course_res = (
             supabase.table("courses")
             .select("id")
             .eq("user_id", sync_request.userId)
-            .ilike("name", course_name)
+            .ilike("name", clean_name)
             .limit(1)
             .execute()
         )
         if not course_res.data:
-            # Also try the old column name
             course_res = (
                 supabase.table("courses")
                 .select("id")
                 .eq("user_id", sync_request.userId)
-                .ilike("course_name", course_name)
+                .ilike("course_name", clean_name)
                 .limit(1)
                 .execute()
             )
+
         if course_res.data:
-            course_id = course_res.data[0]["id"]
-        else:
-            # Insert course — populate both old and new column names to satisfy any NOT NULL
-            supabase.table("courses").insert({
-                "user_id": sync_request.userId,
-                "name": course_name,
-                "course_name": course_name,          # old NOT NULL column
-                "code": course_name[:4].upper(),
-                "course_code": course_name[:4].upper(),  # old column
-            }).execute()
-            # Fetch back
-            fetch_res = (
-                supabase.table("courses")
-                .select("id")
-                .eq("user_id", sync_request.userId)
-                .ilike("course_name", course_name)
-                .limit(1)
-                .execute()
-            )
-            if not fetch_res.data:
-                continue
-            course_id = fetch_res.data[0]["id"]
+            return course_res.data[0]["id"]
+
+        supabase.table("courses").insert({
+            "user_id": sync_request.userId,
+            "name": clean_name,
+            "course_name": clean_name,
+            "code": clean_name[:4].upper(),
+            "course_code": clean_name[:4].upper(),
+        }).execute()
+
+        fetch_res = (
+            supabase.table("courses")
+            .select("id")
+            .eq("user_id", sync_request.userId)
+            .ilike("course_name", clean_name)
+            .limit(1)
+            .execute()
+        )
+        if not fetch_res.data:
+            return None
+        return fetch_res.data[0]["id"]
+
+    # 0. Sync extracted courses first (if provided)
+    for ext_course in (sync_request.courses or []):
+        course_id = resolve_or_create_course(ext_course.name)
+        if course_id:
+            synced_courses += 1
+
+    for ext in sync_request.assignments:
+        # 1. Resolve or create course for each assignment
+        course_id = resolve_or_create_course(ext.course or "General")
+        if not course_id:
+            continue
 
         # upsert: update if exists, insert if new
         existing = (
@@ -295,4 +315,8 @@ async def sync_assignments(sync_request: SyncRequest):
             }).execute()
             synced_count += 1
 
-    return {"message": f"Successfully synced {synced_count} new assignments", "count": synced_count}
+    return {
+        "message": f"Successfully synced {synced_count} new assignments and {synced_courses} courses",
+        "count": synced_count,
+        "courses": synced_courses,
+    }

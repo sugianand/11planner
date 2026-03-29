@@ -8,6 +8,7 @@ from app.api.courses import router as courses_router
 from app.api.assignments import router as assignments_router
 from app.api.schedule_blocks import router as schedule_blocks_router
 from app.api.syllabus import router as syllabus_router
+from app.api.music import router as music_router
 
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
@@ -32,6 +33,7 @@ app.include_router(courses_router)
 app.include_router(assignments_router)
 app.include_router(schedule_blocks_router)
 app.include_router(syllabus_router)
+app.include_router(music_router)
 
 # --- Fallback routes to catch Chrome Extension URL typos ---
 from app.api.assignments import sync_assignments, SyncRequest

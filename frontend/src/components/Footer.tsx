@@ -1,13 +1,16 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function Footer() {
   return (
     <footer className="w-full bg-white/60 dark:bg-slate-800/60 backdrop-blur-3xl py-10 px-6 border-t border-white/40 dark:border-slate-700/40">
       <div className="max-w-[1200px] mx-auto flex flex-col lg:flex-row justify-between items-center gap-6">
         <div className="flex items-center gap-3">
-          <img
+          <Image
             src="/images/logo.png"
             alt="11Planner Logo"
+            width={224}
+            height={112}
             className="h-28 md:h-28 w-auto"
           />
           <h2 className="text-slate-900 dark:text-white text-xl font-bold tracking-tight">11 Planner</h2>

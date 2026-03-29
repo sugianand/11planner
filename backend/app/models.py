@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
 from datetime import datetime
 
@@ -32,9 +32,8 @@ class Course(CourseBase):
     id: str
     user_id: str
     created_at: datetime
-    
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)
 
 # ========== Assignment Models ==========
 
@@ -44,6 +43,11 @@ class AssignmentBase(BaseModel):
     deadline: datetime
     description: Optional[str] = None
     priority: int = 2  # 1-5 scale
+    estimated_hours: float = 1.0
+    status: str = "pending"
+    points: Optional[float] = None
+    url: Optional[str] = None
+    source: Optional[str] = "manual"
 
 class AssignmentCreate(AssignmentBase):
     user_id: str
@@ -54,6 +58,10 @@ class AssignmentUpdate(BaseModel):
     deadline: Optional[datetime] = None
     description: Optional[str] = None
     priority: Optional[int] = None
+    estimated_hours: Optional[float] = None
+    status: Optional[str] = None
+    points: Optional[float] = None
+    url: Optional[str] = None
     completed: Optional[bool] = None
 
 class Assignment(AssignmentBase):
@@ -61,9 +69,8 @@ class Assignment(AssignmentBase):
     user_id: str
     created_at: datetime
     completed: bool = False
-    
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)
 
 # ========== Task Models ==========
 
@@ -94,9 +101,8 @@ class Task(TaskBase):
     user_id: str
     created_at: datetime
     completed: bool = False
-    
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)
 
 # ========== Schedule Block Models ==========
 
@@ -123,9 +129,8 @@ class ScheduleBlock(ScheduleBlockBase):
     user_id: str
     created_at: datetime
     completed: bool = False
-    
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)
 
 # ========== Schedule Summary Models ==========
 
@@ -136,6 +141,5 @@ class WeeklyScheduleSummary(BaseModel):
     completed_tasks: int
     total_hours: float
     schedule_blocks: list[ScheduleBlock]
-    
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)

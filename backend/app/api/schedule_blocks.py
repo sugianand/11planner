@@ -4,6 +4,7 @@ from typing import List
 from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import PlainTextResponse
 from supabase import Client, create_client
 
 from app.models import ScheduleBlock, ScheduleBlockBase, ScheduleBlockCreate, ScheduleBlockUpdate
@@ -101,6 +102,56 @@ async def get_schedule_blocks_by_user(user_id: str):
     )
     rows = result.data or []
     return [map_row_to_block(row) for row in rows]
+
+@router.get("/{user_id}/calendar.ics")
+async def get_schedule_calendar_ics(user_id: str):
+    import datetime as dt
+    supabase = get_supabase()
+    result = (
+        supabase.table("schedule_blocks")
+        .select("*")
+        .eq("user_id", user_id)
+        .order("starts_at")
+        .execute()
+    )
+    rows = result.data or []
+
+    lines = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//11Planner//EN",
+        "CALSCALE:GREGORIAN",
+        "X-WR-CALNAME:11Planner Schedule"
+    ]
+    
+    now_str = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    
+    for row in rows:
+        block = map_row_to_block(row)
+        uid = block["id"]
+        
+        # Format start and end times to UTC string
+        st = block["start_time"]
+        et = block["end_time"]
+        start_str = st.astimezone(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ") if st.tzinfo else st.strftime("%Y%m%dT%H%M%SZ")
+        end_str = et.astimezone(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ") if et.tzinfo else et.strftime("%Y%m%dT%H%M%SZ")
+        
+        # Use task_id for title or fallback
+        title = "Study Session"
+        # Optional: You could join with tasks table to get exact name here. 
+        
+        lines.extend([
+            "BEGIN:VEVENT",
+            f"UID:{uid}@11planner",
+            f"DTSTAMP:{now_str}",
+            f"DTSTART:{start_str}",
+            f"DTEND:{end_str}",
+            f"SUMMARY:{title}",
+            "END:VEVENT"
+        ])
+        
+    lines.append("END:VCALENDAR")
+    return PlainTextResponse(content="\r\n".join(lines), media_type="text/calendar")
 
 
 @router.put("/{block_id}", response_model=ScheduleBlock)
