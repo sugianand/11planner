@@ -827,7 +827,7 @@ export default function FocusDashboardPanel({
           </div>
         </div>
 
-        <div className={`lg:col-span-3 flex flex-col gap-4 transition-all duration-500 ease-out ${uiHidden ? "translate-x-20 opacity-0" : "translate-x-0 opacity-100"}`}>
+        <div className={`lg:col-span-3 flex flex-col gap-4 transition-all duration-500 ease-out ${courses.length === 0 ? "lg:-mt-28" : ""} ${uiHidden ? "translate-x-20 opacity-0" : "translate-x-0 opacity-100"}`}>
           <StatCard
             label="Productivity Score"
             value={`${productivityScore}%`}

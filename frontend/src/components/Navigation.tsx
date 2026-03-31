@@ -53,11 +53,11 @@ export default function Navigation() {
       <div className="max-w-6xl mx-auto px-4 md:px-6 h-16 md:h-16">
         <div className="flex items-center justify-between h-full">
           {/* Logo */}
-          <div className="relative flex items-center h-full w-fit -mr-8">
+          <div className="absolute left-24 top-1/2 -translate-y-1/2 z-50 flex items-center h-full w-fit">
             <Link
-              href="/"
+              href={isLoggedIn ? "/dashboard" : "/"}
               className="absolute inset-0 z-10"
-              aria-label="Go to home page"
+              aria-label={isLoggedIn ? "Go to dashboard" : "Go to home page"}
             />
             <Image
               src="/images/logo.png"
@@ -165,41 +165,49 @@ export default function Navigation() {
           </div>
 
           {/* User Dropdown / Login Button - Desktop */}
-          <div className="hidden lg:flex ml-auto items-center pr-2">
+          <div className="hidden lg:flex items-center absolute right-24 top-1/2 -translate-y-1/2 z-50">
             {isLoggedIn ? (
               <div className="relative">
                 <button
                   onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
-                  className="flex items-center justify-center w-10 h-10 rounded-full bg-emerald-600 dark:bg-emerald-500 text-white font-semibold hover:bg-emerald-700 dark:hover:bg-emerald-600 transition"
+                  className="flex items-center justify-center w-11 h-11 rounded-full border-2 border-emerald-400 dark:border-emerald-500 bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-200 font-bold shadow-md hover:shadow-lg hover:border-emerald-600 dark:hover:border-emerald-300 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                  aria-label="Open user menu"
                 >
-                  {userInitials}
+                  <span className="text-lg select-none">{userInitials}</span>
                 </button>
                 
                 {isUserDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-700 rounded-lg shadow-lg border border-slate-200 dark:border-slate-600 z-50">
-                    <Link
-                      href="/profile"
-                      onClick={() => setIsUserDropdownOpen(false)}
-                      className="block px-4 py-3 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-t-lg transition"
-                    >
-                      Profile
-                    </Link>
-                    <Link
-                      href="/settings"
-                      onClick={() => setIsUserDropdownOpen(false)}
-                      className="block px-4 py-3 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition"
-                    >
-                      Settings
-                    </Link>
-                    <button
-                      onClick={() => {
-                        logout();
-                        setIsUserDropdownOpen(false);
-                      }}
-                      className="w-full text-left px-4 py-3 text-red-600 dark:text-red-400 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-b-lg transition"
-                    >
-                      Logout
-                    </button>
+                  <div className="absolute right-0 mt-3 w-56 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-700 z-50 overflow-hidden animate-fadeIn">
+                    <div className="py-2">
+                      <Link
+                        href="/profile"
+                        onClick={() => setIsUserDropdownOpen(false)}
+                        className="flex items-center gap-3 px-5 py-3 text-slate-800 dark:text-slate-100 hover:bg-emerald-50 dark:hover:bg-slate-700/60 text-base font-medium transition group"
+                      >
+                        <span className="material-symbols-outlined text-xl text-emerald-500 group-hover:scale-110 transition">person</span>
+                        Profile
+                      </Link>
+                      <Link
+                        href="/settings"
+                        onClick={() => setIsUserDropdownOpen(false)}
+                        className="flex items-center gap-3 px-5 py-3 text-slate-800 dark:text-slate-100 hover:bg-emerald-50 dark:hover:bg-slate-700/60 text-base font-medium transition group"
+                      >
+                        <span className="material-symbols-outlined text-xl text-emerald-500 group-hover:scale-110 transition">settings</span>
+                        Settings
+                      </Link>
+                    </div>
+                    <div className="border-t border-slate-100 dark:border-slate-700">
+                      <button
+                        onClick={() => {
+                          logout();
+                          setIsUserDropdownOpen(false);
+                        }}
+                        className="flex items-center gap-3 w-full text-left px-5 py-3 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 text-base font-semibold transition group"
+                      >
+                        <span className="material-symbols-outlined text-xl text-red-400 group-hover:scale-110 transition">logout</span>
+                        Logout
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

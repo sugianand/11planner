@@ -173,14 +173,7 @@ export default function SchedulePage() {
           </div>
         )}
 
-        {/* Debug Info */}
-        {process.env.NODE_ENV === "development" && (
-          <div className="bg-blue-50/80 dark:bg-blue-900/20 border border-blue-200/60 dark:border-blue-800/60 rounded-2xl p-4 mb-6 text-xs">
-            <p className="text-blue-800 dark:text-blue-200">
-              <strong>Debug:</strong> userId={userId}, pending_tasks={pendingTasks.length}, loading={loading}
-            </p>
-          </div>
-        )}
+
 
         {scheduleStats && (
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">

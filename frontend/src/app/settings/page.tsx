@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
+import { useRef } from "react";
+// removed duplicate import of supabase
 import { useTheme } from "@/contexts/ThemeContext";
 import { useNotification } from "@/contexts/NotificationContext";
 import Footer from "@/components/Footer";
@@ -41,9 +43,19 @@ const readStoredNumber = (key: string, fallback: number): number => {
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const [isMounted, setIsMounted] = useState(false);
+  const [user, setUser] = useState<any>(null);
   useEffect(() => {
     setIsMounted(true);
-}, []);
+    supabase.auth.getUser().then(({ data }) => setUser(data?.user));
+  }, []);
+
+  // Remove collapsible section state
+
+  // New: Notification sound toggle
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  // New: Data export/import (dummy handlers)
+  const handleExport = () => alert("Exported data!");
+  const handleImport = () => alert("Import dialog!");
   const {
     notificationsEnabled,
     setNotificationsEnabled,
@@ -211,285 +223,177 @@ export default function SettingsPage() {
     <div className="min-h-screen relative">
       <style>{sliderStyles}</style>
       <div className="fixed inset-0 bg-focus-light dark:bg-focus-dark bg-cover bg-center -z-20"></div>
-
-
-      <div className="p-6">
-        <div className="max-w-3xl mx-auto">
-
-          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-3xl p-8 mb-6 shadow-sm border border-white/40 dark:border-slate-700/40">
-            <div className="mb-8 border-b border-slate-200 dark:border-slate-700/50 pb-6">
-              <h1 className="text-4xl font-bold text-slate-900 dark:text-white">Settings</h1>
-              <p className="text-slate-600 dark:text-slate-300 mt-2">Customize your 11Planner experience</p>
-            </div>
-
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">Appearance</h2>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-3">
-                  Theme
-                </label>
-                <div className="flex gap-4">
-                  <label className="flex items-center cursor-pointer">
-                    <input
-                      type="radio"
-                      name="theme"
-                      value="light"
-                      checked={theme === "light"}
-                      onChange={(e) => handleThemeChange(e.target.value as Theme)}
-                      className="w-4 h-4 accent-emerald-600"
-                    />
-                    <span className="ml-3 text-slate-900 dark:text-white">Light</span>
-                  </label>
-
-                  <label className="flex items-center cursor-pointer">
-                    <input
-                      type="radio"
-                      name="theme"
-                      value="dark"
-                      checked={theme === "dark"}
-                      onChange={(e) => handleThemeChange(e.target.value as Theme)}
-                      className="w-4 h-4 accent-emerald-600"
-                    />
-                    <span className="ml-3 text-slate-900 dark:text-white">Dark</span>
-                  </label>
-
-                  <label className="flex items-center cursor-pointer">
-                    <input
-                      type="radio"
-                      name="theme"
-                      value="auto"
-                      checked={theme === "auto"}
-                      onChange={(e) => handleThemeChange(e.target.value as Theme)}
-                      className="w-4 h-4 accent-emerald-600"
-                    />
-                    <span className="ml-3 text-slate-900 dark:text-white">Auto</span>
-                  </label>
-                </div>
+      <div className="p-4">
+        <div className="max-w-xl mx-auto">
+          <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-0 overflow-hidden">
+            {/* User Info */}
+            <div className="flex items-center gap-4 px-6 pt-7 pb-4 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-emerald-50/80 dark:from-slate-800/80 to-transparent">
+              <div className="w-14 h-14 rounded-full bg-emerald-100 dark:bg-slate-700 flex items-center justify-center text-2xl font-bold text-emerald-600 dark:text-emerald-300 border-2 border-emerald-200 dark:border-emerald-700 shadow">
+                {user?.email ? user.email.charAt(0).toUpperCase() : "U"}
               </div>
-
-              <div className="p-4 bg-slate-100 dark:bg-slate-700 rounded-lg">
-                <p className="text-sm text-slate-600 dark:text-slate-200">
-                  Current theme: <span className="font-semibold text-slate-900 dark:text-white">{theme}</span>
-                </p>
+              <div>
+                <div className="font-semibold text-lg text-slate-900 dark:text-white">{user?.email || "User"}</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">Account Settings</div>
               </div>
             </div>
-          </div>
+            <div className="px-6 pt-4 pb-2 border-b border-slate-100 dark:border-slate-800">
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Settings</h1>
+              <p className="text-slate-600 dark:text-slate-300 mt-1 text-sm">Customize your 11Planner experience</p>
+            </div>
 
-          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-3xl p-8 mb-6 shadow-sm border border-white/40 dark:border-slate-700/40">
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">Productivity</h2>
+            {/* Appearance & Theme Section */}
+            <div className="px-6 pt-6 pb-6 border-b border-slate-100 dark:border-slate-800">
+              <div className="font-semibold text-lg text-slate-900 dark:text-white mb-2 flex items-center gap-2">
+                <span className="material-symbols-outlined text-emerald-500">palette</span>
+                Appearance & Theme
+              </div>
+              <div className="flex flex-wrap gap-4 items-center mb-3">
+                <button onClick={() => setTheme("light")} className={`w-10 h-10 rounded-full border-2 ${theme === "light" ? "border-emerald-500 ring-2 ring-emerald-200" : "border-slate-200 dark:border-slate-700"} bg-gradient-to-br from-white to-slate-100 dark:from-slate-200 dark:to-slate-400 shadow-inner`} title="Light mode"></button>
+                <button onClick={() => setTheme("dark")} className={`w-10 h-10 rounded-full border-2 ${theme === "dark" ? "border-emerald-500 ring-2 ring-emerald-200" : "border-slate-200 dark:border-slate-700"} bg-gradient-to-br from-slate-800 to-slate-900 shadow-inner`} title="Dark mode"></button>
+                <button onClick={() => setTheme("auto")} className={`w-10 h-10 rounded-full border-2 ${theme === "auto" ? "border-emerald-500 ring-2 ring-emerald-200" : "border-slate-200 dark:border-slate-700"} bg-gradient-to-br from-slate-100 to-slate-900 shadow-inner flex items-center justify-center text-xs text-slate-700 dark:text-slate-200`} title="Auto"><span className="material-symbols-outlined">auto_mode</span></button>
+                {/* Add more color themes here */}
+                <button onClick={() => setTheme("emerald")}
+                  className={`w-10 h-10 rounded-full border-2 ${theme === "emerald" ? "border-emerald-500 ring-2 ring-emerald-200" : "border-slate-200 dark:border-slate-700"} bg-gradient-to-br from-emerald-200 to-emerald-500 shadow-inner`}
+                  title="Emerald theme"></button>
+                <button onClick={() => setTheme("ocean")}
+                  className={`w-10 h-10 rounded-full border-2 ${theme === "ocean" ? "border-cyan-500 ring-2 ring-cyan-200" : "border-slate-200 dark:border-slate-700"} bg-gradient-to-br from-cyan-200 to-cyan-600 shadow-inner`}
+                  title="Ocean theme"></button>
+                <button onClick={() => setTheme("rose")}
+                  className={`w-10 h-10 rounded-full border-2 ${theme === "rose" ? "border-rose-500 ring-2 ring-rose-200" : "border-slate-200 dark:border-slate-700"} bg-gradient-to-br from-rose-200 to-rose-500 shadow-inner`}
+                  title="Rose theme"></button>
+                <button onClick={() => setTheme("slate")}
+                  className={`w-10 h-10 rounded-full border-2 ${theme === "slate" ? "border-slate-500 ring-2 ring-slate-200" : "border-slate-200 dark:border-slate-700"} bg-gradient-to-br from-slate-200 to-slate-500 shadow-inner`}
+                  title="Slate theme"></button>
+              </div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">Current: <span className="font-semibold text-slate-900 dark:text-white">{theme}</span></div>
+            </div>
+            {/* Removed leftover dropdown/collapsible code for Appearance section */}
 
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">
-                  Daily Study Limit (hours)
-                </label>
+            {/* Productivity Section */}
+            <button className="w-full flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700/40 hover:bg-slate-50 dark:hover:bg-slate-800 transition" onClick={() => toggleSection("productivity")}> 
+              <span className="font-semibold text-slate-900 dark:text-white">Productivity</span>
+              <span className={`material-symbols-outlined transition-transform ${openSection === "productivity" ? "rotate-180" : ""}`}>expand_more</span>
+            </button>
+            {openSection === "productivity" && (
+              <div className="px-6 pb-4 pt-2 space-y-4">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">Daily Study Limit (hours)</label>
                 <div className="flex items-center gap-4">
-                  <input
-                    type="range"
-                    min="1"
-                    max="12"
-                    value={dailyLimit}
-                    onChange={(e) => handleDailyLimitChange(parseInt(e.target.value))}
-                    className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"
-                  />
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      min={1}
-                      max={12}
-                      value={dailyLimit}
-                      onChange={(e) =>
-                        handleDailyLimitChange(
-                          Math.min(12, Math.max(1, parseInt(e.target.value) || 1))
-                        )
-                      }
-                      className="w-20 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-right text-slate-900 dark:text-white"
-                    />
-                    <span className="text-sm text-slate-500 dark:text-slate-400">hours</span>
-                  </div>
+                  <input type="range" min="1" max="12" value={dailyLimit} onChange={(e) => handleDailyLimitChange(parseInt(e.target.value))} className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer" />
+                  <input type="number" min={1} max={12} value={dailyLimit} onChange={(e) => handleDailyLimitChange(Math.min(12, Math.max(1, parseInt(e.target.value) || 1)))} className="w-16 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-right text-slate-900 dark:text-white" />
+                  <span className="text-xs text-slate-500 dark:text-slate-400">hours</span>
                 </div>
                 <div className="flex items-center justify-between mt-2 text-xs">
-                  <p className="text-slate-500 dark:text-slate-400">
-                    Cap schedule generation at this number of hours per day
-                  </p>
-                  <span className={isDailyLimitDirty ? "text-amber-600" : "text-emerald-600"}>
-                    {isDailyLimitDirty ? "Not saved" : "Saved"}
-                  </span>
+                  <p className="text-slate-500 dark:text-slate-400">Cap schedule generation at this number of hours per day</p>
+                  <span className={isDailyLimitDirty ? "text-amber-600" : "text-emerald-600"}>{isDailyLimitDirty ? "Not saved" : "Saved"}</span>
                 </div>
               </div>
+            )}
+
+            {/* Notifications Section */}
+            {/* Notification Sound Toggle */}
+            <div className="px-6 pt-6 pb-6 border-b border-slate-100 dark:border-slate-800 flex items-center gap-4">
+              <span className="material-symbols-outlined text-emerald-500">volume_up</span>
+              <span className="flex-1 font-medium text-slate-900 dark:text-white">Notification Sound</span>
+              <button onClick={() => setSoundEnabled(!soundEnabled)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${soundEnabled ? "bg-emerald-600" : "bg-slate-300"}`}>
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${soundEnabled ? "translate-x-6" : "translate-x-1"}`} />
+              </button>
+              <span className="text-xs text-slate-500 dark:text-slate-400">{soundEnabled ? "On" : "Off"}</span>
             </div>
-          </div>
-
-          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-3xl p-8 mb-6 shadow-sm border border-white/40 dark:border-slate-700/40">
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">Notifications</h2>
-
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-slate-900 dark:text-white">Push Notifications</p>
-                  <p className="text-sm text-slate-600 dark:text-slate-300">
-                    Receive alerts about upcoming deadlines
-                  </p>
+            <button className="w-full flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700/40 hover:bg-slate-50 dark:hover:bg-slate-800 transition" onClick={() => toggleSection("notifications")}> 
+              <span className="font-semibold text-slate-900 dark:text-white">Notifications</span>
+              <span className={`material-symbols-outlined transition-transform ${openSection === "notifications" ? "rotate-180" : ""}`}>expand_more</span>
+            </button>
+            {openSection === "notifications" && (
+              <div className="px-6 pb-4 pt-2 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-slate-900 dark:text-white">Push Notifications</p>
+                    <p className="text-xs text-slate-600 dark:text-slate-300">Receive alerts about upcoming deadlines</p>
+                  </div>
+                  <button onClick={() => handleNotificationChange(!notificationsEnabled)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${notificationsEnabled ? "bg-emerald-600" : "bg-slate-300"}`}> <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${notificationsEnabled ? "translate-x-6" : "translate-x-1"}`} /> </button>
                 </div>
-                <button
-                  onClick={() => handleNotificationChange(!notificationsEnabled)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${notificationsEnabled ? "bg-emerald-600" : "bg-slate-300"
-                    }`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${notificationsEnabled ? "translate-x-6" : "translate-x-1"
-                      }`}
-                  />
-                </button>
-              </div>
-
-              <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium text-slate-900 dark:text-white">Browser Permission</p>
-                    <p className="text-sm text-slate-600 dark:text-slate-300">
-                      {isMounted ? permissionLabel : "Loading..."}
-                    </p>
+                    <p className="text-xs text-slate-600 dark:text-slate-300">{isMounted ? permissionLabel : "Loading..."}</p>
                   </div>
-                  <button
-                    onClick={requestPermission}
-                    disabled={!isMounted || permission === "denied" || permission === "unsupported"}
-                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${isMounted && permission === "granted"
-                      ? "bg-emerald-100 text-emerald-700"
-                      : "bg-slate-200 text-slate-700 hover:bg-slate-300"
-                      }`}
-                  >
-                    {permissionButtonLabel}
-                  </button>
+                  <button onClick={requestPermission} disabled={!isMounted || permission === "denied" || permission === "unsupported"} className={`px-4 py-2 rounded-lg text-xs font-semibold transition ${isMounted && permission === "granted" ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-700 hover:bg-slate-300"}`}>{permissionButtonLabel}</button>
                 </div>
-              </div>
-
-              <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">
-                  Reminder lead time (hours)
-                </label>
-                <div className="flex items-center gap-4">
-                  <input
-                    type="range"
-                    min="1"
-                    max="168"
-                    value={reminderLeadHours}
-                    onChange={(e) => setReminderLeadHours(parseInt(e.target.value))}
-                    className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"
-                  />
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      min={1}
-                      max={168}
-                      value={reminderLeadHours}
-                      onChange={(e) =>
-                        setReminderLeadHours(
-                          Math.min(168, Math.max(1, parseInt(e.target.value) || 1))
-                        )
-                      }
-                      className="w-20 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-right text-slate-900 dark:text-white"
-                    />
-                    <span className="text-sm text-slate-500 dark:text-slate-400">hours</span>
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-200 mb-1">Reminder lead time (hours)</label>
+                  <div className="flex items-center gap-4">
+                    <input type="range" min="1" max="168" value={reminderLeadHours} onChange={(e) => setReminderLeadHours(parseInt(e.target.value))} className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer" />
+                    <input type="number" min={1} max={168} value={reminderLeadHours} onChange={(e) => setReminderLeadHours(Math.min(168, Math.max(1, parseInt(e.target.value) || 1)))} className="w-16 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-right text-slate-900 dark:text-white" />
+                    <span className="text-xs text-slate-500 dark:text-slate-400">hours</span>
+                  </div>
+                  <div className="flex items-center justify-between mt-2 text-xs">
+                    <p className="text-slate-500 dark:text-slate-400">How far in advance to remind you about deadlines</p>
+                    <span className={isReminderDirty ? "text-amber-600" : "text-emerald-600"}>{isReminderDirty ? "Not saved" : "Saved"}</span>
                   </div>
                 </div>
-                <div className="flex items-center justify-between mt-2 text-xs">
-                  <p className="text-slate-500 dark:text-slate-400">
-                    How far in advance to remind you about deadlines
-                  </p>
-                  <span className={isReminderDirty ? "text-amber-600" : "text-emerald-600"}>
-                    {isReminderDirty ? "Not saved" : "Saved"}
-                  </span>
-                </div>
-              </div>
-
-              <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium text-slate-900 dark:text-white">Email Updates</p>
-                    <p className="text-sm text-slate-600 dark:text-slate-300">
-                      Get email reminders for important tasks
-                    </p>
+                    <p className="text-xs text-slate-600 dark:text-slate-300">Get email reminders for important tasks</p>
                   </div>
-                  <button
-                    onClick={() => handleEmailUpdatesChange(!emailUpdates)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${emailUpdates ? "bg-emerald-600" : "bg-slate-300"
-                      }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${emailUpdates ? "translate-x-6" : "translate-x-1"
-                        }`}
-                    />
-                  </button>
+                  <button onClick={() => handleEmailUpdatesChange(!emailUpdates)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${emailUpdates ? "bg-emerald-600" : "bg-slate-300"}`}> <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${emailUpdates ? "translate-x-6" : "translate-x-1"}`} /> </button>
                 </div>
-              </div>
-
-              <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium text-slate-900 dark:text-white">Weekly Report</p>
-                    <p className="text-sm text-slate-600 dark:text-slate-300">
-                      Receive a summary of your weekly progress
-                    </p>
+                    <p className="text-xs text-slate-600 dark:text-slate-300">Receive a summary of your weekly progress</p>
                   </div>
-                  <button
-                    onClick={() => handleWeeklyReportChange(!weeklyReport)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${weeklyReport ? "bg-emerald-600" : "bg-slate-300"
-                      }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${weeklyReport ? "translate-x-6" : "translate-x-1"
-                        }`}
-                    />
-                  </button>
+                  <button onClick={() => handleWeeklyReportChange(!weeklyReport)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${weeklyReport ? "bg-emerald-600" : "bg-slate-300"}`}> <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${weeklyReport ? "translate-x-6" : "translate-x-1"}`} /> </button>
                 </div>
               </div>
+            )}
+
+            {/* Data Export/Import Section */}
+            <div className="px-6 pt-6 pb-6 border-b border-slate-100 dark:border-slate-800 flex items-center gap-4">
+              <span className="material-symbols-outlined text-emerald-500">download</span>
+              <button onClick={handleExport} className="font-medium text-emerald-700 dark:text-emerald-300 hover:underline">Export Data</button>
+              <span className="material-symbols-outlined text-emerald-500 ml-6">upload</span>
+              <button onClick={handleImport} className="font-medium text-emerald-700 dark:text-emerald-300 hover:underline">Import Data</button>
             </div>
-          </div>
-
-          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-3xl p-8 mb-6 shadow-sm border border-white/40 dark:border-slate-700/40">
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">Account</h2>
-
-            <div className="space-y-4">
-              <button 
-                onClick={handleChangePassword}
-                className="w-full text-left px-4 py-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition">
-                <p className="font-medium text-slate-900 dark:text-white">Change Password</p>
-                <p className="text-sm text-slate-600 dark:text-slate-300">Update your login password</p>
-              </button>
-
-              <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition">
-                <p className="font-medium text-slate-900 dark:text-white">Privacy & Security</p>
-                <p className="text-sm text-slate-600 dark:text-slate-300">Manage your privacy settings</p>
-              </button>
-
-              <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800 transition">
-                <p className="font-medium text-red-600">Delete Account</p>
-                <p className="text-sm text-red-600">Permanently delete your account</p>
-              </button>
-            </div>
-          </div>
-
-          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-3xl p-6 mb-6 shadow-sm border border-white/40 dark:border-slate-700/40">
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between text-sm text-slate-700 dark:text-slate-200">
-                <span>{hasChanges ? "Saving..." : "All changes saved"}</span>
-                {lastSavedAt && <span>Last saved at {lastSavedAt}</span>}
-              </div>
-              <p className="text-xs text-slate-600 dark:text-slate-400">
-                Changes are saved automatically as you update settings.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex gap-3">
-            <button
-              onClick={handleResetDefaults}
-              className="bg-slate-300 hover:bg-slate-400 text-slate-900 font-semibold py-3 px-6 rounded-lg transition flex-1"
-            >
-              Reset to Defaults
+            <button className="w-full flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700/40 hover:bg-slate-50 dark:hover:bg-slate-800 transition" onClick={() => toggleSection("account")}> 
+              <span className="font-semibold text-slate-900 dark:text-white">Account</span>
+              <span className={`material-symbols-outlined transition-transform ${openSection === "account" ? "rotate-180" : ""}`}>expand_more</span>
             </button>
+            {openSection === "account" && (
+              <div className="px-6 pb-4 pt-2 space-y-3">
+                <button onClick={handleChangePassword} className="w-full text-left px-4 py-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition">
+                  <p className="font-medium text-slate-900 dark:text-white">Change Password</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-300">Update your login password</p>
+                </button>
+                <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition">
+                  <p className="font-medium text-slate-900 dark:text-white">Privacy & Security</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-300">Manage your privacy settings</p>
+                </button>
+                <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800 transition">
+                  <p className="font-medium text-red-600">Delete Account</p>
+                  <p className="text-xs text-red-600">Permanently delete your account</p>
+                </button>
+              </div>
+            )}
+          </div>
+
+            {/* Support/FAQ Section */}
+            <div className="px-6 pt-6 pb-6 border-b border-slate-100 dark:border-slate-800 flex items-center gap-4">
+              <span className="material-symbols-outlined text-emerald-500">help</span>
+              <a href="/support" className="font-medium text-emerald-700 dark:text-emerald-300 hover:underline">Support</a>
+              <span className="material-symbols-outlined text-emerald-500 ml-6">quiz</span>
+              <a href="/faq" className="font-medium text-emerald-700 dark:text-emerald-300 hover:underline">FAQ</a>
+            </div>
+
+            {/* App Info Section */}
+            <div className="px-6 pt-6 pb-6 border-b border-slate-100 dark:border-slate-800 flex items-center gap-4">
+              <span className="material-symbols-outlined text-emerald-500">info</span>
+              <span className="flex-1 text-xs text-slate-500 dark:text-slate-400">11Planner v1.0.0 &mdash; &copy; 2026</span>
+              <a href="/about" className="font-medium text-emerald-700 dark:text-emerald-300 hover:underline">About</a>
+            </div>
+          <div className="sticky bottom-0 left-0 right-0 z-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur border-t border-slate-200 dark:border-slate-700/40 px-6 py-3 flex items-center justify-between gap-4 mt-8 rounded-b-2xl shadow-sm">
+            <span className="text-xs text-slate-700 dark:text-slate-200">{hasChanges ? "Saving..." : "All changes saved"} {lastSavedAt && <span className="ml-2">Last saved at {lastSavedAt}</span>}</span>
+            <button onClick={handleResetDefaults} className="bg-slate-300 hover:bg-slate-400 text-slate-900 font-semibold py-2 px-5 rounded-lg transition">Reset to Defaults</button>
           </div>
         </div>
       </div>
