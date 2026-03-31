@@ -87,15 +87,17 @@ export default function Navigation() {
                 Home
               </Link>
 
-              <Link
-                href="/demo"
-                className={`font-medium transition ${isActive("/demo")
-                  ? "text-emerald-600 dark:text-emerald-400 border-b-2 border-b-emerald-600 dark:border-b-emerald-400"
-                  : "text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400"
-                  }`}
-              >
-                Demo
-              </Link>
+              {!isLoggedIn && (
+                <Link
+                  href="/demo"
+                  className={`font-medium transition ${isActive("/demo")
+                    ? "text-emerald-600 dark:text-emerald-400 border-b-2 border-b-emerald-600 dark:border-b-emerald-400"
+                    : "text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400"
+                    }`}
+                >
+                  Demo
+                </Link>
+              )}
 
               {!isLoggedIn && (
                 <Link
@@ -213,16 +215,18 @@ export default function Navigation() {
                 Home
               </Link>
 
-              <Link
-                href="/demo"
-                className={`block font-medium py-2 px-3 rounded transition ${isActive("/demo")
-                  ? "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20"
-                  : "text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-700/30"
-                  }`}
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Demo
-              </Link>
+              {!isLoggedIn && (
+                <Link
+                  href="/demo"
+                  className={`block font-medium py-2 px-3 rounded transition ${isActive("/demo")
+                    ? "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20"
+                    : "text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-700/30"
+                    }`}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Demo
+                </Link>
+              )}
 
               {isLoggedIn && (
                 <>
