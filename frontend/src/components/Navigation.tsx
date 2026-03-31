@@ -53,7 +53,7 @@ export default function Navigation() {
       <div className="max-w-6xl mx-auto px-4 md:px-6 h-16 md:h-16">
         <div className="flex items-center justify-between h-full">
           {/* Logo */}
-          <div className="relative flex items-center h-full w-fit">
+          <div className="relative flex items-center h-full w-fit -mr-8">
             <Link
               href="/"
               className="absolute inset-0 z-10"
@@ -165,7 +165,7 @@ export default function Navigation() {
           </div>
 
           {/* User Dropdown / Login Button - Desktop */}
-          <div className="hidden lg:flex ml-auto items-center">
+          <div className="hidden lg:flex ml-auto items-center pr-2">
             {isLoggedIn ? (
               <div className="relative">
                 <button
