@@ -7,21 +7,29 @@ import { supabase } from "@/lib/supabaseClient";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-
-
-
 export default function Navigation() {
-
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+  const [userInitials, setUserInitials] = useState("");
   const router = useRouter();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setIsLoggedIn(!!session);
-    })
+      if (session) {
+        const email = session.user?.email || "";
+        const initial = email.charAt(0).toUpperCase();
+        setUserInitials(initial);
+      }
+    });
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       setIsLoggedIn(!!session);
+      if (session) {
+        const email = session.user?.email || "";
+        const initial = email.charAt(0).toUpperCase();
+        setUserInitials(initial);
+      }
     });
 
     return () => {
@@ -34,10 +42,7 @@ export default function Navigation() {
     router.push("/auth");
   }
 
-
-
   const pathname = usePathname();
-
   const isActive = (path: string) => pathname === path;
 
   return (
@@ -154,40 +159,50 @@ export default function Navigation() {
                   >
                     Schedule
                   </Link>
-
-                  <Link
-                    href="/profile"
-                    className={`font-medium transition ${isActive("/profile")
-                      ? "text-emerald-600 dark:text-emerald-400 border-b-2 border-b-emerald-600 dark:border-b-emerald-400"
-                      : "text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400"
-                      }`}
-                  >
-                    Profile
-                  </Link>
-
-                  <Link
-                    href="/settings"
-                    className={`font-medium transition ${isActive("/settings")
-                      ? "text-emerald-600 dark:text-emerald-400 border-b-2 border-b-emerald-600 dark:border-b-emerald-400"
-                      : "text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400"
-                      }`}
-                  >
-                    Settings
-                  </Link>
                 </>
               )}
             </div>
           </div>
 
-          {/* Logout/Login Button - Desktop */}
-          <div className="hidden lg:flex ml-auto">
+          {/* User Dropdown / Login Button - Desktop */}
+          <div className="hidden lg:flex ml-auto items-center">
             {isLoggedIn ? (
-              <button
-                onClick={logout}
-                className="font-medium text-slate-700 dark:text-slate-300 hover:text-red-600 transition px-3"
-              >
-                Logout
-              </button>
+              <div className="relative">
+                <button
+                  onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
+                  className="flex items-center justify-center w-10 h-10 rounded-full bg-emerald-600 dark:bg-emerald-500 text-white font-semibold hover:bg-emerald-700 dark:hover:bg-emerald-600 transition"
+                >
+                  {userInitials}
+                </button>
+                
+                {isUserDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-700 rounded-lg shadow-lg border border-slate-200 dark:border-slate-600 z-50">
+                    <Link
+                      href="/profile"
+                      onClick={() => setIsUserDropdownOpen(false)}
+                      className="block px-4 py-3 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-t-lg transition"
+                    >
+                      Profile
+                    </Link>
+                    <Link
+                      href="/settings"
+                      onClick={() => setIsUserDropdownOpen(false)}
+                      className="block px-4 py-3 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition"
+                    >
+                      Settings
+                    </Link>
+                    <button
+                      onClick={() => {
+                        logout();
+                        setIsUserDropdownOpen(false);
+                      }}
+                      className="w-full text-left px-4 py-3 text-red-600 dark:text-red-400 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-b-lg transition"
+                    >
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : (
               <Link
                 href="/auth"
@@ -277,43 +292,43 @@ export default function Navigation() {
                   >
                     Schedule
                   </Link>
-
-                  <Link
-                    href="/profile"
-                    className={`block font-medium py-2 px-3 rounded transition ${isActive("/profile")
-                      ? "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20"
-                      : "text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-700/30"
-                      }`}
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    Profile
-                  </Link>
-
-                  <Link
-                    href="/settings"
-                    className={`block font-medium py-2 px-3 rounded transition ${isActive("/settings")
-                      ? "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20"
-                      : "text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-700/30"
-                      }`}
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    Settings
-                  </Link>
                 </>
               )}
 
               {/* Mobile Logout/Login */}
               <div className="border-t border-white/20 dark:border-slate-700/40 pt-3 mt-2">
                 {isLoggedIn ? (
-                  <button
-                    onClick={() => {
-                      logout();
-                      setIsMenuOpen(false);
-                    }}
-                    className="block w-full text-left font-medium text-slate-700 dark:text-slate-300 hover:text-red-600 py-2 px-3 rounded transition hover:bg-slate-100 dark:hover:bg-slate-700/30"
-                  >
-                    Logout
-                  </button>
+                  <>
+                    <Link
+                      href="/profile"
+                      className={`block font-medium py-2 px-3 rounded transition ${isActive("/profile")
+                        ? "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20"
+                        : "text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-700/30"
+                        }`}
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Profile
+                    </Link>
+                    <Link
+                      href="/settings"
+                      className={`block font-medium py-2 px-3 rounded transition ${isActive("/settings")
+                        ? "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20"
+                        : "text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-700/30"
+                        }`}
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Settings
+                    </Link>
+                    <button
+                      onClick={() => {
+                        logout();
+                        setIsMenuOpen(false);
+                      }}
+                      className="block w-full text-left font-medium text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 py-2 px-3 rounded transition hover:bg-slate-100 dark:hover:bg-slate-700/30"
+                    >
+                      Logout
+                    </button>
+                  </>
                 ) : (
                   <Link
                     href="/auth"
