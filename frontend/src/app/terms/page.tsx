@@ -4,73 +4,112 @@ import Link from "next/link";
 import Footer from "@/components/Footer";
 
 export default function TermsPage() {
+  const highlights = [
+    {
+      icon: "check_circle",
+      title: "Clear Usage Rules",
+      body: "Use 11Planner for personal academic planning and responsible account behavior."
+    },
+    {
+      icon: "lock_person",
+      title: "You Own Your Content",
+      body: "Your coursework and planning inputs remain yours."
+    },
+    {
+      icon: "gavel",
+      title: "Fair Enforcement",
+      body: "Accounts may be restricted only for misuse, abuse, or policy violations."
+    }
+  ];
+
   return (
     <div className="min-h-screen relative overflow-hidden transition-colors duration-500 pb-0">
       <div className="fixed inset-0 bg-focus-light dark:bg-focus-dark -z-20"></div>
 
-      <div className="max-w-3xl mx-auto p-6 lg:p-10 mt-16 mb-24">
-        <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-sm p-6 md:p-10 border border-white/40 dark:border-slate-700/40 space-y-6">
+      <div className="max-w-4xl mx-auto p-6 lg:p-10 mt-16 mb-24">
+        <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-sm p-6 md:p-10 border border-white/40 dark:border-slate-700/40 space-y-8">
           <div className="mb-8 border-b border-slate-200/50 dark:border-slate-700/50 pb-6">
             <p className="text-sm font-semibold uppercase tracking-widest text-emerald-600">Terms</p>
             <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight mt-2">
               Simple terms for a calmer workflow.
             </h1>
             <p className="text-slate-600 dark:text-slate-300 mt-3 font-medium">
-              Effective date: February 6, 2026
+              Effective date: March 30, 2026
+            </p>
+            <p className="text-slate-700 dark:text-slate-300 mt-4 leading-relaxed max-w-3xl">
+              These Terms explain acceptable use, account responsibilities, and legal boundaries
+              for using 11Planner.
             </p>
           </div>
 
-          <section className="space-y-3">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Acceptance of terms</h2>
+          <section className="grid md:grid-cols-3 gap-4">
+            {highlights.map((item) => (
+              <article
+                key={item.title}
+                className="rounded-2xl bg-white/70 dark:bg-slate-800/65 border border-white/60 dark:border-slate-700/50 p-5"
+              >
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 flex items-center justify-center mb-3">
+                  <span className="material-symbols-outlined">{item.icon}</span>
+                </div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white">{item.title}</h2>
+                <p className="text-slate-700 dark:text-slate-300 mt-2 leading-relaxed">{item.body}</p>
+              </article>
+            ))}
+          </section>
+
+          <section className="space-y-4">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Acceptance of terms</h2>
             <p className="text-slate-700 dark:text-slate-300">
-              By using 11Planner, you agree to these Terms of Service and our Privacy Policy.
-              If you do not agree, do not use the service.
+              By using 11Planner, you agree to these Terms and our
+              <Link href="/privacy" className="font-semibold text-emerald-700 dark:text-emerald-400 hover:underline"> Privacy Policy</Link>.
+              If you do not agree, please do not use the service.
             </p>
           </section>
 
-          <section className="space-y-3">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Use of the service</h2>
+          <section className="space-y-4">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Use of the service</h2>
             <ul className="space-y-2 text-slate-700 dark:text-slate-300">
               <li>Use the app for personal academic planning and productivity.</li>
               <li>Do not attempt to disrupt, reverse engineer, or abuse the service.</li>
               <li>Keep your account details secure and accurate.</li>
+              <li>Follow applicable laws and institutional policies while using the platform.</li>
             </ul>
           </section>
 
-          <section className="space-y-3">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Content and ownership</h2>
+          <section className="space-y-4">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Content and ownership</h2>
             <p className="text-slate-700 dark:text-slate-300">
               You retain ownership of the content you create. You grant us a limited license
               to store and process it only for providing the service.
             </p>
           </section>
 
-          <section className="space-y-3">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Availability</h2>
+          <section className="space-y-4">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Availability and updates</h2>
             <p className="text-slate-700 dark:text-slate-300">
               We aim for reliable uptime but do not guarantee uninterrupted access. Features
               may change or be removed as the product evolves.
             </p>
           </section>
 
-          <section className="space-y-3">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Termination</h2>
+          <section className="space-y-4">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Termination and account actions</h2>
             <p className="text-slate-700 dark:text-slate-300">
               You can stop using the service at any time. We may suspend accounts that
               violate these terms or harm the platform or other users.
             </p>
           </section>
 
-          <section className="space-y-3">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Disclaimer</h2>
+          <section className="space-y-4">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Disclaimer and limitation</h2>
             <p className="text-slate-700 dark:text-slate-300">
               11Planner is provided &quot;as is&quot; without warranties. We are not responsible for
               missed deadlines or outcomes based on scheduling suggestions.
             </p>
           </section>
 
-          <section className="space-y-3">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Third-party rights notice</h2>
+          <section className="space-y-4 rounded-2xl bg-white/55 dark:bg-slate-800/45 border border-white/60 dark:border-slate-700/45 p-5">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Third-party rights notice</h2>
             <p className="text-slate-700 dark:text-slate-300">
               Stranger Things and related marks are trademarks and copyrights of Netflix, Inc. 11Planner
               is not affiliated with Netflix. All third-party trademarks and copyrights remain the property
@@ -78,12 +117,18 @@ export default function TermsPage() {
             </p>
           </section>
 
-          <section className="space-y-3">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Contact</h2>
+          <section className="space-y-4 rounded-2xl bg-emerald-50/70 dark:bg-emerald-900/15 border border-emerald-100 dark:border-emerald-800/30 p-5">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Questions about terms</h2>
             <p className="text-slate-700 dark:text-slate-300">
               Questions about these terms? Email support@11planner.com.
             </p>
+            <p className="text-slate-700 dark:text-slate-300">
+              You can also visit{' '}
+              <Link href="/support" className="font-semibold text-emerald-700 dark:text-emerald-400 hover:underline">/support</Link>{' '}
+              for troubleshooting and contact guidance.
+            </p>
           </section>
+
           <div className="pt-4 border-t border-slate-200/70 dark:border-slate-700/70">
             <Link
               href="/"
