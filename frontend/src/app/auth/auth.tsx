@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import "./auth.css";
 import { supabase } from "@/lib/supabaseClient";
 
-type Mode = "login" | "register";
+type Mode = "login" | "register" | "forgot-password";
 
 type FormState = {
   loginEmail: string;
@@ -12,6 +12,7 @@ type FormState = {
   dob: string;
   password: string;
   confirmPassword: string;
+  resetEmail: string;
 };
 
 const initialForm: FormState = {
@@ -22,6 +23,7 @@ const initialForm: FormState = {
   dob: "",
   password: "",
   confirmPassword: "",
+  resetEmail: "",
 };
 
 export default function AuthPage() {
@@ -137,6 +139,28 @@ export default function AuthPage() {
     goToNextPage();
   }
 
+  async function sendPasswordResetEmail(): Promise<void> {
+    const email = form.resetEmail.trim();
+
+    if (!email) {
+      alert("Please enter your email address.");
+      return;
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/reset-password`,
+    });
+
+    if (error) {
+      alert(error.message ?? "Failed to send reset email");
+      return;
+    }
+
+    alert("Password reset email sent! Check your inbox for the reset link.");
+    setMode("login");
+    setForm(initialForm);
+  }
+
   async function logout(): Promise<void> {
     await supabase.auth.signOut();
     window.location.href = "/login";
@@ -148,7 +172,7 @@ export default function AuthPage() {
       <div className="auth-card">
         <div className="auth-title">Welcome to 11Planner</div>
 
-         {mode === "login" ? "Login" : "Register"}
+         {mode === "login" ? "Login" : mode === "forgot-password" ? "Reset Password" : "Register"}
 
 
         {mode === "login" ? (
@@ -173,8 +197,19 @@ export default function AuthPage() {
               Log in
             </button>
 
-            <div className="auth-footer">
-              <span>Don’t have an account?</span>
+            <div className="auth-footer">              <button
+                className="link-btn"
+                onClick={() => {
+                  console.log("Forgot Password clicked");
+                  setMode("forgot-password");
+                  setForm(initialForm);
+                }}
+              >
+                Forgot Password?
+              </button>
+            </div>
+
+            <div className="auth-footer">              <span>Don’t have an account?</span>
               <button
                 className="link-btn"
                 onClick={() => {
@@ -183,6 +218,35 @@ export default function AuthPage() {
                 }}
               >
                 Register
+              </button>
+            </div>
+          </>
+        ) : mode === "forgot-password" ? (
+          <>
+            <p style={{ fontSize: "14px", marginBottom: "20px" }}>
+              Enter your email address and we'll send you a link to reset your password.
+            </p>
+            <input
+              type="email"
+              name="resetEmail"
+              placeholder="Email"
+              value={form.resetEmail}
+              onChange={handleInputChange}
+            />
+
+            <button className="btn" onClick={sendPasswordResetEmail}>
+              Send Reset Link
+            </button>
+
+            <div className="auth-footer">
+              <button
+                className="link-btn"
+                onClick={() => {
+                  setMode("login");
+                  setForm(initialForm);
+                }}
+              >
+                Back to Login
               </button>
             </div>
           </>

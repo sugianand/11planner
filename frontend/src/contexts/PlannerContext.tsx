@@ -380,28 +380,7 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     async (id: string, assignment: Partial<Assignment>) => {
       try {
         setLoading(true);
-        // build update payload
-        const updatePayload: Record<string, unknown> = {};
-        if (assignment.title !== undefined) updatePayload.title = assignment.title;
-        if (assignment.course_id !== undefined) updatePayload.course_id = assignment.course_id || null;
-        if (assignment.deadline !== undefined) updatePayload.deadline = assignment.deadline;
-        if (assignment.description !== undefined) updatePayload.description = assignment.description || null;
-        if (assignment.priority !== undefined) updatePayload.priority = assignment.priority;
-        if (assignment.estimated_hours !== undefined) updatePayload.estimated_hours = assignment.estimated_hours;
-        if (assignment.status !== undefined) updatePayload.status = assignment.status;
-        if (assignment.completed !== undefined) {
-          updatePayload.completed = assignment.completed;
-          updatePayload.status = assignment.completed ? "completed" : "pending";
-        }
-        if (assignment.points !== undefined) updatePayload.points = assignment.points;
-        if (assignment.url !== undefined) updatePayload.url = assignment.url;
-
-        const { error: updateError } = await supabase
-          .from("assignments")
-          .update(updatePayload)
-          .eq("id", id);
-
-        if (updateError) throw updateError;
+        await assignmentAPI.update(id, assignment);
         setAssignments((prev) =>
           prev.map((a) => (a.id === id ? { ...a, ...assignment } : a))
         );

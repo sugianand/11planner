@@ -1,7 +1,10 @@
 import io
 import re
+import os
+import json
 from typing import Optional
 from pypdf import PdfReader
+import google.generativeai as genai
 
 COURSE_CODE_RE = re.compile(r"\b([A-Z]{2,6})\s?-?\s?(\d{3,4}[A-Z]?)\b", re.IGNORECASE)
 COURSE_CODE_TITLE_RE = re.compile(
@@ -95,6 +98,100 @@ def _extract_professor_name(value: str) -> Optional[str]:
     # Only return if it looks like a name (typically 2-3 words, no numbers)
     if name_part and len(name_part) > 2 and len(name_part) < 100 and not re.search(r"\d{4,}", name_part):
         return name_part
+    
+    return None
+
+
+def _extract_course_code_from_parens(line: str) -> Optional[str]:
+    """Extract course code from parenthetical format like (CS-101) or (CS 101)."""
+    # Look for patterns like (CS-101), (CS 101), (MATH-201), etc.
+    paren_match = re.search(r'\(([A-Z]{2,6})\s?-?\s?(\d{3,4}[A-Z]?)\)', line, re.IGNORECASE)
+    if paren_match:
+        dept = paren_match.group(1).upper()
+        number = paren_match.group(2).upper()
+        return _normalize_course_code(f"{dept} {number}")
+    return None
+
+
+def _analyze_syllabus_with_gemini(course_code: str, course_name: str, full_syllabus_text: str) -> dict:
+    """Use Gemini to analyze syllabus and extract course info comprehensively."""
+    try:
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            return {}
+        
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel("gemini-pro")
+        
+        prompt = f"""Analyze this course syllabus and extract the following information in JSON format:
+{{
+    "description": "1-2 sentence overview of what the course covers (max 200 chars)",
+    "courseGoals": "Key learning objectives and goals (1-2 sentences, max 200 chars)",
+    "meetingDays": "Days of the week the course meets (e.g., 'Monday Wednesday Friday' or 'MWF' or null if online)",
+    "meetingTime": "Time range when course meets (e.g., '9:00 AM - 10:30 AM' or null if online)",
+    "isOnline": "true/false - whether course is fully online or asynchronous",
+    "keyTopics": "Main topics covered (comma-separated list, max 200 chars)"
+}}
+
+Course Code: {course_code}
+Course Name: {course_name}
+
+SYLLABUS TEXT:
+{full_syllabus_text[:3000]}
+
+Return ONLY valid JSON, no other text."""
+        
+        response = model.generate_content(prompt)
+        if response and response.text:
+            try:
+                # Extract JSON from response
+                text = response.text.strip()
+                # Handle markdown code blocks if present
+                if text.startswith("```"):
+                    text = text.split("```")[1]
+                    if text.startswith("json"):
+                        text = text[4:]
+                    text = text.strip()
+                
+                result = json.loads(text)
+                return result
+            except json.JSONDecodeError:
+                print(f"Failed to parse JSON from Gemini response: {response.text}")
+                return {}
+    except Exception as e:
+        print(f"Gemini API error: {str(e)}")
+    
+    return {}
+
+
+def _generate_description_with_gemini(course_code: str, course_name: str, syllabus_excerpt: str) -> Optional[str]:
+    """Generate a course description using Google Gemini API."""
+    try:
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            return None
+        
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel("gemini-pro")
+        
+        prompt = f"""Based on the following course information from a syllabus, generate a concise course description (1-2 sentences, max 150 characters):
+
+Course Code: {course_code}
+Course Name: {course_name}
+Syllabus Excerpt: {syllabus_excerpt[:500]}
+
+Generate only the description, no additional text."""
+        
+        response = model.generate_content(prompt)
+        if response and response.text:
+            description = response.text.strip()
+            # Ensure it's not too long
+            if len(description) > 200:
+                description = description[:197] + "..."
+            return description
+    except Exception as e:
+        # Silently fail - if Gemini API fails, parsing should still work
+        print(f"Gemini API error: {str(e)}")
     
     return None
 
@@ -656,6 +753,30 @@ def _extract_course_info(lines: list[str]) -> dict:
         course_name = "Course from Syllabus"
     if not course_code:
         course_code = "COURSE-000"
+    
+    # Use Gemini to analyze full syllabus and fill in missing information
+    full_text = "\n".join(lines)
+    ai_analysis = _analyze_syllabus_with_gemini(course_code, course_name, full_text)
+    
+    # Merge AI results with extracted data (prefer extracted data, use AI as fallback)
+    if ai_analysis:
+        if not description and ai_analysis.get("description"):
+            description = ai_analysis.get("description")
+        
+        # Use AI meeting days if we didn't find them
+        if not course_date and ai_analysis.get("meetingDays"):
+            course_date = ai_analysis.get("meetingDays")
+        
+        # Use AI meeting time if we didn't find it
+        if not start_time and ai_analysis.get("meetingTime"):
+            time_parts = ai_analysis.get("meetingTime", "").split("-")
+            if len(time_parts) == 2:
+                start_time = time_parts[0].strip()
+                end_time = time_parts[1].strip()
+        
+        # Override online status if AI detected it clearly
+        if ai_analysis.get("isOnline") == "true":
+            is_online = True
 
     return {
         "name": course_name,

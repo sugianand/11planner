@@ -4,7 +4,7 @@ import "./auth.css";
 import { supabase } from "@/lib/supabaseClient";
 import Footer from "@/components/Footer";
 
-type Mode = "login" | "register";
+type Mode = "login" | "register" | "forgot-password";
 
 type FormState = {
   firstname: string;
@@ -14,6 +14,7 @@ type FormState = {
   email: string;
   password: string;
   confirmPassword: string;
+  resetEmail: string;
 };
 
 const initialForm: FormState = {
@@ -24,6 +25,7 @@ const initialForm: FormState = {
   email: "",
   password: "",
   confirmPassword: "",
+  resetEmail: "",
 };
 
 export default function AuthPage() {

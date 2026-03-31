@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import Link from "next/link";
 import "../auth.css";
@@ -13,6 +13,25 @@ export default function ResetPasswordPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
+
+  useEffect(() => {
+    // Check if user is in recovery mode (from email link)
+    async function checkSession() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          setSessionReady(true);
+        } else {
+          setErrorMessage("Invalid or expired recovery link. Please request a new password reset.");
+        }
+      } catch (err) {
+        console.error("Session check error:", err);
+        setErrorMessage("Could not verify session.");
+      }
+    }
+    checkSession();
+  }, []);
 
   async function updatePassword(): Promise<void> {
     const hasSpecialCharacter = /[^A-Za-z0-9]/.test(password);
@@ -61,62 +80,73 @@ export default function ResetPasswordPage() {
         <div className="auth-title">Reset Password</div>
         <h2>Create a new password</h2>
 
-        {errorMessage && (
+        {!sessionReady && errorMessage && (
           <div className="error-card" role="alert">
-            <div className="error-title">Please fix the following:</div>
+            <div className="error-title">Unable to Reset Password</div>
             <div className="error-text">{errorMessage}</div>
           </div>
         )}
 
-        {successMessage && (
-          <div className="success-card" role="status">
-            <div className="success-text">{successMessage}</div>
-          </div>
+        {sessionReady && (
+          <>
+            {errorMessage && (
+              <div className="error-card" role="alert">
+                <div className="error-title">Please fix the following:</div>
+                <div className="error-text">{errorMessage}</div>
+              </div>
+            )}
+
+            {successMessage && (
+              <div className="success-card" role="status">
+                <div className="success-text">{successMessage}</div>
+              </div>
+            )}
+
+            <div className="password-field">
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="New Password"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setErrorMessage("");
+                }}
+              />
+              <button
+                type="button"
+                className="toggle-password-btn"
+                onClick={() => setShowPassword((prev) => !prev)}
+              >
+                {showPassword ? "Hide" : "Show"}
+              </button>
+            </div>
+
+            <p className="field-hint">Password must be at least 6 characters and include 1 special character.</p>
+
+            <div className="password-field">
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                placeholder="Confirm New Password"
+                value={confirmPassword}
+                onChange={(e) => {
+                  setConfirmPassword(e.target.value);
+                  setErrorMessage("");
+                }}
+              />
+              <button
+                type="button"
+                className="toggle-password-btn"
+                onClick={() => setShowConfirmPassword((prev) => !prev)}
+              >
+                {showConfirmPassword ? "Hide" : "Show"}
+              </button>
+            </div>
+
+            <button className="btn" onClick={updatePassword} disabled={submitting}>
+              {submitting ? "Updating" : "Update Password"}
+            </button>
+          </>
         )}
-
-        <div className="password-field">
-          <input
-            type={showPassword ? "text" : "password"}
-            placeholder="New Password"
-            value={password}
-            onChange={(e) => {
-              setPassword(e.target.value);
-              setErrorMessage("");
-            }}
-          />
-          <button
-            type="button"
-            className="toggle-password-btn"
-            onClick={() => setShowPassword((prev) => !prev)}
-          >
-            {showPassword ? "Hide" : "Show"}
-          </button>
-        </div>
-
-        <p className="field-hint">Password must be at least 6 characters and include 1 special character.</p>
-
-        <div className="password-field">
-          <input
-            type={showConfirmPassword ? "text" : "password"}
-            placeholder="Confirm New Password"
-            value={confirmPassword}
-            onChange={(e) => {
-              setConfirmPassword(e.target.value);
-              setErrorMessage("");
-            }}
-          />
-          <button
-            type="button"
-            className="toggle-password-btn"
-            onClick={() => setShowConfirmPassword((prev) => !prev)}
-          >
-            {showConfirmPassword ? "Hide" : "Show"}
-          </button>
-        </div>
-
-        <button className="btn" onClick={updatePassword} disabled={submitting}>
-          {submitting ? "Updating" : "Update Password"}
-        </button>
 
         <div className="auth-footer">
           <Link className="link-btn" href="/auth">

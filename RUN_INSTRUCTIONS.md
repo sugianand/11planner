@@ -38,8 +38,8 @@ python -m venv .venv
 # Install dependencies
 pip install -r requirements.txt
 
-# Start the server
-python3 -m uvicorn app.main:app --reload
+# Start the server (use either command)
+uvicorn app.main:app --reload
 ```
 The backend will run at `http://127.0.0.1:8000`.
 API Docs available at: `http://127.0.0.1:8000/docs`

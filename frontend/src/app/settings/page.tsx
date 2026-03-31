@@ -4,6 +4,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useNotification } from "@/contexts/NotificationContext";
 import Footer from "@/components/Footer";
+import { supabase } from "@/lib/supabaseClient";
 
 type Theme = "light" | "dark" | "auto";
 
@@ -89,9 +90,38 @@ export default function SettingsPage() {
     localStorage.setItem("weeklyReport", String(value));
   };
 
-  const handleDailyLimitChange = (value: number) => {
-    setDailyLimit(value);
-    localStorage.setItem("dailyLimit", String(value));
+  const handleChangePassword = async () => {
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError) {
+        console.error("User fetch error:", userError);
+        alert(`Error: Could not get user. ${userError.message}`);
+        return;
+      }
+
+      if (!user?.email) {
+        alert("Could not retrieve your email address. Please log out and log back in.");
+        return;
+      }
+
+      console.log("Sending reset email to:", user.email);
+
+      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+        redirectTo: `${window.location.origin}/auth/reset-password`,
+      });
+
+      if (error) {
+        console.error("Reset email error:", error);
+        alert(`Error: ${error.message}\n\nMake sure the redirect URL http://localhost:3000/auth/reset-password is added in Supabase → Authentication → URL Configuration`);
+        return;
+      }
+
+      alert("Password reset email sent! Check your inbox for the reset link.");
+    } catch (err) {
+      console.error("Unexpected error:", err);
+      alert("Failed to send reset email. Check the browser console for details.");
+    }
   };
 
   const hasChanges = useMemo(() => {
@@ -319,7 +349,7 @@ export default function SettingsPage() {
                   <div>
                     <p className="font-medium text-slate-900 dark:text-white">Browser Permission</p>
                     <p className="text-sm text-slate-600 dark:text-slate-300">
-                      {permissionLabel}
+                      {isMounted ? permissionLabel : "Loading..."}
                     </p>
                   </div>
                   <button
@@ -422,7 +452,9 @@ export default function SettingsPage() {
             <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">Account</h2>
 
             <div className="space-y-4">
-              <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition">
+              <button 
+                onClick={handleChangePassword}
+                className="w-full text-left px-4 py-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition">
                 <p className="font-medium text-slate-900 dark:text-white">Change Password</p>
                 <p className="text-sm text-slate-600 dark:text-slate-300">Update your login password</p>
               </button>
