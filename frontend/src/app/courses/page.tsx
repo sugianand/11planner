@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { usePlanner } from "@/contexts/PlannerContext";
 import { CourseCreate, Course } from "@/types";
 import Footer from "@/components/Footer";
+import AppDialog from "@/components/AppDialog";
 
 export default function CoursesPage() {
   const weekDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
@@ -21,6 +22,19 @@ export default function CoursesPage() {
   const [showForm, setShowForm] = useState(false);
   const [showDaysDropdown, setShowDaysDropdown] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [dialog, setDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText?: string;
+    cancelText?: string;
+    destructive?: boolean;
+    onConfirm?: () => void | Promise<void>;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+  });
   const [formData, setFormData] = useState<Partial<CourseCreate>>({
     name: "",
     code: "",
@@ -46,7 +60,11 @@ export default function CoursesPage() {
     e.preventDefault();
 
     if (!formData.name || !formData.code) {
-      alert("Please fill in required fields");
+      setDialog({
+        isOpen: true,
+        title: "Missing required fields",
+        message: "Please fill in Course Name and Course Code before saving.",
+      });
       return;
     }
 
@@ -98,12 +116,22 @@ export default function CoursesPage() {
     });
     setEditingId(course.id);
     setShowForm(true);
+    window.scrollTo({ top: 250, behavior: 'smooth' });
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm("Delete this course?")) {
-      await deleteCourse(id);
-    }
+    setDialog({
+      isOpen: true,
+      title: "Delete course?",
+      message: "This course will be permanently removed.",
+      confirmText: "Delete",
+      cancelText: "Keep",
+      destructive: true,
+      onConfirm: async () => {
+        await deleteCourse(id);
+        setDialog({ isOpen: false, title: "", message: "" });
+      },
+    });
   };
 
   const selectedDays = (formData.courseDate || "")
@@ -158,11 +186,19 @@ export default function CoursesPage() {
           labIsOnline: data.parsed.labIsOnline || prev.labIsOnline,
         }));
       } else {
-        alert("Failed to parse syllabus. Please fill in the details manually.");
+        setDialog({
+          isOpen: true,
+          title: "Syllabus parsing failed",
+          message: "Could not parse this syllabus. Please fill in details manually.",
+        });
       }
     } catch (err) {
       console.error("Error uploading syllabus:", err);
-      alert("Error uploading syllabus. Please try again.");
+      setDialog({
+        isOpen: true,
+        title: "Upload error",
+        message: "Error uploading syllabus. Please try again.",
+      });
     }
   };
 
@@ -606,6 +642,16 @@ export default function CoursesPage() {
           </div>
         </div>
       </div>
+      <AppDialog
+        isOpen={dialog.isOpen}
+        title={dialog.title}
+        message={dialog.message}
+        confirmText={dialog.confirmText}
+        cancelText={dialog.cancelText}
+        destructive={dialog.destructive}
+        onConfirm={dialog.onConfirm}
+        onClose={() => setDialog({ isOpen: false, title: "", message: "" })}
+      />
       <Footer />
     </div>
   );

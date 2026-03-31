@@ -9,6 +9,7 @@ import { DayView } from './DayView';
 import { WeekView } from './WeekView';
 import { MonthView } from './MonthView';
 import { YearView } from './YearView';
+import AppDialog from './AppDialog';
 
 interface ScheduleViewProps {
   events?: Event[];
@@ -24,6 +25,11 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
   const [dayData, setDayData] = useState<DayData>(getDayData(currentDate));
   const [monthsInYear, setMonthsInYear] = useState(getMonthsInYear(currentDate.getFullYear()));
   const [eventList, setEventList] = useState<Event[]>(events);
+  const [dialog, setDialog] = useState<{ isOpen: boolean; title: string; message: string }>({
+    isOpen: false,
+    title: '',
+    message: '',
+  });
 
   useEffect(() => {
     setEventList(events);
@@ -85,7 +91,11 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
 
   const handleSubscribe = useCallback(() => {
     if (!userId) {
-      alert("Please log in to sync your calendar.");
+      setDialog({
+        isOpen: true,
+        title: 'Login required',
+        message: 'Please log in to sync your calendar.',
+      });
       return;
     }
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
@@ -233,6 +243,12 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
           <YearView year={currentDate.getFullYear()} monthsData={monthsInYear} events={eventList} />
         )}
       </div>
+      <AppDialog
+        isOpen={dialog.isOpen}
+        title={dialog.title}
+        message={dialog.message}
+        onClose={() => setDialog({ isOpen: false, title: '', message: '' })}
+      />
     </div>
   );
 };

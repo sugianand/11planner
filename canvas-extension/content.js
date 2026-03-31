@@ -214,6 +214,13 @@ function daysUntilDue(dueDate) {
     return Math.ceil((due.getTime() - now.getTime()) / msPerDay);
 }
 
+function isDueAfterNow(dueDate) {
+    if (!dueDate) return false;
+    const due = new Date(dueDate);
+    if (isNaN(due.getTime())) return false;
+    return due.getTime() > Date.now();
+}
+
 function estimateHours(assignment) {
     const title = (assignment.title || '').toLowerCase();
     const description = (assignment.description || '').toLowerCase();
@@ -889,9 +896,12 @@ async function extractAssignments() {
         ];
     }
 
+    // keep only upcoming tasks
+    const upcoming = found.filter(a => isDueAfterNow(a.dueDate));
+
     // deduplicate
     const seen = new Set();
-    const deduped = found.filter(a => {
+    const deduped = upcoming.filter(a => {
         if (seen.has(a.title)) return false;
         seen.add(a.title);
         return true;
