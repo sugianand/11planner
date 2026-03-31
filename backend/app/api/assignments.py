@@ -346,10 +346,22 @@ async def sync_assignments(sync_request: SyncRequest):
         try:
             deadline_iso = to_deadline_iso(ext.dueDate)
         except Exception:
-            deadline_iso = datetime.now(timezone.utc).isoformat()
+            # Invalid/missing due date: skip because we only want future deadlines.
+            continue
+
+        try:
+            from dateutil import parser as dtparser
+            deadline_dt = dtparser.isoparse(deadline_iso)
+            if deadline_dt.tzinfo is None:
+                deadline_dt = deadline_dt.replace(tzinfo=timezone.utc)
+            else:
+                deadline_dt = deadline_dt.astimezone(timezone.utc)
+        except Exception:
+            # If we can't parse normalized deadline, skip it.
+            continue
 
         # skip past-due assignments
-        if deadline_dt < datetime.now():
+        if deadline_dt <= datetime.now(timezone.utc):
             continue
 
         if existing.data:

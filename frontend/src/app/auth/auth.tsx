@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./auth.css";
 import { supabase } from "@/lib/supabaseClient";
+import AppDialog from "@/components/AppDialog";
 
 type Mode = "login" | "register";
 
@@ -27,6 +28,11 @@ const initialForm: FormState = {
 export default function AuthPage() {
   const [mode, setMode] = useState<Mode>("login");
   const [form, setForm] = useState<FormState>(initialForm);
+  const [dialog, setDialog] = useState<{ isOpen: boolean; title: string; message: string }>({
+    isOpen: false,
+    title: "",
+    message: "",
+  });
 
   useEffect(() => {
     async function checkSession() {
@@ -82,12 +88,20 @@ export default function AuthPage() {
     const { username, email, dob, password, confirmPassword } = form;
 
     if (!username || !email || !dob || !password || !confirmPassword) {
-      alert("Please enter all fields.");
+      setDialog({
+        isOpen: true,
+        title: "Missing required fields",
+        message: "Please enter all registration fields.",
+      });
       return;
     }
 
     if (password !== confirmPassword) {
-      alert("Passwords do not match.");
+      setDialog({
+        isOpen: true,
+        title: "Password mismatch",
+        message: "Passwords do not match.",
+      });
       return;
     }
 
@@ -100,7 +114,11 @@ export default function AuthPage() {
     });
 
     if (error || !data.user) {
-      alert(error?.message ?? "Registration failed");
+      setDialog({
+        isOpen: true,
+        title: "Registration failed",
+        message: error?.message ?? "Registration failed",
+      });
       return;
     }
 
@@ -110,7 +128,11 @@ export default function AuthPage() {
       username, dob
     })
 
-    alert("Registration successful! You can now log in.");
+    setDialog({
+      isOpen: true,
+      title: "Registration successful",
+      message: "You can now log in.",
+    });
     setMode("login");
     setForm(initialForm);
   }
@@ -120,7 +142,11 @@ export default function AuthPage() {
     const password = form.loginPassword;
 
     if (!email || !password) {
-      alert("Please enter all fields.");
+      setDialog({
+        isOpen: true,
+        title: "Missing required fields",
+        message: "Please enter your email and password.",
+      });
       return;
     }
 
@@ -130,7 +156,11 @@ export default function AuthPage() {
     });
 
     if (error || !authData.user) {
-      alert(error?.message ?? "Login failed");
+      setDialog({
+        isOpen: true,
+        title: "Login failed",
+        message: error?.message ?? "Login failed",
+      });
       return;
     }
 
@@ -247,6 +277,12 @@ export default function AuthPage() {
         )}
       </div>
     </div>
+    <AppDialog
+      isOpen={dialog.isOpen}
+      title={dialog.title}
+      message={dialog.message}
+      onClose={() => setDialog({ isOpen: false, title: "", message: "" })}
+    />
     </div>
   );
 }
