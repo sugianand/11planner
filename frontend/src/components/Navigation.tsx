@@ -77,15 +77,17 @@ export default function Navigation() {
           {/* Navigation Links - Desktop */}
           <div className="hidden lg:flex flex-1 justify-center">
             <div className="flex gap-6 lg:gap-8 items-center">
-              <Link
-                href="/"
-                className={`font-medium transition ${isActive("/")
-                  ? "text-emerald-600 dark:text-emerald-400 border-b-2 border-b-emerald-600 dark:border-b-emerald-400"
-                  : "text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400"
-                  }`}
-              >
-                Home
-              </Link>
+              {!isLoggedIn && (
+                <Link
+                  href="/"
+                  className={`font-medium transition ${isActive("/")
+                    ? "text-emerald-600 dark:text-emerald-400 border-b-2 border-b-emerald-600 dark:border-b-emerald-400"
+                    : "text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400"
+                    }`}
+                >
+                  Home
+                </Link>
+              )}
 
               {!isLoggedIn && (
                 <Link
@@ -204,16 +206,18 @@ export default function Navigation() {
         {isMenuOpen && (
           <div className="md:hidden mt-4 pb-4 bg-white/70 dark:bg-slate-800/70 border-t border-white/40 dark:border-slate-700/40 rounded-b-lg">
             <div className="flex flex-col gap-3 pt-4 px-3">
-              <Link
-                href="/"
-                className={`block font-medium py-2 px-3 rounded transition ${isActive("/")
-                  ? "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20"
-                  : "text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-700/30"
-                  }`}
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Home
-              </Link>
+              {!isLoggedIn && (
+                <Link
+                  href="/"
+                  className={`block font-medium py-2 px-3 rounded transition ${isActive("/")
+                    ? "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20"
+                    : "text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-700/30"
+                    }`}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Home
+                </Link>
+              )}
 
               {!isLoggedIn && (
                 <Link
