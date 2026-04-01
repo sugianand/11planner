@@ -71,6 +71,7 @@ export interface AssignmentCreate {
 export interface Task {
   id: string;
   title: string;
+  category?: "assignment" | "exam" | "project";
   assignment_id?: string;
   course_id?: string;
   deadline: string;
@@ -84,6 +85,7 @@ export interface Task {
 
 export interface TaskCreate {
   title: string;
+  category?: "assignment" | "exam" | "project";
   assignment_id?: string;
   course_id?: string;
   deadline: string;

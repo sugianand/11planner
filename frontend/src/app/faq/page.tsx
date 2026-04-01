@@ -75,14 +75,14 @@ export default function FaqPage() {
     <div className="min-h-screen relative overflow-hidden transition-colors duration-500 pb-0">
       <div className="fixed inset-0 bg-focus-light dark:bg-focus-dark -z-20"></div>
       <div className="pointer-events-none fixed inset-0 -z-10">
-        <div className="absolute top-10 left-10 h-72 w-72 rounded-full bg-emerald-200/30 dark:bg-emerald-500/15 blur-3xl" />
+        <div className="absolute top-10 left-10 h-72 w-72 rounded-full blur-3xl" style={{ backgroundColor: "var(--theme-accent-soft)" }} />
         <div className="absolute right-[-4rem] top-1/3 h-96 w-96 rounded-full bg-sky-200/25 dark:bg-sky-500/15 blur-3xl" />
       </div>
 
       <div className="max-w-4xl mx-auto p-6 lg:p-10 mt-16 mb-24">
         <div data-reveal data-reveal-once="true" className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-sm p-6 md:p-10 border border-white/40 dark:border-slate-700/40 space-y-8">
           <div data-reveal data-reveal-once="true" className="mb-2 border-b border-slate-200/50 dark:border-slate-700/50 pb-6">
-            <p className="text-sm font-semibold uppercase tracking-widest text-emerald-600">FAQ</p>
+            <p className="text-sm font-semibold uppercase tracking-widest" style={{ color: "var(--theme-accent-strong)" }}>FAQ</p>
             <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight mt-2">
               Answers before you sign up
             </h1>
@@ -129,11 +129,19 @@ export default function FaqPage() {
             })}
           </section>
 
-          <section data-reveal data-reveal-once="true" className="rounded-2xl bg-emerald-50/70 dark:bg-emerald-900/15 border border-emerald-100 dark:border-emerald-800/30 p-5">
+          <section
+            data-reveal
+            data-reveal-once="true"
+            className="rounded-2xl p-5"
+            style={{
+              backgroundColor: "var(--theme-accent-soft)",
+              border: "1px solid color-mix(in srgb, var(--theme-accent) 35%, transparent)"
+            }}
+          >
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">Need more help?</h2>
             <p className="text-slate-700 dark:text-slate-300 mt-2">
               For account-specific support, contact support@11planner.com or visit
-              <Link href="/support" className="font-semibold text-emerald-700 dark:text-emerald-400 hover:underline"> /support</Link>
+              <Link href="/support" className="font-semibold hover:underline" style={{ color: "var(--theme-accent-strong)" }}> /support</Link>
               .
             </p>
           </section>
@@ -141,7 +149,8 @@ export default function FaqPage() {
           <div data-reveal data-reveal-once="true" className="pt-4 border-t border-slate-200/70 dark:border-slate-700/70 flex flex-wrap gap-4">
             <Link
               href="/"
-              className="inline-flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-semibold"
+              className="inline-flex items-center gap-2 font-semibold"
+              style={{ color: "var(--theme-accent-strong)" }}
             >
               <span className="material-symbols-outlined text-base">arrow_back</span>
               Back to home

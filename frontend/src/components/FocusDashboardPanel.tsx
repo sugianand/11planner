@@ -61,10 +61,8 @@ export default function FocusDashboardPanel({
   const {
     userId,
     tasks,
-    courses,
     scheduleBlocks,
     loadTasks,
-    loadCourses,
     loadAssignments,
     loadScheduleBlocks,
   } = usePlanner();
@@ -245,11 +243,10 @@ export default function FocusDashboardPanel({
   }, [connectMessage]);
 
   useEffect(() => {
-    loadCourses();
     loadTasks();
     loadAssignments();
     loadScheduleBlocks();
-  }, [userId, loadCourses, loadTasks, loadAssignments, loadScheduleBlocks]);
+  }, [userId, loadTasks, loadAssignments, loadScheduleBlocks]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -479,24 +476,6 @@ export default function FocusDashboardPanel({
             Let&apos;s get in the zone, {userId ? "Student" : "Guest"}.
           </p>
         </div>
-
-        {courses.length > 0 ? (
-        <div className={`flex gap-3 overflow-x-auto pb-2 max-w-full lg:max-w-2xl no-scrollbar transition-all duration-150 ease-out ${uiHidden ? "translate-x-8 opacity-0" : "translate-x-0 opacity-100"}`}>
-            {courses.map((course) => (
-              <div
-                key={course.id}
-                className="flex-shrink-0 px-4 py-2 bg-white/80 dark:bg-slate-900/70 backdrop-blur-md rounded-2xl shadow-sm border border-white/60 dark:border-slate-700/60 min-w-[120px] flex flex-col"
-              >
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 truncate">
-                  {course.code}
-                </span>
-                <span className="text-sm font-bold text-slate-800 dark:text-white truncate">
-                  {course.name}
-                </span>
-              </div>
-            ))}
-        </div>
-        ) : null}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -870,7 +849,7 @@ export default function FocusDashboardPanel({
           </div>
         </div>
 
-        <div className={`lg:col-span-3 flex flex-col gap-4 transition-all duration-150 ease-out ${courses.length === 0 ? "lg:-mt-28" : ""} ${uiHidden ? "translate-x-8 opacity-0" : "translate-x-0 opacity-100"}`}>
+        <div className={`lg:col-span-3 lg:-mt-24 flex flex-col gap-4 transition-all duration-150 ease-out ${uiHidden ? "translate-x-8 opacity-0" : "translate-x-0 opacity-100"}`}>
           <StatCard
             label="Productivity Score"
             value={`${productivityScore}%`}

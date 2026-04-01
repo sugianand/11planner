@@ -8,6 +8,20 @@ import AppDialog from "@/components/AppDialog";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+type TaskCategory = "assignment" | "exam" | "project";
+
+function getTaskCategoryLabel(category: TaskCategory): string {
+  if (category === "exam") return "Exam";
+  if (category === "project") return "Project";
+  return "Assignment";
+}
+
+function getTaskCategoryPillClass(category: TaskCategory): string {
+  if (category === "exam") return "bg-rose-100 text-rose-800 dark:bg-rose-900/25 dark:text-rose-200";
+  if (category === "project") return "bg-violet-100 text-violet-800 dark:bg-violet-900/25 dark:text-violet-200";
+  return "bg-sky-100 text-sky-800 dark:bg-sky-900/25 dark:text-sky-200";
+}
+
 export default function TasksPage() {
   const {
     userId,
@@ -40,6 +54,7 @@ export default function TasksPage() {
   });
   const [formData, setFormData] = useState<Partial<TaskCreate>>({
     title: "",
+    category: "assignment",
     course_id: "",
     deadline: "",
     estimated_hours: 2,
@@ -52,6 +67,7 @@ export default function TasksPage() {
   const [sortBy, setSortBy] = useState<"deadline_asc" | "deadline_desc" | "name_asc" | "name_desc" | "priority_desc">("deadline_asc");
   const [courseFilter, setCourseFilter] = useState("all");
   const [deadlineFilter, setDeadlineFilter] = useState<"all" | "today" | "next7" | "next30" | "overdue">("all");
+  const [typeFilter, setTypeFilter] = useState<"all" | TaskCategory>("all");
   const [pageSize, setPageSize] = useState<10 | 25 | 50>(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [estimatingTaskId, setEstimatingTaskId] = useState<string | null>(null);
@@ -78,7 +94,7 @@ export default function TasksPage() {
       } else {
         await createTask({ ...formData, user_id: userId } as TaskCreate);
       }
-      setFormData({ title: "", course_id: "", deadline: "", estimated_hours: 2, priority: 2, description: "", user_id: userId });
+      setFormData({ title: "", category: "assignment", course_id: "", deadline: "", estimated_hours: 2, priority: 2, description: "", user_id: userId });
       setShowForm(false);
     } catch (err) {
       console.error("Error saving task:", err);
@@ -88,6 +104,7 @@ export default function TasksPage() {
   const handleEdit = (task: Task) => {
     setFormData({
       title: task.title,
+      category: (task.category as TaskCategory | undefined) || "assignment",
       course_id: task.course_id,
       deadline: task.deadline,
       estimated_hours: task.estimated_hours,
@@ -182,6 +199,9 @@ export default function TasksPage() {
   const overdueTasks = tasks.filter(
     (task) => !task.completed && new Date(task.deadline).getTime() < now.getTime()
   ).length;
+  const assignmentCount = tasks.filter((task) => (task.category || "assignment") === "assignment").length;
+  const examCount = tasks.filter((task) => (task.category || "assignment") === "exam").length;
+  const projectCount = tasks.filter((task) => (task.category || "assignment") === "project").length;
 
   const getDeadlineTime = (task: Task) => new Date(task.deadline).getTime();
 
@@ -227,8 +247,9 @@ export default function TasksPage() {
         description.includes(q);
 
       const matchesCourse = courseFilter === "all" || task.course_id === courseFilter;
+      const matchesType = typeFilter === "all" || (task.category || "assignment") === typeFilter;
 
-      return matchesSearch && matchesCourse && matchesDeadline(task);
+      return matchesSearch && matchesCourse && matchesDeadline(task) && matchesType;
     });
 
     return searchedAndFiltered.sort((a, b) => {
@@ -249,14 +270,14 @@ export default function TasksPage() {
           return diff3 !== 0 ? diff3 : a.title.localeCompare(b.title);
       }
     });
-  }, [tasks, activeTab, searchQuery, sortBy, courseFilter, deadlineFilter, courses]);
+  }, [tasks, activeTab, searchQuery, sortBy, courseFilter, deadlineFilter, typeFilter, courses]);
 
   const totalPages = Math.max(1, Math.ceil(filteredTasks.length / pageSize));
   const paginatedTasks = filteredTasks.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   useEffect(() => {
     startTransition(() => setCurrentPage(1));
-  }, [activeTab, searchQuery, sortBy, courseFilter, deadlineFilter, pageSize]);
+  }, [activeTab, searchQuery, sortBy, courseFilter, deadlineFilter, typeFilter, pageSize]);
 
   useEffect(() => {
     if (currentPage > totalPages) startTransition(() => setCurrentPage(totalPages));
@@ -289,6 +310,15 @@ export default function TasksPage() {
                   <span className="px-3 py-1 rounded-full text-xs font-semibold bg-white/80 dark:bg-slate-900/70 border border-white/60 dark:border-slate-700/60 text-slate-700 dark:text-slate-200">
                     Overdue: {overdueTasks}
                   </span>
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-sky-100/85 dark:bg-sky-900/30 border border-sky-200/70 dark:border-sky-800/40 text-sky-800 dark:text-sky-200">
+                    Assignments: {assignmentCount}
+                  </span>
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-rose-100/85 dark:bg-rose-900/30 border border-rose-200/70 dark:border-rose-800/40 text-rose-800 dark:text-rose-200">
+                    Exams: {examCount}
+                  </span>
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-violet-100/85 dark:bg-violet-900/30 border border-violet-200/70 dark:border-violet-800/40 text-violet-800 dark:text-violet-200">
+                    Projects: {projectCount}
+                  </span>
                 </div>
               </div>
 
@@ -296,7 +326,7 @@ export default function TasksPage() {
                 <button
                   onClick={() => {
                     setShowForm(true); setEditingId(null);
-                    setFormData({ title: "", course_id: "", deadline: "", estimated_hours: 2, priority: 2, description: "", user_id: userId });
+                    setFormData({ title: "", category: "assignment", course_id: "", deadline: "", estimated_hours: 2, priority: 2, description: "", user_id: userId });
                   }}
                   disabled={courses.length === 0}
                   title={courses.length === 0 ? "Add a course first to create tasks" : "Create a new task"}
@@ -341,6 +371,18 @@ export default function TasksPage() {
                     <input type="text" value={formData.title || ""} onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                       placeholder="e.g., Finish calculus worksheet"
                       className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Type</label>
+                    <select
+                      value={(formData.category as TaskCategory) || "assignment"}
+                      onChange={(e) => setFormData({ ...formData, category: e.target.value as TaskCategory })}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800"
+                    >
+                      <option value="assignment">Assignment</option>
+                      <option value="exam">Exam</option>
+                      <option value="project">Project</option>
+                    </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Course *</label>
@@ -417,6 +459,22 @@ export default function TasksPage() {
                 >
                   Completed ({completedTasks})
                 </button>
+              </div>
+
+              <div className="mb-4 flex flex-wrap gap-2">
+                {(["all", "assignment", "exam", "project"] as const).map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => setTypeFilter(type)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition border ${
+                      typeFilter === type
+                        ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-slate-900 dark:border-slate-100"
+                        : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600"
+                    }`}
+                  >
+                    {type === "all" ? "All Types" : getTaskCategoryLabel(type)}
+                  </button>
+                ))}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
@@ -507,9 +565,14 @@ export default function TasksPage() {
                         <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{task.title}</h3>
                         <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">{getCourseName(task.course_id)}</p>
                       </div>
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${getPriorityColor(task.priority)}`}>
-                        {getPriorityLabel(task.priority)}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getTaskCategoryPillClass((task.category as TaskCategory) || "assignment")}`}>
+                          {getTaskCategoryLabel((task.category as TaskCategory) || "assignment")}
+                        </span>
+                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${getPriorityColor(task.priority)}`}>
+                          {getPriorityLabel(task.priority)}
+                        </span>
+                      </div>
                     </div>
 
                     {task.description && (

@@ -85,6 +85,37 @@ type SupabaseTaskRow = {
   created_at: string;
 };
 
+type TaskCategory = "assignment" | "exam" | "project";
+const TASK_CATEGORY_TAG_RE = /^\s*\[\[type:(assignment|exam|project)\]\]\s*/i;
+
+function parseTaskCategoryFromDescription(
+  description: string | null
+): { category: TaskCategory; description: string } {
+  const raw = description || "";
+  const match = raw.match(TASK_CATEGORY_TAG_RE);
+  if (match) {
+    const category = match[1].toLowerCase() as TaskCategory;
+    return {
+      category,
+      description: raw.replace(TASK_CATEGORY_TAG_RE, "").trim(),
+    };
+  }
+  return {
+    category: "assignment",
+    description: raw,
+  };
+}
+
+function withTaskCategoryTag(
+  description: string | null | undefined,
+  category: TaskCategory | undefined
+): string | null {
+  const clean = (description || "").replace(TASK_CATEGORY_TAG_RE, "").trim();
+  const normalizedCategory = category || "assignment";
+  const tagged = `[[type:${normalizedCategory}]]`;
+  return clean.length > 0 ? `${tagged} ${clean}` : tagged;
+}
+
 function parseCourseDays(value: string): string[] {
   return value
     .split(/[,\s]+/)
@@ -151,15 +182,17 @@ function mapCourseRowToModel(row: SupabaseCourseRow): Course {
 }
 
 function mapTaskRowToModel(row: SupabaseTaskRow): Task {
+  const parsed = parseTaskCategoryFromDescription(row.description);
   return {
     id: row.id,
     user_id: row.user_id,
     title: row.task_title,
+    category: parsed.category,
     course_id: row.course_id || undefined,
     deadline: row.deadline_at,
     estimated_hours: row.estimated_hours ?? 0,
     priority: row.priority_level ?? 2,
-    description: row.description || "",
+    description: parsed.description,
     completed: row.status === "completed",
     created_at: row.created_at,
   };
@@ -454,7 +487,7 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
           deadline_at: normalizeDeadlineForDb(task.deadline),
           estimated_hours: task.estimated_hours ?? 0,
           priority_level: task.priority ?? 2,
-          description: task.description || null,
+          description: withTaskCategoryTag(task.description, task.category),
           status: "pending",
         };
 
@@ -490,7 +523,9 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
       if (task.deadline !== undefined) updatePayload.deadline_at = normalizeDeadlineForDb(task.deadline);
       if (task.estimated_hours !== undefined) updatePayload.estimated_hours = task.estimated_hours;
       if (task.priority !== undefined) updatePayload.priority_level = task.priority;
-      if (task.description !== undefined) updatePayload.description = task.description || null;
+      if (task.description !== undefined || task.category !== undefined) {
+        updatePayload.description = withTaskCategoryTag(task.description, task.category);
+      }
       if (task.completed !== undefined) updatePayload.status = task.completed ? "completed" : "pending";
 
       const { error: updateError } = await supabase

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState, useEffect } from "react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useNotification } from "@/contexts/NotificationContext";
@@ -39,6 +40,7 @@ const readStoredBoolean = (key: string, fallback: boolean): boolean => {
 
 export default function SettingsPage() {
   const { theme, setTheme, colorTheme, setColorTheme, colorThemes } = useTheme();
+  const [isMounted, setIsMounted] = useState(false);
   const [user, setUser] = useState<{ email?: string } | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(() => readStoredBoolean("soundEnabled", true));
   const [privacyProfileVisible, setPrivacyProfileVisible] = useState(() => readStoredBoolean("privacyProfileVisible", true));
@@ -49,7 +51,9 @@ export default function SettingsPage() {
   const [weeklyReport, setWeeklyReport] = useState(() => readStoredBoolean("weeklyReport", true));
   const [dailyLimit, setDailyLimit] = useState(4);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
-  const [activePanel, setActivePanel] = useState<"appearance" | "productivity" | "notifications" | "account">("appearance");
+  const [activePanel, setActivePanel] = useState<
+    "schedule" | "personalize" | "reminders" | "account" | "support"
+  >("personalize");
 
   const {
     notificationsEnabled,
@@ -61,6 +65,7 @@ export default function SettingsPage() {
   } = useNotification();
 
   useEffect(() => {
+    setIsMounted(true);
     supabase.auth.getUser().then(({ data }) => setUser(data?.user ?? null));
   }, []);
 
@@ -150,6 +155,42 @@ export default function SettingsPage() {
     } catch {
       alert("Failed to send reset email. Check the browser console for details.");
     }
+  };
+
+  const handleExportScheduleAsPdf = () => {
+    const scheduleWindow = window.open("/schedule", "_blank");
+    if (!scheduleWindow) {
+      alert("Please allow pop-ups to export schedule as PDF.");
+      return;
+    }
+
+    // Trigger browser print to save schedule page as PDF.
+    setTimeout(() => {
+      scheduleWindow.focus();
+      scheduleWindow.print();
+    }, 1200);
+  };
+
+  const handleClearAccountData = () => {
+    const confirmed = window.confirm(
+      "Clear local account data and preferences on this device?"
+    );
+    if (!confirmed) return;
+
+    const keysToClear = [
+      "emailUpdates",
+      "weeklyReport",
+      "dailyLimit",
+      "privacyProfileVisible",
+      "privacyAnalyticsEnabled",
+      "privacyPersonalizationEnabled",
+      "privacyShareProgress",
+      "soundEnabled",
+    ];
+
+    keysToClear.forEach((key) => localStorage.removeItem(key));
+    handleResetDefaults();
+    alert("Local account data cleared.");
   };
 
   const hasChanges = useMemo(() => {
@@ -250,14 +291,14 @@ export default function SettingsPage() {
 
   const handleResetDefaults = () => {
     switch (activePanel) {
-      case "appearance":
+      case "personalize":
         handleThemeChange("light");
         handleColorThemeChange("emerald");
         break;
-      case "productivity":
+      case "schedule":
         handleDailyLimitChange(4);
         break;
-      case "notifications":
+      case "reminders":
         setNotificationsEnabled(true);
         setSoundEnabled(true);
         handleEmailUpdatesChange(true);
@@ -275,11 +316,12 @@ export default function SettingsPage() {
     }
   };
 
-  const navItems: Array<{ id: "appearance" | "productivity" | "notifications" | "account"; label: string; icon: string }> = [
-    { id: "appearance", label: "Appearance", icon: "palette" },
-    { id: "productivity", label: "Productivity", icon: "target" },
-    { id: "notifications", label: "Notifications", icon: "notifications" },
+  const navItems: Array<{ id: "schedule" | "personalize" | "reminders" | "account" | "support"; label: string; icon: string }> = [
+    { id: "schedule", label: "Schedule Setup", icon: "event" },
+    { id: "personalize", label: "Personalize", icon: "palette" },
+    { id: "reminders", label: "Reminders", icon: "notifications" },
     { id: "account", label: "Account", icon: "person" },
+    { id: "support", label: "Support", icon: "support_agent" },
   ];
 
   const sectionCardClass =
@@ -344,9 +386,9 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              {activePanel === "appearance" && (
+              {activePanel === "personalize" && (
                 <section className={sectionCardClass}>
-                  <div className="text-xl font-bold text-slate-900 dark:text-white mb-1">Appearance</div>
+                  <div className="text-xl font-bold text-slate-900 dark:text-white mb-1">Personalize</div>
                   <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Customize the look and feel of your planner.</p>
 
                     <div className="mb-5">
@@ -392,9 +434,9 @@ export default function SettingsPage() {
                 </section>
               )}
 
-              {activePanel === "productivity" && (
+              {activePanel === "schedule" && (
                 <section className={sectionCardClass}>
-                  <div className="text-xl font-bold text-slate-900 dark:text-white mb-1">Productivity</div>
+                  <div className="text-xl font-bold text-slate-900 dark:text-white mb-1">Schedule Setup</div>
                   <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Tune planning density and pace.</p>
 
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">Daily Study Limit</label>
@@ -423,9 +465,9 @@ export default function SettingsPage() {
                 </section>
               )}
 
-              {activePanel === "notifications" && (
+              {activePanel === "reminders" && (
                 <section className={sectionCardClass}>
-                  <div className="text-xl font-bold text-slate-900 dark:text-white mb-1">Notifications</div>
+                  <div className="text-xl font-bold text-slate-900 dark:text-white mb-1">Reminders</div>
                   <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Control reminder channels and timing.</p>
 
                   <div className="space-y-4">
@@ -599,10 +641,38 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
+                  <div className="space-y-3 mt-4">
+                    <button
+                      onClick={handleExportScheduleAsPdf}
+                      className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-slate-200/70 dark:border-slate-700/70 bg-white/70 dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition"
+                    >
+                      <span className="flex items-center gap-2 text-slate-800 dark:text-slate-100"><span className="material-symbols-outlined text-base">picture_as_pdf</span>Export Schedule as PDF</span>
+                      <span className="material-symbols-outlined text-base text-slate-400">chevron_right</span>
+                    </button>
+                    <button
+                      onClick={handleClearAccountData}
+                      className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-red-200/70 dark:border-red-800/50 bg-red-50/70 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 transition"
+                    >
+                      <span className="flex items-center gap-2 text-red-700 dark:text-red-300"><span className="material-symbols-outlined text-base">delete</span>Clear Account Data</span>
+                      <span className="material-symbols-outlined text-base text-red-300">chevron_right</span>
+                    </button>
+                  </div>
+
                   <button className="w-full text-left mt-4 px-4 py-3 rounded-xl border border-red-300 dark:border-red-700 bg-red-50/80 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 transition">
                     <p className="font-medium text-red-700 dark:text-red-300">Delete Account</p>
                     <p className="text-xs text-red-400 dark:text-red-300">Permanently remove your account and data</p>
                   </button>
+                </section>
+              )}
+
+              {activePanel === "support" && (
+                <section className={sectionCardClass}>
+                  <div className="text-xl font-bold text-slate-900 dark:text-white mb-1">Support</div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Need help? Reach support resources quickly.</p>
+                  <Link href="/support" className="flex items-center justify-between px-4 py-3 rounded-xl border border-slate-200/70 dark:border-slate-700/70 bg-white/70 dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition">
+                    <span className="flex items-center gap-2 text-slate-800 dark:text-slate-100"><span className="material-symbols-outlined text-base">support_agent</span>Open Support Page</span>
+                    <span className="material-symbols-outlined text-base text-slate-400">chevron_right</span>
+                  </Link>
                 </section>
               )}
 

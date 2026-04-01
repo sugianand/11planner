@@ -28,7 +28,7 @@ export default function AboutPage() {
       name: "Tamana Gaur",
       role: "Team Lead & Documentation Lead",
       icon: "groups",
-      color: "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400",
+      color: "bg-white/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200",
       responsibilities: [
         "Serves as the primary point of contact with the GTA and course instructor",
         "Oversees overall project direction, timeline, and milestone tracking",
@@ -134,7 +134,7 @@ export default function AboutPage() {
     <div className="min-h-screen relative overflow-hidden transition-colors duration-500 pb-0">
       <div className="fixed inset-0 bg-focus-light dark:bg-focus-dark -z-20"></div>
       <div className="pointer-events-none fixed inset-0 -z-10">
-        <div className="absolute top-8 left-8 h-72 w-72 rounded-full bg-emerald-200/30 dark:bg-emerald-500/15 blur-3xl" />
+        <div className="absolute top-8 left-8 h-72 w-72 rounded-full blur-3xl" style={{ backgroundColor: "var(--theme-accent-soft)" }} />
         <div className="absolute top-1/3 right-[-5rem] h-96 w-96 rounded-full bg-sky-200/30 dark:bg-sky-500/15 blur-3xl" />
         <div className="absolute bottom-[-5rem] left-1/4 h-80 w-80 rounded-full bg-teal-200/25 dark:bg-teal-500/10 blur-3xl" />
       </div>
@@ -163,7 +163,13 @@ export default function AboutPage() {
                 data-reveal-once="true"
                 className="rounded-2xl bg-white/70 dark:bg-slate-900/65 border border-white/50 dark:border-slate-700/45 p-5"
               >
-                <div className="w-11 h-11 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 flex items-center justify-center mb-3">
+                <div
+                  className="w-11 h-11 rounded-xl flex items-center justify-center mb-3"
+                  style={{
+                    backgroundColor: "var(--theme-accent-soft)",
+                    color: "var(--theme-accent-strong)"
+                  }}
+                >
                   <span className="material-symbols-outlined">{item.icon}</span>
                 </div>
                 <p className="text-xs uppercase tracking-widest text-slate-500 dark:text-slate-400 font-semibold">{item.label}</p>
@@ -213,7 +219,7 @@ export default function AboutPage() {
                       key={idx}
                       className="flex items-start gap-2 text-slate-700 dark:text-slate-300 text-sm leading-relaxed"
                     >
-                      <span className="material-symbols-outlined text-emerald-600 dark:text-emerald-400 text-base mt-0.5 flex-shrink-0">
+                      <span className="material-symbols-outlined text-base mt-0.5 flex-shrink-0" style={{ color: "var(--theme-accent-strong)" }}>
                         check_circle
                       </span>
                       <span>{responsibility}</span>
@@ -224,7 +230,15 @@ export default function AboutPage() {
             ))}
           </div>
 
-          <div data-reveal data-reveal-once="true" className="mt-12 p-8 bg-emerald-50/50 dark:bg-emerald-900/20 rounded-2xl border border-emerald-200/50 dark:border-emerald-800/30 text-center">
+          <div
+            data-reveal
+            data-reveal-once="true"
+            className="mt-12 p-8 rounded-2xl text-center"
+            style={{
+              backgroundColor: "var(--theme-accent-soft)",
+              border: "1px solid color-mix(in srgb, var(--theme-accent) 35%, transparent)"
+            }}
+          >
             <h3 className="text-slate-900 dark:text-white text-2xl font-bold mb-3">
               Shared Ownership, One Product Standard
             </h3>
@@ -235,7 +249,8 @@ export default function AboutPage() {
             <div className="mt-6 flex justify-center gap-3 flex-wrap">
               <Link
                 href="/support"
-                className="inline-flex items-center gap-2 bg-[#306844] dark:bg-[#3d8658] text-white px-6 py-3 rounded-pill font-bold hover:opacity-90 transition-opacity"
+                className="inline-flex items-center gap-2 text-white px-6 py-3 rounded-pill font-bold hover:opacity-90 transition-opacity"
+                style={{ backgroundColor: "var(--theme-accent-strong)" }}
               >
                 <span className="material-symbols-outlined text-base">support_agent</span>
                 Contact Support

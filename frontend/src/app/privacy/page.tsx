@@ -30,7 +30,7 @@ export default function PrivacyPage() {
       <div className="max-w-4xl mx-auto p-6 lg:p-10 mt-16 mb-24">
         <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-sm p-6 md:p-10 border border-white/40 dark:border-slate-700/40 space-y-8">
           <div className="mb-8 border-b border-slate-200/50 dark:border-slate-700/50 pb-6">
-            <p className="text-sm font-semibold uppercase tracking-widest text-emerald-600">Privacy</p>
+            <p className="text-sm font-semibold uppercase tracking-widest" style={{ color: "var(--theme-accent-strong)" }}>Privacy</p>
             <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight mt-2">
               Your data, your control.
             </h1>
@@ -49,7 +49,13 @@ export default function PrivacyPage() {
                 key={item.title}
                 className="rounded-2xl bg-white/70 dark:bg-slate-800/65 border border-white/60 dark:border-slate-700/50 p-5"
               >
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 flex items-center justify-center mb-3">
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
+                  style={{
+                    backgroundColor: "var(--theme-accent-soft)",
+                    color: "var(--theme-accent-strong)"
+                  }}
+                >
                   <span className="material-symbols-outlined">{item.icon}</span>
                 </div>
                 <h2 className="text-base font-bold text-slate-900 dark:text-white">{item.title}</h2>
@@ -127,7 +133,13 @@ export default function PrivacyPage() {
             </p>
           </section>
 
-          <section className="space-y-4 rounded-2xl bg-emerald-50/70 dark:bg-emerald-900/15 border border-emerald-100 dark:border-emerald-800/30 p-5">
+          <section
+            className="space-y-4 rounded-2xl p-5"
+            style={{
+              backgroundColor: "var(--theme-accent-soft)",
+              border: "1px solid color-mix(in srgb, var(--theme-accent) 35%, transparent)"
+            }}
+          >
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">Questions or requests</h2>
             <p className="text-slate-700 dark:text-slate-300">
               For privacy questions, access requests, correction requests, or account deletion,
@@ -135,11 +147,11 @@ export default function PrivacyPage() {
             </p>
             <p className="text-slate-700 dark:text-slate-300">
               You can also review our terms at{" "}
-              <Link href="/terms" className="font-semibold text-emerald-700 dark:text-emerald-400 hover:underline">
+              <Link href="/terms" className="font-semibold hover:underline" style={{ color: "var(--theme-accent-strong)" }}>
                 /terms
               </Link>{" "}
               and get help from{" "}
-              <Link href="/support" className="font-semibold text-emerald-700 dark:text-emerald-400 hover:underline">
+              <Link href="/support" className="font-semibold hover:underline" style={{ color: "var(--theme-accent-strong)" }}>
                 /support
               </Link>
               .
@@ -149,7 +161,8 @@ export default function PrivacyPage() {
           <div className="pt-4 border-t border-slate-200/70 dark:border-slate-700/70">
             <Link
               href="/"
-              className="inline-flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-semibold"
+              className="inline-flex items-center gap-2 font-semibold"
+              style={{ color: "var(--theme-accent-strong)" }}
             >
               <span className="material-symbols-outlined text-base">arrow_back</span>
               Back to home
