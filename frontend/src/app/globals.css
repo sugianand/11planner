@@ -149,61 +149,90 @@
   --theme-accent-soft: rgba(167, 139, 250, 0.16);
 }
 
-[data-theme="mint"] {
-  --theme-50: rgba(94, 234, 212, 0.08);
-  --theme-100: rgba(94, 234, 212, 0.14);
-  --theme-200: #ccfbf1;
-  --theme-300: #99f6e4;
-  --theme-400: #5eead4;
-  --theme-500: #2dd4bf;
-  --theme-600: #14b8a6;
-  --theme-700: #2ea497;
-  --theme-800: #268a80;
-  --brand-from: #63b8ad;
-  --brand-via: #78c7bc;
-  --brand-to: #afe9e2;
-  --brand-to-alt: #95ddd4;
-  --brand-hover: #53a59b;
-  --theme-accent: #5eead4;
-  --theme-accent-strong: #14b8a6;
-  --theme-accent-soft: rgba(94, 234, 212, 0.16);
-}
-
 /* Global remap for emerald utility classes and brand hex classes. */
 [data-theme] .text-emerald-300 { color: var(--theme-300) !important; }
 [data-theme] .text-emerald-400 { color: var(--theme-400) !important; }
 [data-theme] .text-emerald-500 { color: var(--theme-500) !important; }
 [data-theme] .text-emerald-600 { color: var(--theme-600) !important; }
 [data-theme] .text-emerald-700 { color: var(--theme-700) !important; }
+[data-theme] .text-emerald-800 { color: var(--theme-800) !important; }
+[data-theme] .text-emerald-900 { color: color-mix(in srgb, var(--theme-800) 72%, black) !important; }
+
+[data-theme] .dark\:text-emerald-100:is(.dark *) { color: color-mix(in srgb, var(--theme-200) 75%, white) !important; }
+[data-theme] .dark\:text-emerald-200:is(.dark *) { color: color-mix(in srgb, var(--theme-200) 88%, white) !important; }
+[data-theme] .dark\:text-emerald-300:is(.dark *) { color: var(--theme-300) !important; }
+[data-theme] .dark\:text-emerald-400:is(.dark *) { color: var(--theme-400) !important; }
 
 [data-theme] .bg-emerald-50 { background-color: var(--theme-50) !important; }
 [data-theme] .bg-emerald-100 { background-color: var(--theme-100) !important; }
 [data-theme] .bg-emerald-500 { background-color: var(--theme-500) !important; }
 [data-theme] .bg-emerald-600 { background-color: var(--theme-600) !important; }
 [data-theme] .bg-emerald-700 { background-color: var(--theme-700) !important; }
+[data-theme] .bg-emerald-50\/50 { background-color: color-mix(in srgb, var(--theme-50) 50%, transparent) !important; }
+[data-theme] .bg-emerald-50\/70 { background-color: color-mix(in srgb, var(--theme-50) 70%, transparent) !important; }
+[data-theme] .bg-emerald-50\/75 { background-color: color-mix(in srgb, var(--theme-50) 75%, transparent) !important; }
+[data-theme] .bg-emerald-50\/80 { background-color: color-mix(in srgb, var(--theme-50) 80%, transparent) !important; }
+[data-theme] .bg-emerald-50\/85 { background-color: color-mix(in srgb, var(--theme-50) 85%, transparent) !important; }
+[data-theme] .bg-emerald-200\/30 { background-color: color-mix(in srgb, var(--theme-200) 30%, transparent) !important; }
+[data-theme] .bg-emerald-900\/10 { background-color: color-mix(in srgb, var(--theme-800) 10%, transparent) !important; }
+[data-theme] .bg-emerald-900\/15 { background-color: color-mix(in srgb, var(--theme-800) 15%, transparent) !important; }
+[data-theme] .bg-emerald-900\/20 { background-color: color-mix(in srgb, var(--theme-800) 20%, transparent) !important; }
+[data-theme] .bg-emerald-900\/30 { background-color: color-mix(in srgb, var(--theme-800) 30%, transparent) !important; }
+[data-theme] .bg-emerald-900\/40 { background-color: color-mix(in srgb, var(--theme-800) 40%, transparent) !important; }
+[data-theme] .bg-emerald-950\/20 { background-color: color-mix(in srgb, var(--theme-800) 20%, black) !important; }
+
+[data-theme] .dark\:bg-emerald-500\/10:is(.dark *) { background-color: color-mix(in srgb, var(--theme-500) 10%, transparent) !important; }
+[data-theme] .dark\:bg-emerald-500\/15:is(.dark *) { background-color: color-mix(in srgb, var(--theme-500) 15%, transparent) !important; }
+[data-theme] .dark\:bg-emerald-900\/10:is(.dark *) { background-color: color-mix(in srgb, var(--theme-800) 10%, transparent) !important; }
+[data-theme] .dark\:bg-emerald-900\/15:is(.dark *) { background-color: color-mix(in srgb, var(--theme-800) 15%, transparent) !important; }
+[data-theme] .dark\:bg-emerald-900\/20:is(.dark *) { background-color: color-mix(in srgb, var(--theme-800) 20%, transparent) !important; }
+[data-theme] .dark\:bg-emerald-900\/30:is(.dark *) { background-color: color-mix(in srgb, var(--theme-800) 30%, transparent) !important; }
+[data-theme] .dark\:bg-emerald-900\/40:is(.dark *) { background-color: color-mix(in srgb, var(--theme-800) 40%, transparent) !important; }
 
 [data-theme] .hover\:bg-emerald-50:hover { background-color: var(--theme-50) !important; }
 [data-theme] .hover\:bg-emerald-100:hover { background-color: var(--theme-100) !important; }
 [data-theme] .hover\:bg-emerald-600:hover { background-color: var(--theme-600) !important; }
 [data-theme] .hover\:bg-emerald-700:hover { background-color: var(--theme-700) !important; }
+[data-theme] .hover\:border-emerald-200:hover { border-color: var(--theme-200) !important; }
+[data-theme] .dark\:hover\:border-emerald-500\/35:is(.dark *):hover { border-color: color-mix(in srgb, var(--theme-500) 35%, transparent) !important; }
 
 [data-theme] .border-emerald-200 { border-color: var(--theme-200) !important; }
 [data-theme] .border-emerald-300 { border-color: var(--theme-300) !important; }
 [data-theme] .border-emerald-500 { border-color: var(--theme-500) !important; }
+[data-theme] .border-emerald-100 { border-color: color-mix(in srgb, var(--theme-200) 70%, white) !important; }
+[data-theme] .border-emerald-800 { border-color: color-mix(in srgb, var(--theme-800) 58%, transparent) !important; }
+[data-theme] .border-emerald-200\/50 { border-color: color-mix(in srgb, var(--theme-200) 50%, transparent) !important; }
+[data-theme] .border-emerald-200\/70 { border-color: color-mix(in srgb, var(--theme-200) 70%, transparent) !important; }
+[data-theme] .border-emerald-200\/80 { border-color: color-mix(in srgb, var(--theme-200) 80%, transparent) !important; }
+[data-theme] .dark\:border-emerald-500\/25:is(.dark *) { border-color: color-mix(in srgb, var(--theme-500) 25%, transparent) !important; }
+[data-theme] .dark\:border-emerald-500\/30:is(.dark *) { border-color: color-mix(in srgb, var(--theme-500) 30%, transparent) !important; }
+[data-theme] .dark\:border-emerald-500\/35:is(.dark *) { border-color: color-mix(in srgb, var(--theme-500) 35%, transparent) !important; }
+[data-theme] .dark\:border-emerald-500\/40:is(.dark *) { border-color: color-mix(in srgb, var(--theme-500) 40%, transparent) !important; }
+[data-theme] .dark\:border-emerald-500\/45:is(.dark *) { border-color: color-mix(in srgb, var(--theme-500) 45%, transparent) !important; }
+[data-theme] .dark\:border-emerald-800\/30:is(.dark *) { border-color: color-mix(in srgb, var(--theme-800) 30%, transparent) !important; }
+[data-theme] .dark\:border-emerald-800\/40:is(.dark *) { border-color: color-mix(in srgb, var(--theme-800) 40%, transparent) !important; }
 
 [data-theme] .ring-emerald-200 { --tw-ring-color: var(--theme-200) !important; }
 [data-theme] .ring-emerald-300 { --tw-ring-color: var(--theme-300) !important; }
 [data-theme] .ring-emerald-500 { --tw-ring-color: var(--theme-500) !important; }
+[data-theme] .focus\:ring-emerald-600:focus { --tw-ring-color: var(--theme-600) !important; }
+[data-theme] .focus-visible\:outline-emerald-600:focus-visible { outline-color: var(--theme-600) !important; }
 [data-theme] .accent-emerald-600 { accent-color: var(--theme-600) !important; }
 
 [data-theme] .from-emerald-500 { --tw-gradient-from: var(--theme-500) var(--tw-gradient-from-position) !important; }
 [data-theme] .via-emerald-500 { --tw-gradient-via: var(--theme-500) var(--tw-gradient-via-position) !important; }
 [data-theme] .to-emerald-500 { --tw-gradient-to: var(--theme-500) var(--tw-gradient-to-position) !important; }
 [data-theme] .to-emerald-900 { --tw-gradient-to: var(--theme-800) var(--tw-gradient-to-position) !important; }
+[data-theme] .from-emerald-300\/35 { --tw-gradient-from: color-mix(in srgb, var(--theme-300) 35%, transparent) var(--tw-gradient-from-position) !important; }
+[data-theme] .to-emerald-300\/5 { --tw-gradient-to: color-mix(in srgb, var(--theme-300) 5%, transparent) var(--tw-gradient-to-position) !important; }
+[data-theme] .dark\:from-emerald-400\/20:is(.dark *) { --tw-gradient-from: color-mix(in srgb, var(--theme-400) 20%, transparent) var(--tw-gradient-from-position) !important; }
+[data-theme] .dark\:to-emerald-500\/15:is(.dark *) { --tw-gradient-to: color-mix(in srgb, var(--theme-500) 15%, transparent) var(--tw-gradient-to-position) !important; }
+[data-theme] .dark\:to-emerald-950\/20:is(.dark *) { --tw-gradient-to: color-mix(in srgb, var(--theme-800) 20%, black) var(--tw-gradient-to-position) !important; }
 
 [data-theme] .bg-\[\#306844\] { background-color: var(--brand-from) !important; }
 [data-theme] .text-\[\#306844\] { color: var(--brand-from) !important; }
 [data-theme] .border-\[\#306844\] { border-color: var(--brand-from) !important; }
+[data-theme] .shadow-green-900\/10 { --tw-shadow-color: color-mix(in srgb, var(--brand-from) 22%, transparent) !important; }
 [data-theme] .from-\[\#306844\] { --tw-gradient-from: var(--brand-from) var(--tw-gradient-from-position) !important; }
 [data-theme] .via-\[\#2f7f54\] { --tw-gradient-via: var(--brand-via) var(--tw-gradient-via-position) !important; }
 [data-theme] .to-\[\#5ac693\] { --tw-gradient-to: var(--brand-to) var(--tw-gradient-to-position) !important; }

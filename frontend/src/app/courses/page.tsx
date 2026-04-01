@@ -582,7 +582,7 @@ export default function CoursesPage() {
                       <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
                         {course.name}
                       </h3>
-                      <p className="text-sm font-bold uppercase tracking-wider text-[#306844] dark:text-green-400">
+                      <p className="text-sm font-bold uppercase tracking-wider text-[#306844] dark:text-emerald-400">
                         {course.code}
                       </p>
                     </div>

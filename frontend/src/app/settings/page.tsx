@@ -8,7 +8,7 @@ import Footer from "@/components/Footer";
 import { supabase } from "@/lib/supabaseClient";
 
 type Theme = "light" | "dark" | "auto";
-type ColorTheme = "emerald" | "ocean" | "rose" | "slate" | "amber" | "violet" | "mint";
+type ColorTheme = "emerald" | "ocean" | "rose" | "slate" | "amber" | "violet";
 
 const colorThemeSwatches: Record<ColorTheme, string> = {
   emerald: "linear-gradient(135deg, #10b981, #059669)",
@@ -17,7 +17,6 @@ const colorThemeSwatches: Record<ColorTheme, string> = {
   slate: "linear-gradient(135deg, #64748b, #475569)",
   amber: "linear-gradient(135deg, #f59e0b, #d97706)",
   violet: "linear-gradient(135deg, #a78bfa, #7c3aed)",
-  mint: "linear-gradient(135deg, #5eead4, #14b8a6)",
 };
 
 const sliderStyles = `
@@ -50,6 +49,10 @@ export default function SettingsPage() {
   const [isMounted, setIsMounted] = useState(false);
   const [user, setUser] = useState<{ email?: string } | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [privacyProfileVisible, setPrivacyProfileVisible] = useState(true);
+  const [privacyAnalyticsEnabled, setPrivacyAnalyticsEnabled] = useState(false);
+  const [privacyPersonalizationEnabled, setPrivacyPersonalizationEnabled] = useState(true);
+  const [privacyShareProgress, setPrivacyShareProgress] = useState(false);
   const [emailUpdates, setEmailUpdates] = useState(true);
   const [weeklyReport, setWeeklyReport] = useState(true);
   const [dailyLimit, setDailyLimit] = useState(4);
@@ -70,12 +73,20 @@ export default function SettingsPage() {
     setEmailUpdates(readStoredBoolean("emailUpdates", true));
     setWeeklyReport(readStoredBoolean("weeklyReport", true));
     setDailyLimit(readStoredNumber("dailyLimit", 4));
+    setPrivacyProfileVisible(readStoredBoolean("privacyProfileVisible", true));
+    setPrivacyAnalyticsEnabled(readStoredBoolean("privacyAnalyticsEnabled", false));
+    setPrivacyPersonalizationEnabled(readStoredBoolean("privacyPersonalizationEnabled", true));
+    setPrivacyShareProgress(readStoredBoolean("privacyShareProgress", false));
   }, []);
 
   const [savedSettings, setSavedSettings] = useState({
     theme: theme as Theme,
     colorTheme: colorTheme as ColorTheme,
     notifications: notificationsEnabled,
+    privacyProfileVisible,
+    privacyAnalyticsEnabled,
+    privacyPersonalizationEnabled,
+    privacyShareProgress,
     emailUpdates,
     weeklyReport,
     dailyLimit,
@@ -103,6 +114,26 @@ export default function SettingsPage() {
   const handleWeeklyReportChange = (value: boolean) => {
     setWeeklyReport(value);
     localStorage.setItem("weeklyReport", String(value));
+  };
+
+  const handlePrivacyProfileVisibleChange = (value: boolean) => {
+    setPrivacyProfileVisible(value);
+    localStorage.setItem("privacyProfileVisible", String(value));
+  };
+
+  const handlePrivacyAnalyticsChange = (value: boolean) => {
+    setPrivacyAnalyticsEnabled(value);
+    localStorage.setItem("privacyAnalyticsEnabled", String(value));
+  };
+
+  const handlePrivacyPersonalizationChange = (value: boolean) => {
+    setPrivacyPersonalizationEnabled(value);
+    localStorage.setItem("privacyPersonalizationEnabled", String(value));
+  };
+
+  const handlePrivacyShareProgressChange = (value: boolean) => {
+    setPrivacyShareProgress(value);
+    localStorage.setItem("privacyShareProgress", String(value));
   };
 
   const handleExport = () => alert("Exported data!");
@@ -145,6 +176,10 @@ export default function SettingsPage() {
       theme !== savedSettings.theme ||
       colorTheme !== savedSettings.colorTheme ||
       notificationsEnabled !== savedSettings.notifications ||
+      privacyProfileVisible !== savedSettings.privacyProfileVisible ||
+      privacyAnalyticsEnabled !== savedSettings.privacyAnalyticsEnabled ||
+      privacyPersonalizationEnabled !== savedSettings.privacyPersonalizationEnabled ||
+      privacyShareProgress !== savedSettings.privacyShareProgress ||
       emailUpdates !== savedSettings.emailUpdates ||
       weeklyReport !== savedSettings.weeklyReport ||
       dailyLimit !== savedSettings.dailyLimit ||
@@ -154,6 +189,10 @@ export default function SettingsPage() {
     theme,
     colorTheme,
     notificationsEnabled,
+    privacyProfileVisible,
+    privacyAnalyticsEnabled,
+    privacyPersonalizationEnabled,
+    privacyShareProgress,
     emailUpdates,
     weeklyReport,
     dailyLimit,
@@ -179,6 +218,10 @@ export default function SettingsPage() {
         theme: theme as Theme,
         colorTheme: colorTheme as ColorTheme,
         notifications: notificationsEnabled,
+        privacyProfileVisible,
+        privacyAnalyticsEnabled,
+        privacyPersonalizationEnabled,
+        privacyShareProgress,
         emailUpdates,
         weeklyReport,
         dailyLimit,
@@ -198,6 +241,10 @@ export default function SettingsPage() {
     theme,
     colorTheme,
     notificationsEnabled,
+    privacyProfileVisible,
+    privacyAnalyticsEnabled,
+    privacyPersonalizationEnabled,
+    privacyShareProgress,
     emailUpdates,
     weeklyReport,
     dailyLimit,
@@ -233,6 +280,10 @@ export default function SettingsPage() {
     handleWeeklyReportChange(true);
     handleDailyLimitChange(4);
     setReminderLeadHours(24);
+    handlePrivacyProfileVisibleChange(true);
+    handlePrivacyAnalyticsChange(false);
+    handlePrivacyPersonalizationChange(true);
+    handlePrivacyShareProgressChange(false);
   };
 
   return (
@@ -388,10 +439,52 @@ export default function SettingsPage() {
                 <p className="font-medium text-slate-900 dark:text-white">Change Password</p>
                 <p className="text-xs text-slate-600 dark:text-slate-300">Update your login password</p>
               </button>
-              <Link href="/privacy" className="w-full text-left px-4 py-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition inline-block">
+              <div className="w-full px-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
                 <p className="font-medium text-slate-900 dark:text-white">Privacy & Security</p>
-                <p className="text-xs text-slate-600 dark:text-slate-300">Manage your privacy settings</p>
-              </Link>
+                <p className="text-xs text-slate-600 dark:text-slate-300 mb-3">Manage your privacy settings</p>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-slate-900 dark:text-white">Public Profile Visibility</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-300">Allow your profile details to be visible across shared views.</p>
+                    </div>
+                    <button onClick={() => handlePrivacyProfileVisibleChange(!privacyProfileVisible)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${privacyProfileVisible ? "bg-emerald-600" : "bg-slate-300"}`}>
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${privacyProfileVisible ? "translate-x-6" : "translate-x-1"}`} />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-slate-900 dark:text-white">Usage Analytics</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-300">Share anonymous usage metrics to improve recommendations.</p>
+                    </div>
+                    <button onClick={() => handlePrivacyAnalyticsChange(!privacyAnalyticsEnabled)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${privacyAnalyticsEnabled ? "bg-emerald-600" : "bg-slate-300"}`}>
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${privacyAnalyticsEnabled ? "translate-x-6" : "translate-x-1"}`} />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-slate-900 dark:text-white">Personalized Insights</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-300">Use your planning activity to personalize smart scheduling.</p>
+                    </div>
+                    <button onClick={() => handlePrivacyPersonalizationChange(!privacyPersonalizationEnabled)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${privacyPersonalizationEnabled ? "bg-emerald-600" : "bg-slate-300"}`}>
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${privacyPersonalizationEnabled ? "translate-x-6" : "translate-x-1"}`} />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-slate-900 dark:text-white">Share Progress with Integrations</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-300">Allow progress sharing to connected apps like Canvas sync tools.</p>
+                    </div>
+                    <button onClick={() => handlePrivacyShareProgressChange(!privacyShareProgress)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${privacyShareProgress ? "bg-emerald-600" : "bg-slate-300"}`}>
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${privacyShareProgress ? "translate-x-6" : "translate-x-1"}`} />
+                    </button>
+                  </div>
+                </div>
+              </div>
               <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800 transition">
                 <p className="font-medium text-red-600">Delete Account</p>
                 <p className="text-xs text-red-600">Permanently delete your account</p>

@@ -35,6 +35,16 @@ export default function ProfilePage() {
   const { tasks, courses, preferences, loadPreferences } = usePlanner();
   const [email, setEmail] = useState<string | null>(null);
   const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [privacyProfileVisible] = useState(() =>
+    typeof window === "undefined"
+      ? true
+      : localStorage.getItem("privacyProfileVisible") !== "false"
+  );
+  const [privacyPersonalizationEnabled] = useState(() =>
+    typeof window === "undefined"
+      ? true
+      : localStorage.getItem("privacyPersonalizationEnabled") !== "false"
+  );
   const [animatedCompletionRate, setAnimatedCompletionRate] = useState(0);
   const animatedCompletionRateRef = useRef(0);
 
@@ -77,7 +87,6 @@ export default function ProfilePage() {
     loadPreferences();
   }, [loadPreferences]);
 
-
   const completedTasks = tasks.filter((t) => t.completed).length;
   const totalTasks = tasks.length;
   const completionRate = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
@@ -89,17 +98,22 @@ export default function ProfilePage() {
     preferences?.assignmentplan
   );
 
-  const fullName = profile ? `${profile.firstname} ${profile.lastname}` : "Guest User";
-  const initials = `${profile?.firstname?.[0] ?? "G"}${profile?.lastname?.[0] ?? "U"}`.toUpperCase();
+  const fullName = privacyProfileVisible
+    ? (profile ? `${profile.firstname} ${profile.lastname}` : "Guest User")
+    : "Private Profile";
+  const initials = privacyProfileVisible
+    ? `${profile?.firstname?.[0] ?? "G"}${profile?.lastname?.[0] ?? "U"}`.toUpperCase()
+    : "PP";
 
-  const focusTier =
-    completionRate >= 80
+  const focusTier = privacyPersonalizationEnabled
+    ? completionRate >= 80
       ? "Locked In"
       : completionRate >= 50
       ? "In The Zone"
       : completionRate >= 20
       ? "Building Momentum"
-      : "Getting Started";
+      : "Getting Started"
+    : "General Progress";
 
   useEffect(() => {
     animatedCompletionRateRef.current = animatedCompletionRate;
@@ -208,19 +222,19 @@ export default function ProfilePage() {
   return (
     <div className="relative min-h-screen overflow-hidden flex flex-col">
       <div className="fixed inset-0 bg-focus-light dark:bg-focus-dark bg-cover bg-center -z-30" />
-      <div className="pointer-events-none fixed inset-0 -z-20 bg-[radial-gradient(circle_at_20%_15%,rgba(16,185,129,0.24),transparent_40%),radial-gradient(circle_at_80%_20%,rgba(56,189,248,0.22),transparent_35%),radial-gradient(circle_at_50%_90%,rgba(99,102,241,0.18),transparent_40%)]" />
+      <div className="pointer-events-none fixed inset-0 -z-20 bg-[radial-gradient(circle_at_20%_15%,var(--theme-accent-soft),transparent_40%),radial-gradient(circle_at_80%_20%,rgba(56,189,248,0.22),transparent_35%),radial-gradient(circle_at_50%_90%,rgba(99,102,241,0.18),transparent_40%)]" />
       <div className="pointer-events-none fixed inset-0 -z-10 bg-gradient-to-b from-white/25 via-transparent to-white/40 dark:from-slate-900/45 dark:via-slate-900/25 dark:to-slate-950/60" />
 
       <main className="mx-auto w-full max-w-5xl flex-1 p-4 pb-10 sm:p-6 sm:pb-12 lg:p-8 lg:pb-14">
         <section className="rounded-3xl border border-white/45 bg-white/50 p-5 shadow-[0_30px_120px_-50px_rgba(15,23,42,0.5)] backdrop-blur-xl transition-all duration-500 dark:border-slate-700/55 dark:bg-slate-900/45 sm:p-8">
           <div className="grid gap-5 lg:grid-cols-[1.35fr_0.95fr]">
             <div
-              className="card-reveal relative overflow-hidden rounded-3xl border border-white/50 bg-gradient-to-br from-white/80 via-white/60 to-emerald-50/70 p-6 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_40px_-28px_rgba(22,101,52,0.7)] motion-reduce:transition-none dark:border-slate-700/55 dark:from-slate-900/70 dark:via-slate-900/55 dark:to-emerald-950/20 sm:p-8"
+              className="card-reveal relative overflow-hidden rounded-3xl border border-white/50 bg-gradient-to-br from-white/80 via-white/60 to-emerald-50/70 p-6 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_40px_-28px_rgba(15,23,42,0.35)] motion-reduce:transition-none dark:border-slate-700/55 dark:from-slate-900/70 dark:via-slate-900/55 dark:to-emerald-950/20 sm:p-8"
               style={{ animationDelay: "70ms" }}
             >
               <div className="pointer-events-none absolute -right-12 -top-14 h-44 w-44 rounded-full bg-gradient-to-b from-emerald-300/35 to-teal-300/5 blur-2xl dark:from-emerald-400/20 dark:to-transparent" />
               <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:gap-6">
-                <div className="flex h-24 w-24 items-center justify-center rounded-2xl border border-white/70 bg-gradient-to-br from-[#306844] to-[#1f4d30] text-4xl font-black tracking-wide text-white shadow-[0_14px_35px_-16px_rgba(17,24,39,0.7)]">
+                <div className="flex h-24 w-24 items-center justify-center rounded-2xl border border-white/70 bg-gradient-to-br from-[#306844] to-[#3d8658] text-4xl font-black tracking-wide text-white shadow-[0_14px_35px_-16px_rgba(17,24,39,0.7)]">
                   {initials}
                 </div>
                 <div className="space-y-1">
@@ -231,7 +245,9 @@ export default function ProfilePage() {
                     {fullName}
                   </h1>
                   <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
-                    {email || "Signed out currently - login to sync profile details"}
+                    {privacyProfileVisible
+                      ? (email || "Signed out currently - login to sync profile details")
+                      : "Email hidden by privacy setting"}
                   </p>
                 </div>
               </div>
@@ -264,7 +280,7 @@ export default function ProfilePage() {
 
               <div className="mt-5 h-3 w-full overflow-hidden rounded-full bg-slate-200/85 dark:bg-slate-700/60">
                 <div
-                  className="h-3 rounded-full bg-gradient-to-r from-[#306844] via-[#2f7f54] to-[#4fbe8b] transition-all duration-700 ease-out"
+                  className="h-3 rounded-full bg-gradient-to-r from-[#306844] via-[#2f7f54] to-[#5ac693] transition-all duration-700 ease-out"
                   style={{ width: `${completionRate}%` }}
                 />
               </div>

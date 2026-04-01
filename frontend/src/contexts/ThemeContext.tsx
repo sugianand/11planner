@@ -4,10 +4,10 @@ import { ReactNode, createContext, useContext, useEffect, useMemo, useState } fr
 import { ThemeProvider as NextThemesProvider, useTheme as useNextTheme } from 'next-themes';
 
 type Theme = 'light' | 'dark' | 'auto';
-type ColorTheme = 'emerald' | 'ocean' | 'rose' | 'slate' | 'amber' | 'violet' | 'mint';
+type ColorTheme = 'emerald' | 'ocean' | 'rose' | 'slate' | 'amber' | 'violet';
 
 const COLOR_THEME_STORAGE_KEY = 'colorTheme';
-const COLOR_THEMES: ColorTheme[] = ['emerald', 'ocean', 'rose', 'slate', 'amber', 'violet', 'mint'];
+const COLOR_THEMES: ColorTheme[] = ['emerald', 'ocean', 'rose', 'slate', 'amber', 'violet'];
 
 interface ColorThemeContextType {
   colorTheme: ColorTheme;

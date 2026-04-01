@@ -316,7 +316,6 @@ type DashboardPrefs = {
   backgroundId?: string;
   soundId?: string;
   volume?: number;
-  allowBackgroundVideo?: boolean;
 };
 
 const getStoredDashboardPrefs = (): DashboardPrefs | null => {
@@ -333,17 +332,6 @@ const getStoredDashboardPrefs = (): DashboardPrefs | null => {
   } catch {
     return null;
   }
-};
-
-const shouldReduceBackgroundVideo = (): boolean => {
-  if (typeof window === "undefined") {
-    return false;
-  }
-
-  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
-  const saveDataEnabled = Boolean(connection?.saveData);
-  return prefersReducedMotion || saveDataEnabled;
 };
 
 const soundscapes: Soundscape[] = [
@@ -716,11 +704,18 @@ export default function Dashboard() {
   const [isUiTransparent, setIsUiTransparent] = useState(false);
   const [showMiniTimer, setShowMiniTimer] = useState(false);
   const [showMiniTimerSettings, setShowMiniTimerSettings] = useState(false);
+  const [miniTimerDraft, setMiniTimerDraft] = useState<Record<"pomodoro" | "shortBreak" | "longBreak", string>>({
+    pomodoro: defaultTimerDurations.pomodoro.toString(),
+    shortBreak: defaultTimerDurations.shortBreak.toString(),
+    longBreak: defaultTimerDurations.longBreak.toString(),
+  });
 
   const {
     timerMode,
     timeLeft,
     isTimerActive,
+    activeTimerMode,
+    activeTimeLeft,
     customTimerDurations,
     timerModes,
     toggleTimer,
@@ -730,6 +725,9 @@ export default function Dashboard() {
     setCustomTimerDurations,
   } = useTimer();
 
+  const visibleTimerMode = activeTimerMode ?? timerMode;
+  const visibleTimeLeft = activeTimeLeft ?? timeLeft;
+
   const [timerPosition, setTimerPosition] = useState(getInitialTimerPosition);
   const hasAutoPositionedTimerRef = useRef(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -738,7 +736,8 @@ export default function Dashboard() {
   const [volume, setVolume] = useState(0.6);
   const [videoError, setVideoError] = useState(false);
   const [isBackgroundVideoReady, setIsBackgroundVideoReady] = useState(false);
-  const [allowBackgroundVideo, setAllowBackgroundVideo] = useState(true);
+  const [previewVideoSceneId, setPreviewVideoSceneId] = useState<string>("");
+  const [showAllThumbnailMotion, setShowAllThumbnailMotion] = useState(false);
   const [prefsLoaded, setPrefsLoaded] = useState(false);
   const [loadedThumbnailPreviews, setLoadedThumbnailPreviews] = useState<Record<string, boolean>>({});
   const [failedThumbnailPreviews, setFailedThumbnailPreviews] = useState<Record<string, boolean>>({});
@@ -765,12 +764,6 @@ export default function Dashboard() {
       setVolume(Math.min(1, Math.max(0, storedPrefs.volume)));
     }
 
-    if (typeof storedPrefs.allowBackgroundVideo === "boolean") {
-      setAllowBackgroundVideo(storedPrefs.allowBackgroundVideo);
-    } else {
-      setAllowBackgroundVideo(!shouldReduceBackgroundVideo());
-    }
-
     setPrefsLoaded(true);
   }, []);
 
@@ -783,11 +776,10 @@ export default function Dashboard() {
       backgroundId,
       soundId,
       volume,
-      allowBackgroundVideo,
     };
 
     window.localStorage.setItem(DASHBOARD_PREFS_KEY, JSON.stringify(payload));
-  }, [backgroundId, soundId, volume, allowBackgroundVideo, prefsLoaded]);
+  }, [backgroundId, soundId, volume, prefsLoaded]);
 
   useEffect(() => {
     const body = document.body;
@@ -1113,8 +1105,62 @@ export default function Dashboard() {
   );
 
   const handleSaveMiniTimerSettings = () => {
-    applyTimerSettings();
+    const clampDraftMinutes = (rawValue: string, min: number, max: number, fallback: number) => {
+      const parsed = Number.parseInt(rawValue.trim(), 10);
+      if (!Number.isFinite(parsed)) {
+        return fallback;
+      }
+      return Math.min(max, Math.max(min, parsed));
+    };
+
+    const nextDurations = {
+      pomodoro: clampDraftMinutes(miniTimerDraft.pomodoro, 1, 60, 1),
+      shortBreak: clampDraftMinutes(miniTimerDraft.shortBreak, 1, 30, 1),
+      longBreak: clampDraftMinutes(miniTimerDraft.longBreak, 1, 60, 1),
+    };
+
+    setCustomTimerDurations(nextDurations);
+    applyTimerSettings(nextDurations);
     setShowMiniTimerSettings(false);
+  };
+
+  useEffect(() => {
+    if (!showMiniTimerSettings) {
+      return;
+    }
+
+    setMiniTimerDraft({
+      pomodoro: customTimerDurations.pomodoro.toString(),
+      shortBreak: customTimerDurations.shortBreak.toString(),
+      longBreak: customTimerDurations.longBreak.toString(),
+    });
+  }, [showMiniTimerSettings, customTimerDurations]);
+
+  const handleMiniTimerDraftChange = (mode: "pomodoro" | "shortBreak" | "longBreak", rawValue: string) => {
+    const digitsOnly = rawValue.replace(/\D/g, "");
+
+    if (digitsOnly === "") {
+      setMiniTimerDraft((prev) => ({ ...prev, [mode]: "0" }));
+      return;
+    }
+
+    setMiniTimerDraft((prev) => ({ ...prev, [mode]: digitsOnly }));
+  };
+
+  const handleMiniTimerDraftBlur = (
+    mode: "pomodoro" | "shortBreak" | "longBreak",
+    min: number,
+    max: number
+  ) => {
+    setMiniTimerDraft((prev) => {
+      const parsed = Number.parseInt(prev[mode].trim(), 10);
+      if (!Number.isFinite(parsed) || parsed <= 0) {
+        return { ...prev, [mode]: min.toString() };
+      }
+
+      const clamped = Math.min(max, Math.max(min, parsed));
+      return { ...prev, [mode]: clamped.toString() };
+    });
   };
 
   const formatTime = (seconds: number) => {
@@ -1144,7 +1190,13 @@ export default function Dashboard() {
     [backgroundId]
   );
 
-  const shouldRenderBackgroundVideo = Boolean(activeBackground?.videoUrl) && !videoError && allowBackgroundVideo;
+  useEffect(() => {
+    setPreviewVideoSceneId(backgroundId);
+  }, [backgroundId]);
+
+  const shouldRenderBackgroundVideo =
+    Boolean(activeBackground?.videoUrl)
+    && !videoError;
 
   const activeSound = useMemo(
     () => soundscapes.find((scene) => scene.id === soundId) ?? soundscapes[0],
@@ -1307,28 +1359,37 @@ export default function Dashboard() {
                   ))}
                 </div>
 
-                <button
-                  onClick={() => setAllowBackgroundVideo((prev) => !prev)}
-                  title="Performance Mode keeps static backgrounds to reduce CPU and bandwidth usage"
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition justify-self-end col-start-3 ${!allowBackgroundVideo
-                    ? "bg-emerald-600 text-white border-emerald-600"
-                    : "border-slate-200/80 dark:border-slate-700/80 text-slate-600 dark:text-slate-300 hover:bg-white/80 dark:hover:bg-slate-800/80"
-                    }`}
-                >
-                  Performance Mode {!allowBackgroundVideo ? "On" : "Off"}
-                </button>
+                <div className="justify-self-end col-start-3 flex items-center gap-2">
+                  <button
+                    onClick={() => setShowAllThumbnailMotion((prev) => !prev)}
+                    title="When on, all background thumbnails animate. Keep this off for smoother performance."
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${showAllThumbnailMotion
+                      ? "bg-violet-600 text-white border-violet-600 shadow-sm shadow-violet-900/20"
+                      : "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-900/25 dark:text-sky-200 dark:border-sky-700/50"
+                      }`}
+                  >
+                    Live Previews: {showAllThumbnailMotion ? "All" : "Smart"}
+                  </button>
+                </div>
               </div>
 
               <div className="grid w-full gap-4 grid-cols-2 md:grid-cols-4 lg:grid-cols-5">
-                {filteredBackgrounds.map((scene) => (
-                  <button
-                    key={scene.id}
-                    onClick={() => handleBackgroundSelect(scene.id)}
-                    className={`text-center rounded-2xl border p-4 transition shadow-sm ${scene.id === activeBackground?.id
-                      ? "border-emerald-500 bg-emerald-50/80 dark:bg-emerald-900/30"
-                      : "border-white/40 dark:border-slate-700/40 bg-white/70 dark:bg-slate-900/70 hover:bg-white dark:hover:bg-slate-800"
-                      }`}
-                  >
+                    {filteredBackgrounds.map((scene) => {
+                      const shouldAnimatePreview = showAllThumbnailMotion || previewVideoSceneId === scene.id;
+
+                      return (
+                        <button
+                          key={scene.id}
+                          onClick={() => handleBackgroundSelect(scene.id)}
+                          onMouseEnter={() => setPreviewVideoSceneId(scene.id)}
+                          onFocus={() => setPreviewVideoSceneId(scene.id)}
+                          onMouseLeave={() => setPreviewVideoSceneId(activeBackground?.id ?? "")}
+                          onBlur={() => setPreviewVideoSceneId(activeBackground?.id ?? "")}
+                          className={`text-center rounded-2xl border p-4 transition shadow-sm ${scene.id === activeBackground?.id
+                            ? "border-emerald-500 bg-emerald-50/80 dark:bg-emerald-900/30"
+                            : "border-white/40 dark:border-slate-700/40 bg-white/70 dark:bg-slate-900/70 hover:bg-white dark:hover:bg-slate-800"
+                            }`}
+                        >
                     <div className="flex flex-col items-center gap-3">
                       <div className="h-20 w-32 rounded-xl bg-slate-200/70 dark:bg-slate-700/70 overflow-hidden">
                         {scene.videoUrl ? (
@@ -1341,7 +1402,7 @@ export default function Dashboard() {
                               loading="lazy"
                               sizes="128px"
                             />
-                            {allowBackgroundVideo && !failedThumbnailPreviews[scene.id] ? (
+                            {!failedThumbnailPreviews[scene.id] && shouldAnimatePreview ? (
                               <video
                                 className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${loadedThumbnailPreviews[scene.id] ? "opacity-100" : "opacity-0"}`}
                                 src={scene.videoUrl}
@@ -1349,7 +1410,7 @@ export default function Dashboard() {
                                 loop
                                 playsInline
                                 autoPlay
-                                preload="metadata"
+                                preload="none"
                                 onLoadedData={() => markThumbnailLoaded(scene.id)}
                                 onError={() => markThumbnailFailed(scene.id)}
                               />
@@ -1374,8 +1435,9 @@ export default function Dashboard() {
                         )}
                       </div>
                     </div>
-                  </button>
-                ))}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -1477,7 +1539,9 @@ export default function Dashboard() {
   );
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-transparent transition-colors duration-500 px-6 lg:px-10 pt-6 lg:pt-10 pb-0 flex flex-col">
+    <div
+      className="min-h-screen relative overflow-hidden bg-transparent transition-colors duration-500 px-6 lg:px-10 pt-6 lg:pt-10 pb-0 flex flex-col"
+    >
       <div className="fixed inset-0 -z-20">
         {shouldRenderBackgroundVideo ? (
           <video
@@ -1506,12 +1570,12 @@ export default function Dashboard() {
             style={{
               backgroundImage: activeBackground?.imageUrl
                 ? `url(${activeBackground.imageUrl})`
-                : videoError || !allowBackgroundVideo
+                : videoError
                   ? `url(${FALLBACK_BACKGROUND_IMAGE})`
                   : activeBackground?.id === "default"
                     ? "none"
                     : "radial-gradient(circle at top, rgba(34, 197, 94, 0.35), transparent 55%), radial-gradient(circle at 30% 40%, rgba(251, 191, 36, 0.3), transparent 45%), radial-gradient(circle at 80% 20%, rgba(56, 189, 248, 0.25), transparent 45%)",
-              backgroundColor: activeBackground?.id === "default" && !videoError && allowBackgroundVideo ? "#f8fafc" : undefined,
+              backgroundColor: activeBackground?.id === "default" && !videoError ? "#f8fafc" : undefined,
               backgroundSize: "cover",
               backgroundPosition: "center",
             }}
@@ -1532,14 +1596,20 @@ export default function Dashboard() {
         </div>
       )}
 
-      {!allowBackgroundVideo && activeBackground?.videoUrl && (
-        <div className="fixed bottom-6 right-6 z-20 bg-white/90 dark:bg-slate-900/90 text-slate-700 dark:text-slate-200 text-xs px-3 py-2 rounded-full shadow">
-          Performance Mode is on. Using static backgrounds.
-        </div>
+      {isUiHidden && (
+        <button
+          type="button"
+          aria-label="Show UI"
+          className="fixed inset-0 z-40 bg-transparent"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsUiHidden(false);
+          }}
+        />
       )}
 
       <div
-        className={`fixed bottom-8 right-8 z-50 flex items-center gap-3 transition-all duration-500 ease-out ${isUiHidden ? "translate-y-0 opacity-100" : "translate-y-16 opacity-0 pointer-events-none"}`}
+        className={`fixed bottom-8 right-8 z-50 flex items-center gap-3 transition-all duration-150 ease-out ${isUiHidden ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0 pointer-events-none"}`}
       >
         <button
           onClick={() => setShowMiniTimer((prev) => !prev)}
@@ -1566,8 +1636,8 @@ export default function Dashboard() {
         >
           <div className="flex flex-col items-center gap-3">
             <div className="text-center">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{timerModes[timerMode].label}{timerMode === "pomodoro" ? " Session" : ""}</p>
-              <p className="text-3xl font-bold text-slate-900 dark:text-white">{formatTime(timeLeft)}</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{timerModes[visibleTimerMode].label}{visibleTimerMode === "pomodoro" ? " Session" : ""}</p>
+              <p className="text-3xl font-bold text-slate-900 dark:text-white">{formatTime(visibleTimeLeft)}</p>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -1620,81 +1690,107 @@ export default function Dashboard() {
 
       {showMiniTimerSettings && (
         <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm"
-          onClick={() => setShowMiniTimerSettings(false)}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/50 backdrop-blur-md px-4"
         >
           <div
-            className="w-full max-w-md mx-4 rounded-3xl bg-white dark:bg-slate-800 p-6 shadow-2xl"
+            className="w-full max-w-lg overflow-hidden rounded-3xl border border-white/60 dark:border-slate-700/70 bg-white/95 dark:bg-slate-900/95 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">Timer Settings</h2>
-
-            <div className="space-y-5">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Focus Duration (minutes)
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="60"
-                  value={customTimerDurations.pomodoro}
-                  onChange={(e) => setCustomTimerDurations({
-                    ...customTimerDurations,
-                    pomodoro: parseInt(e.target.value, 10) || defaultTimerDurations.pomodoro,
-                  })}
-                  className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-[#306844]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Short Break Duration (minutes)
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="30"
-                  value={customTimerDurations.shortBreak}
-                  onChange={(e) => setCustomTimerDurations({
-                    ...customTimerDurations,
-                    shortBreak: parseInt(e.target.value, 10) || defaultTimerDurations.shortBreak,
-                  })}
-                  className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-[#306844]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Long Break Duration (minutes)
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="60"
-                  value={customTimerDurations.longBreak}
-                  onChange={(e) => setCustomTimerDurations({
-                    ...customTimerDurations,
-                    longBreak: parseInt(e.target.value, 10) || defaultTimerDurations.longBreak,
-                  })}
-                  className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-[#306844]"
-                />
+            <div
+              className="px-6 py-5 text-white"
+              style={{
+                backgroundImage: "linear-gradient(to right, var(--brand-from), var(--brand-via), var(--brand-to))",
+              }}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/80">Focus Setup</p>
+                  <h2 className="mt-1 text-2xl font-bold leading-tight">Timer Settings</h2>
+                  <p className="mt-1 text-sm text-white/85">Set your session lengths for focus and breaks.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowMiniTimerSettings(false)}
+                  className="h-9 w-9 rounded-full border border-white/40 bg-white/10 transition hover:bg-white/20"
+                  aria-label="Close timer settings"
+                >
+                  <span className="material-symbols-outlined text-base">close</span>
+                </button>
               </div>
             </div>
 
-            <div className="mt-8 flex gap-3">
-              <button
-                onClick={() => setShowMiniTimerSettings(false)}
-                className="flex-1 rounded-lg bg-slate-200 dark:bg-slate-700 px-6 py-3 font-semibold text-slate-700 dark:text-slate-300 transition hover:bg-slate-300 dark:hover:bg-slate-600"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveMiniTimerSettings}
-                className="flex-1 rounded-lg bg-[#306844] px-6 py-3 font-semibold text-white transition hover:bg-[#255236] shadow-md"
-              >
-                Save
-              </button>
+            <div className="px-6 py-6 space-y-4">
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/70 p-4">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <label className="text-sm font-semibold text-slate-800 dark:text-slate-100">Focus Duration</label>
+                  <span className="text-[11px] font-semibold rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300 px-2 py-1">1-60 min</span>
+                </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={miniTimerDraft.pomodoro}
+                    onChange={(e) => handleMiniTimerDraftChange("pomodoro", e.target.value)}
+                    onBlur={() => handleMiniTimerDraftBlur("pomodoro", 1, 60)}
+                    className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 pr-14 py-3 text-base font-semibold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-600"
+                  />
+                  <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-300">min</span>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/70 p-4">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <label className="text-sm font-semibold text-slate-800 dark:text-slate-100">Short Break</label>
+                  <span className="text-[11px] font-semibold rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300 px-2 py-1">1-30 min</span>
+                </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={miniTimerDraft.shortBreak}
+                    onChange={(e) => handleMiniTimerDraftChange("shortBreak", e.target.value)}
+                    onBlur={() => handleMiniTimerDraftBlur("shortBreak", 1, 30)}
+                    className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 pr-14 py-3 text-base font-semibold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-600"
+                  />
+                  <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-300">min</span>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/70 p-4">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <label className="text-sm font-semibold text-slate-800 dark:text-slate-100">Long Break</label>
+                  <span className="text-[11px] font-semibold rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300 px-2 py-1">1-60 min</span>
+                </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={miniTimerDraft.longBreak}
+                    onChange={(e) => handleMiniTimerDraftChange("longBreak", e.target.value)}
+                    onBlur={() => handleMiniTimerDraftBlur("longBreak", 1, 60)}
+                    className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 pr-14 py-3 text-base font-semibold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-600"
+                  />
+                  <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-300">min</span>
+                </div>
+              </div>
+
+              <div className="mt-2 flex gap-3 pt-2">
+                <button
+                  onClick={() => setShowMiniTimerSettings(false)}
+                  className="flex-1 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-6 py-3 font-semibold text-slate-700 dark:text-slate-300 transition hover:bg-slate-100 dark:hover:bg-slate-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveMiniTimerSettings}
+                  className="flex-1 rounded-xl bg-emerald-600 px-6 py-3 font-semibold text-white transition hover:bg-emerald-700 shadow-md"
+                >
+                  Save Settings
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1707,6 +1803,8 @@ export default function Dashboard() {
           timerMode={timerMode}
           timeLeft={timeLeft}
           isTimerActive={isTimerActive}
+          activeTimerMode={activeTimerMode}
+          activeTimeLeft={activeTimeLeft}
           customTimerDurations={customTimerDurations}
           onToggleTimer={toggleTimer}
           onResetTimer={resetTimer}
@@ -1717,7 +1815,7 @@ export default function Dashboard() {
       </div>
 
       <div
-        className={`mt-auto -mx-6 lg:-mx-10 transition-all duration-500 ease-out ${isUiHidden ? "translate-y-20 opacity-0 pointer-events-none" : "translate-y-0 opacity-100"}`}
+        className={`mt-auto -mx-6 lg:-mx-10 transition-all duration-150 ease-out ${isUiHidden ? "translate-y-8 opacity-0 pointer-events-none" : "translate-y-0 opacity-100"}`}
       >
         <Footer />
       </div>
