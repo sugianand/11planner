@@ -61,6 +61,7 @@ export default function FocusDashboardPanel({
   const {
     userId,
     tasks,
+    courses,
     scheduleBlocks,
     loadTasks,
     loadCourses,
