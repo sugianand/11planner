@@ -38,23 +38,16 @@ const readStoredBoolean = (key: string, fallback: boolean): boolean => {
   return value === null ? fallback : value !== "false";
 };
 
-const readStoredNumber = (key: string, fallback: number): number => {
-  if (typeof window === "undefined") return fallback;
-  const value = Number(localStorage.getItem(key));
-  return Number.isNaN(value) ? fallback : value;
-};
-
 export default function SettingsPage() {
   const { theme, setTheme, colorTheme, setColorTheme, colorThemes } = useTheme();
-  const [isMounted, setIsMounted] = useState(false);
   const [user, setUser] = useState<{ email?: string } | null>(null);
-  const [soundEnabled, setSoundEnabled] = useState(true);
-  const [privacyProfileVisible, setPrivacyProfileVisible] = useState(true);
-  const [privacyAnalyticsEnabled, setPrivacyAnalyticsEnabled] = useState(false);
-  const [privacyPersonalizationEnabled, setPrivacyPersonalizationEnabled] = useState(true);
-  const [privacyShareProgress, setPrivacyShareProgress] = useState(false);
-  const [emailUpdates, setEmailUpdates] = useState(true);
-  const [weeklyReport, setWeeklyReport] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState(() => readStoredBoolean("soundEnabled", true));
+  const [privacyProfileVisible, setPrivacyProfileVisible] = useState(() => readStoredBoolean("privacyProfileVisible", true));
+  const [privacyAnalyticsEnabled, setPrivacyAnalyticsEnabled] = useState(() => readStoredBoolean("privacyAnalyticsEnabled", false));
+  const [privacyPersonalizationEnabled, setPrivacyPersonalizationEnabled] = useState(() => readStoredBoolean("privacyPersonalizationEnabled", true));
+  const [privacyShareProgress, setPrivacyShareProgress] = useState(() => readStoredBoolean("privacyShareProgress", false));
+  const [emailUpdates, setEmailUpdates] = useState(() => readStoredBoolean("emailUpdates", true));
+  const [weeklyReport, setWeeklyReport] = useState(() => readStoredBoolean("weeklyReport", true));
   const [dailyLimit, setDailyLimit] = useState(4);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
 
@@ -68,15 +61,7 @@ export default function SettingsPage() {
   } = useNotification();
 
   useEffect(() => {
-    setIsMounted(true);
     supabase.auth.getUser().then(({ data }) => setUser(data?.user ?? null));
-    setEmailUpdates(readStoredBoolean("emailUpdates", true));
-    setWeeklyReport(readStoredBoolean("weeklyReport", true));
-    setDailyLimit(readStoredNumber("dailyLimit", 4));
-    setPrivacyProfileVisible(readStoredBoolean("privacyProfileVisible", true));
-    setPrivacyAnalyticsEnabled(readStoredBoolean("privacyAnalyticsEnabled", false));
-    setPrivacyPersonalizationEnabled(readStoredBoolean("privacyPersonalizationEnabled", true));
-    setPrivacyShareProgress(readStoredBoolean("privacyShareProgress", false));
   }, []);
 
   const [savedSettings, setSavedSettings] = useState({
@@ -89,7 +74,6 @@ export default function SettingsPage() {
     privacyShareProgress,
     emailUpdates,
     weeklyReport,
-    dailyLimit,
     reminderLeadHours,
   });
 
@@ -182,7 +166,6 @@ export default function SettingsPage() {
       privacyShareProgress !== savedSettings.privacyShareProgress ||
       emailUpdates !== savedSettings.emailUpdates ||
       weeklyReport !== savedSettings.weeklyReport ||
-      dailyLimit !== savedSettings.dailyLimit ||
       reminderLeadHours !== savedSettings.reminderLeadHours
     );
   }, [
@@ -195,7 +178,6 @@ export default function SettingsPage() {
     privacyShareProgress,
     emailUpdates,
     weeklyReport,
-    dailyLimit,
     reminderLeadHours,
     savedSettings,
   ]);
@@ -224,7 +206,6 @@ export default function SettingsPage() {
         privacyShareProgress,
         emailUpdates,
         weeklyReport,
-        dailyLimit,
         reminderLeadHours,
       });
       setLastSavedAt(
@@ -247,7 +228,6 @@ export default function SettingsPage() {
     privacyShareProgress,
     emailUpdates,
     weeklyReport,
-    dailyLimit,
     reminderLeadHours,
   ]);
 
@@ -264,13 +244,10 @@ export default function SettingsPage() {
   );
 
   const permissionButtonClass = useMemo(() => {
-    if (!isMounted) {
-      return "bg-slate-200 text-slate-700";
-    }
     return permission === "granted"
       ? "bg-emerald-100 text-emerald-700"
       : "bg-slate-200 text-slate-700 hover:bg-slate-300";
-  }, [isMounted, permission]);
+  }, [permission]);
 
   const handleResetDefaults = () => {
     handleThemeChange("light");
@@ -278,7 +255,6 @@ export default function SettingsPage() {
     setNotificationsEnabled(true);
     handleEmailUpdatesChange(true);
     handleWeeklyReportChange(true);
-    handleDailyLimitChange(4);
     setReminderLeadHours(24);
     handlePrivacyProfileVisibleChange(true);
     handlePrivacyAnalyticsChange(false);
@@ -392,10 +368,10 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-medium text-slate-900 dark:text-white">Browser Permission</p>
-                  <p className="text-xs text-slate-600 dark:text-slate-300">{isMounted ? permissionLabel : "Loading..."}</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-300">{permissionLabel}</p>
                 </div>
-                <button onClick={requestPermission} disabled={!isMounted || permission === "denied" || permission === "unsupported"} className={`px-4 py-2 rounded-lg text-xs font-semibold transition ${permissionButtonClass}`}>
-                  {isMounted ? permissionButtonLabel : "Enable"}
+                <button onClick={requestPermission} disabled={permission === "denied" || permission === "unsupported"} className={`px-4 py-2 rounded-lg text-xs font-semibold transition ${permissionButtonClass}`}>
+                  {permissionButtonLabel}
                 </button>
               </div>
 

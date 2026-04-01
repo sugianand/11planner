@@ -4,7 +4,7 @@ interface StatCardProps {
     label: string;
     value: string | number | ReactNode;
     subtext?: string | ReactNode;
-    accentColor?: "blue" | "green" | "grey" | "red";
+    accentColor?: "blue" | "green" | "grey" | "red" | "yellow";
     icon?: string;
 }
 
@@ -21,6 +21,7 @@ export default function StatCard({
         green: "text-[#306844] dark:text-[#3d8658]",
         grey: "text-slate-600 dark:text-white",
         red: "text-red-600 dark:text-white",
+        yellow: "text-amber-500 dark:text-amber-300",
     };
 
     return (

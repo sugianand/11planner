@@ -27,14 +27,16 @@ interface ThemeContextType {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [colorTheme, setColorTheme] = useState<ColorTheme>('emerald');
-
-  useEffect(() => {
+  const [colorTheme, setColorTheme] = useState<ColorTheme>(() => {
+    if (typeof window === 'undefined') {
+      return 'emerald';
+    }
     const stored = localStorage.getItem(COLOR_THEME_STORAGE_KEY) as ColorTheme | null;
     if (stored && COLOR_THEMES.includes(stored)) {
-      setColorTheme(stored);
+      return stored;
     }
-  }, []);
+    return 'emerald';
+  });
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', colorTheme);

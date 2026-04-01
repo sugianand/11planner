@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { createPortal } from "react-dom";
 
 type TimerMode = "pomodoro" | "shortBreak" | "longBreak";
@@ -77,18 +77,6 @@ export default function Timer({
         onSaveSettings(nextDurations);
         setShowSettings(false);
     };
-
-    useEffect(() => {
-        if (!showSettings) {
-            return;
-        }
-
-        setTimerDraft({
-            pomodoro: customDurations.pomodoro.toString(),
-            shortBreak: customDurations.shortBreak.toString(),
-            longBreak: customDurations.longBreak.toString(),
-        });
-    }, [showSettings, customDurations]);
 
     const handleDraftChange = (timerMode: TimerMode, rawValue: string) => {
         const digitsOnly = rawValue.replace(/\D/g, "");

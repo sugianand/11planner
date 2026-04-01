@@ -6,6 +6,8 @@ import { Task, TaskCreate } from "@/types";
 import Footer from "@/components/Footer";
 import AppDialog from "@/components/AppDialog";
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 export default function TasksPage() {
   const {
     userId,
@@ -52,6 +54,7 @@ export default function TasksPage() {
   const [deadlineFilter, setDeadlineFilter] = useState<"all" | "today" | "next7" | "next30" | "overdue">("all");
   const [pageSize, setPageSize] = useState<10 | 25 | 50>(10);
   const [currentPage, setCurrentPage] = useState(1);
+  const [estimatingTaskId, setEstimatingTaskId] = useState<string | null>(null);
 
   useEffect(() => {
     loadCourses();
@@ -110,6 +113,47 @@ export default function TasksPage() {
         setDialog({ isOpen: false, title: "", message: "" });
       },
     });
+  };
+
+  const handleEstimateTaskTime = async (task: Task) => {
+    if (!userId || userId === "user_demo") {
+      setDialog({
+        isOpen: true,
+        title: "Sign in required",
+        message: "Please sign in to use AI estimated time.",
+      });
+      return;
+    }
+
+    try {
+      setEstimatingTaskId(task.id);
+      const response = await fetch(`${API_BASE_URL}/api/tasks/${task.id}/estimate-time`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: userId }),
+      });
+
+      if (!response.ok) {
+        const message = await response.text();
+        throw new Error(message || "Failed to estimate task time");
+      }
+
+      const data = await response.json();
+      await loadTasks();
+      setDialog({
+        isOpen: true,
+        title: "Estimated time updated",
+        message: `AI estimate: ${data.estimated_hours} hours`,
+      });
+    } catch (err) {
+      setDialog({
+        isOpen: true,
+        title: "Could not estimate time",
+        message: err instanceof Error ? err.message : "Unexpected error while estimating task time.",
+      });
+    } finally {
+      setEstimatingTaskId(null);
+    }
   };
 
   const getCourseName = (courseId: string | undefined) => {
@@ -488,6 +532,13 @@ export default function TasksPage() {
                     </div>
 
                     <div className="flex gap-3 flex-wrap">
+                      <button
+                        onClick={() => handleEstimateTaskTime(task)}
+                        disabled={estimatingTaskId === task.id}
+                        className="text-slate-500 dark:text-slate-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium py-1.5 px-3 rounded-lg transition hover:bg-emerald-50 dark:hover:bg-emerald-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {estimatingTaskId === task.id ? "Estimating..." : "Get AI Estimated Time"}
+                      </button>
                       <button onClick={() => handleEdit(task)}
                         className="text-slate-500 dark:text-slate-400 hover:text-[#002966] dark:hover:text-blue-400 font-medium py-1.5 px-3 rounded-lg transition hover:bg-blue-50 dark:hover:bg-blue-900/20">
                         Edit

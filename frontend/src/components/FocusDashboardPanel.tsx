@@ -61,7 +61,6 @@ export default function FocusDashboardPanel({
   const {
     userId,
     tasks,
-    courses,
     scheduleBlocks,
     loadTasks,
     loadCourses,
@@ -847,7 +846,7 @@ export default function FocusDashboardPanel({
             value={`${productivityScore}%`}
             subtext={productivityScore === 100 ? "Perfect!" : "Keep going!"}
             icon="bolt"
-            accentColor={productivityScore >= 80 ? "green" : productivityScore >= 50 ? "blue" : "red"}
+            accentColor={productivityScore >= 80 ? "green" : productivityScore >= 50 ? "yellow" : "red"}
           />
           <StatCard
             label="Overdue"

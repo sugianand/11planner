@@ -126,12 +126,12 @@ export const scheduleAPI = {
       body: JSON.stringify(block),
     }),
 
-  generate: (userId: string, tasks: Task[] = []) =>
+  generate: (userId: string, studyLimitHours?: number) =>
     fetchAPI<{ message: string; blocks: ScheduleBlock[]; stats: Record<string, unknown> | null }>(
       `/api/schedule/generate/${userId}`,
       {
         method: "POST",
-        body: JSON.stringify({ tasks }),
+        body: JSON.stringify({ study_limit_hours: studyLimitHours }),
       }
     ),
 

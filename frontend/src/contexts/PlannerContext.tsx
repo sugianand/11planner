@@ -127,6 +127,14 @@ function normalizeDeadlineForDb(value: string): string {
   return date.toISOString();
 }
 
+function clampStudyLimit(value: unknown, fallback = 4): number {
+  const numeric = Number(value);
+  if (Number.isNaN(numeric)) {
+    return fallback;
+  }
+  return Math.min(12, Math.max(1, numeric));
+}
+
 function mapCourseRowToModel(row: SupabaseCourseRow): Course {
   return {
     id: row.id,
@@ -230,7 +238,7 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
 
       const { data, error: queryError } = await supabase
         .from("profiles")
-        .select("worktime, workdays, workstyle, assignmentplan, additional_info")
+        .select("worktime, workdays, workstyle, assignmentplan, additional_info, daily_study_limit")
         .eq("id", userId)
         .single();
 
@@ -242,6 +250,7 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
         workstyle: data.workstyle || "",
         assignmentplan: data.assignmentplan || "",
         additionalInfo: data.additional_info || "",
+        dailyLimit: clampStudyLimit(data.daily_study_limit, 4),
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load preferences");

@@ -146,4 +146,5 @@ export interface UserPreferences {
   workstyle: string;
   assignmentplan: string;
   additionalInfo: string;
+  dailyLimit: number;
 }
