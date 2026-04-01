@@ -13,10 +13,14 @@ import AppDialog from './AppDialog';
 
 interface ScheduleViewProps {
   events?: Event[];
-  onEventMove?: (eventId: string, newStart: Date) => void;
+  onEventMove?: (eventId: string, newStart: Date) => void | boolean | Promise<void | boolean>;
+  colorBy?: "priority" | "course";
+  onColorByChange?: (colorBy: "priority" | "course") => void;
+  errorMessage?: string | null;
+  onDismissError?: () => void;
 }
 
-export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEventMove }) => {
+export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEventMove, colorBy = "priority", onColorByChange, errorMessage = null, onDismissError }) => {
   const { userId } = usePlanner();
   const [viewMode, setViewMode] = useState<ViewMode>('monthly');
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
@@ -99,16 +103,50 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
       return;
     }
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
-    const webcalUrl = backendUrl.replace(/^https?:\/\//, 'webcal://') + `/api/schedule-blocks/${userId}/calendar.ics`;
-    window.open(webcalUrl, '_blank', 'noopener,noreferrer');
-  }, [userId]);
+    const httpUrl = `${backendUrl}/api/schedule-blocks/${userId}/calendar.ics`;
+    const webcalUrl = httpUrl
+      .replace(/^https:\/\//, 'webcals://')
+      .replace(/^http:\/\//, 'webcal://');
+
+    const isMac = /Mac|iPhone|iPad/i.test(navigator.userAgent);
+    const isLocalBackend = /localhost|127\.0\.0\.1/i.test(backendUrl);
+
+    if (isMac && isLocalBackend) {
+      setDialog({
+        isOpen: true,
+        title: 'Mac subscribe limitation in local dev',
+        message: 'Apple Calendar cannot live-subscribe to localhost URLs. Use Export for local testing, or set NEXT_PUBLIC_API_URL to a public HTTPS URL for live subscribe.',
+      });
+      exportEventsToICS(eventList, '11planner-schedule.ics');
+      return;
+    }
+
+    const link = document.createElement('a');
+    link.href = webcalUrl;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }, [eventList, userId]);
 
   const handleViewModeChange = (mode: ViewMode) => {
     setViewMode(mode);
   };
 
   const handleEventMove = useCallback(
-    (eventId: string, newStart: Date) => {
+    async (eventId: string, newStart: Date) => {
+      let shouldApplyMove = true;
+      if (onEventMove) {
+        const result = await onEventMove(eventId, newStart);
+        if (result === false) {
+          shouldApplyMove = false;
+        }
+      }
+
+      if (!shouldApplyMove) {
+        return;
+      }
+
       setEventList((prev) =>
         prev.map((eventItem) => {
           if (eventItem.id !== eventId) {
@@ -122,9 +160,6 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
           return { ...eventItem, start: updatedStart, end: updatedEnd };
         })
       );
-      if (onEventMove) {
-        onEventMove(eventId, newStart);
-      }
     },
     [onEventMove]
   );
@@ -165,47 +200,58 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
         </div>
 
         {/* View mode buttons */}
-        <div className="inline-flex gap-2 p-1.5 mb-5 rounded-2xl bg-white/75 dark:bg-slate-800/70 border border-white/70 dark:border-slate-700/70 shadow-sm">
-          <button
-            onClick={() => handleViewModeChange('daily')}
-            className={`px-4 py-2 rounded-xl font-semibold text-sm transition-colors ${
-              viewMode === 'daily'
-                ? 'bg-emerald-600 text-white'
-                : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-200 dark:hover:bg-slate-600'
-            }`}
+        <div className="flex flex-col gap-3 mb-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => handleViewModeChange('daily')}
+              className={`px-4 py-2 rounded-xl font-semibold text-sm transition-colors ${
+                viewMode === 'daily'
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-200 dark:hover:bg-slate-600'
+              }`}
+            >
+              Day
+            </button>
+            <button
+              onClick={() => handleViewModeChange('weekly')}
+              className={`px-4 py-2 rounded-xl font-semibold text-sm transition-colors ${
+                viewMode === 'weekly'
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-200 dark:hover:bg-slate-600'
+              }`}
+            >
+              Week
+            </button>
+            <button
+              onClick={() => handleViewModeChange('monthly')}
+              className={`px-4 py-2 rounded-xl font-semibold text-sm transition-colors ${
+                viewMode === 'monthly'
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-200 dark:hover:bg-slate-600'
+              }`}
+            >
+              Month
+            </button>
+            <button
+              onClick={() => handleViewModeChange('yearly')}
+              className={`px-4 py-2 rounded-xl font-semibold text-sm transition-colors ${
+                viewMode === 'yearly'
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-200 dark:hover:bg-slate-600'
+              }`}
+            >
+              Year
+            </button>
+          </div>
+
+          <select
+            value={colorBy}
+            onChange={(e) => onColorByChange?.(e.target.value as "priority" | "course")}
+            className="px-3 py-1 rounded-lg text-sm font-medium bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 border border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-600 transition"
           >
-            Day
-          </button>
-          <button
-            onClick={() => handleViewModeChange('weekly')}
-            className={`px-4 py-2 rounded-xl font-semibold text-sm transition-colors ${
-              viewMode === 'weekly'
-                ? 'bg-emerald-600 text-white'
-                : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-200 dark:hover:bg-slate-600'
-            }`}
-          >
-            Week
-          </button>
-          <button
-            onClick={() => handleViewModeChange('monthly')}
-            className={`px-4 py-2 rounded-xl font-semibold text-sm transition-colors ${
-              viewMode === 'monthly'
-                ? 'bg-emerald-600 text-white'
-                : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-200 dark:hover:bg-slate-600'
-            }`}
-          >
-            Month
-          </button>
-          <button
-            onClick={() => handleViewModeChange('yearly')}
-            className={`px-4 py-2 rounded-xl font-semibold text-sm transition-colors ${
-              viewMode === 'yearly'
-                ? 'bg-emerald-600 text-white'
-                : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-200 dark:hover:bg-slate-600'
-            }`}
-          >
-            Year
-          </button>
+            <option value="priority">Color by Priority</option>
+            <option value="course">Color by Course</option>
+          </select>
         </div>
 
         {/* Navigation */}
@@ -234,13 +280,13 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
       {/* Content */}
       <div className="flex-1 overflow-hidden bg-white/55 dark:bg-slate-900/55">
         {viewMode === 'daily' && (
-          <DayView dayData={dayData} events={eventList} onEventMove={handleEventMove} />
+          <DayView dayData={dayData} events={eventList} onEventMove={handleEventMove} errorMessage={errorMessage} onDismissError={onDismissError} />
         )}
         {viewMode === 'weekly' && (
-          <WeekView weekDays={weekDays} events={eventList} onEventMove={handleEventMove} />
+          <WeekView weekDays={weekDays} events={eventList} onEventMove={handleEventMove} errorMessage={errorMessage} onDismissError={onDismissError} />
         )}
         {viewMode === 'monthly' && (
-          <MonthView daysInMonth={daysInMonth} events={eventList} onEventMove={handleEventMove} />
+          <MonthView daysInMonth={daysInMonth} events={eventList} onEventMove={handleEventMove} errorMessage={errorMessage} onDismissError={onDismissError} />
         )}
         {viewMode === 'yearly' && (
           <YearView year={currentDate.getFullYear()} monthsData={monthsInYear} events={eventList} />

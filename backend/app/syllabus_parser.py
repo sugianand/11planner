@@ -125,6 +125,9 @@ def _extract_course_code_from_parens(line: str) -> Optional[str]:
 def _analyze_syllabus_with_gemini(course_code: str, course_name: str, full_syllabus_text: str) -> dict:
     """Use Gemini to analyze syllabus and extract course info comprehensively."""
     try:
+        if genai is None:
+            return {}
+
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             return {}
@@ -180,6 +183,9 @@ Return ONLY valid JSON, no other text."""
 def _generate_description_with_gemini(course_code: str, course_name: str, syllabus_excerpt: str) -> Optional[str]:
     """Generate a course description using Google Gemini API."""
     try:
+        if genai is None:
+            return None
+
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             return None

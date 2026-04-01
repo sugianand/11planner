@@ -111,6 +111,12 @@ export function getColorClass(color?: string): string {
     yellow: 'bg-amber-100/90 text-amber-900 border-amber-300/85 dark:bg-amber-500/18 dark:text-amber-100 dark:border-amber-400/35',
     purple: 'bg-violet-100/85 text-violet-900 border-violet-300/80 dark:bg-violet-500/18 dark:text-violet-100 dark:border-violet-400/35',
     pink: 'bg-pink-100/85 text-pink-900 border-pink-300/80 dark:bg-pink-500/18 dark:text-pink-100 dark:border-pink-400/35',
+    orange: 'bg-orange-100/85 text-orange-900 border-orange-300/80 dark:bg-orange-500/18 dark:text-orange-100 dark:border-orange-400/35',
+    teal: 'bg-teal-100/85 text-teal-900 border-teal-300/80 dark:bg-teal-500/18 dark:text-teal-100 dark:border-teal-400/35',
+    indigo: 'bg-indigo-100/85 text-indigo-900 border-indigo-300/80 dark:bg-indigo-500/18 dark:text-indigo-100 dark:border-indigo-400/35',
+    cyan: 'bg-cyan-100/85 text-cyan-900 border-cyan-300/80 dark:bg-cyan-500/18 dark:text-cyan-100 dark:border-cyan-400/35',
+    lime: 'bg-lime-100/85 text-lime-900 border-lime-300/80 dark:bg-lime-500/18 dark:text-lime-100 dark:border-lime-400/35',
+    rose: 'bg-rose-100/85 text-rose-900 border-rose-300/80 dark:bg-rose-500/18 dark:text-rose-100 dark:border-rose-400/35',
   };
   return colorMap[color || 'blue'] || colorMap.blue;
 }

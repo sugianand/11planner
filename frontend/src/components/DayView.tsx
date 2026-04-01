@@ -8,46 +8,20 @@ interface DayViewProps {
   dayData: DayData;
   events: Event[];
   onEventMove?: (eventId: string, newStart: Date) => void;
+  errorMessage?: string | null;
+  onDismissError?: () => void;
 }
 
-export const DayView: React.FC<DayViewProps> = ({ dayData, events, onEventMove }) => {
+export const DayView: React.FC<DayViewProps> = ({ dayData, events, onEventMove, errorMessage, onDismissError }) => {
   const [activeSlot, setActiveSlot] = React.useState<string | null>(null);
-  const [dragGhost, setDragGhost] = React.useState<{
-    title: string;
-    color?: Event['color'];
-    x: number;
-    y: number;
-    durationLabel: string;
-    timeRangeLabel: string;
-  } | null>(null);
-  const slots = Array.from({ length: 48 }, (_, i) => ({
-    hour: Math.floor(i / 2),
-    minute: i % 2 === 0 ? 0 : 30,
+  const [draggingEventId, setDraggingEventId] = React.useState<string | null>(null);
+  const [isErrorFading, setIsErrorFading] = React.useState(false);
+  const SLOT_MINUTES = 15;
+  const SLOT_HEIGHT_PX = 40;
+  const slots = Array.from({ length: 96 }, (_, i) => ({
+    hour: Math.floor(i / 4),
+    minute: (i % 4) * 15,
   }));
-
-  const formatDurationLabel = (start: Date, end: Date) => {
-    const minutes = Math.max(Math.round((end.getTime() - start.getTime()) / 60000), 0);
-    const hours = Math.floor(minutes / 60);
-    const remainder = minutes % 60;
-    if (hours > 0 && remainder > 0) {
-      return `${hours}h ${remainder}m`;
-    }
-    if (hours > 0) {
-      return `${hours}h`;
-    }
-    return `${remainder || 0}m`;
-  };
-
-  const formatTimeRangeLabel = (start: Date, end: Date) =>
-    `${start.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    })} - ${end.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    })}`;
 
   const handleDragStart = (
     event: React.DragEvent<HTMLDivElement>,
@@ -55,30 +29,14 @@ export const DayView: React.FC<DayViewProps> = ({ dayData, events, onEventMove }
   ) => {
     event.dataTransfer.setData('text/plain', eventItem.id);
     event.dataTransfer.effectAllowed = 'move';
-    setDragGhost({
-      title: eventItem.title,
-      color: eventItem.color,
-      x: event.clientX,
-      y: event.clientY,
-      durationLabel: formatDurationLabel(new Date(eventItem.start), new Date(eventItem.end)),
-      timeRangeLabel: formatTimeRangeLabel(new Date(eventItem.start), new Date(eventItem.end)),
+    requestAnimationFrame(() => {
+      setDraggingEventId(eventItem.id);
     });
   };
 
-  const handleDrag = (event: React.DragEvent<HTMLDivElement>) => {
-    if (!dragGhost) {
-      return;
-    }
-    if (event.clientX === 0 && event.clientY === 0) {
-      return;
-    }
-    setDragGhost((prev) =>
-      prev ? { ...prev, x: event.clientX, y: event.clientY } : prev
-    );
-  };
-
   const handleDragEnd = () => {
-    setDragGhost(null);
+    setDraggingEventId(null);
+    setActiveSlot(null);
   };
 
   const handleDrop = (event: React.DragEvent<HTMLDivElement>, hour: number, minute: number) => {
@@ -91,6 +49,7 @@ export const DayView: React.FC<DayViewProps> = ({ dayData, events, onEventMove }
     newStart.setHours(hour, minute, 0, 0);
     onEventMove(eventId, newStart);
     setActiveSlot(null);
+    setDraggingEventId(null);
   };
 
   const handleDragOver = (event: React.DragEvent<HTMLDivElement>, slotKey: string) => {
@@ -103,18 +62,78 @@ export const DayView: React.FC<DayViewProps> = ({ dayData, events, onEventMove }
     setActiveSlot((prev) => (prev === slotKey ? null : prev));
   };
 
+  React.useEffect(() => {
+    if (!errorMessage) {
+      setIsErrorFading(false);
+      return;
+    }
+    setIsErrorFading(false);
+    const fadeTimer = setTimeout(() => {
+      setIsErrorFading(true);
+    }, 3200);
+    return () => clearTimeout(fadeTimer);
+  }, [errorMessage]);
+
+  const getEventDurationMinutes = (eventItem: Event) => {
+    const start = new Date(eventItem.start).getTime();
+    const end = new Date(eventItem.end).getTime();
+    return Math.max(Math.round((end - start) / 60000), 15);
+  };
+
+  const getEventTimeLabel = (eventItem: Event) => {
+    const start = new Date(eventItem.start);
+    const end = new Date(eventItem.end);
+    return `${start.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    })} - ${end.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    })}`;
+  };
+
   return (
     <div className="flex flex-col h-full">
       <div className="sticky top-0 z-10 border-b border-white/70 dark:border-slate-700/70 bg-white/85 dark:bg-slate-900/85 backdrop-blur px-4 py-3">
         <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{dayData.dayOfWeek}</h2>
         <p className="text-base text-slate-600 dark:text-slate-300">{dayData.date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+        {errorMessage && (
+          <div className="absolute right-4 top-4 z-30">
+            <div
+              className={`inline-flex max-w-[420px] items-center gap-2 rounded-md border border-red-200/70 bg-red-50/90 px-2 py-1 text-xs font-medium text-red-700 shadow-sm transition-opacity duration-700 dark:border-red-800/70 dark:bg-red-900/70 dark:text-red-200 ${
+                isErrorFading ? 'opacity-0' : 'opacity-100'
+              }`}
+            >
+              <span>{errorMessage}</span>
+              <button
+                type="button"
+                onClick={onDismissError}
+                className="rounded px-1 leading-none hover:bg-red-100 dark:hover:bg-red-800/80"
+                aria-label="Dismiss error"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto bg-white/40 dark:bg-slate-900/30">
         {slots.map((slot) => {
-          const slotEvents = events.filter((e) => {
-            const startDate = new Date(e.start);
-            return startDate.getHours() === slot.hour && startDate.getMinutes() === slot.minute;
+          const slotStart = new Date(dayData.date);
+          slotStart.setHours(slot.hour, slot.minute, 0, 0);
+          const slotEnd = new Date(slotStart);
+          slotEnd.setMinutes(slotEnd.getMinutes() + SLOT_MINUTES);
+
+          const slotEvents = events.filter((eventItem) => {
+            const startDate = new Date(eventItem.start);
+            return (
+              startDate.toDateString() === dayData.date.toDateString() &&
+              startDate >= slotStart &&
+              startDate < slotEnd
+            );
           });
           const slotKey = `${dayData.date.toDateString()}-${slot.hour}-${slot.minute}`;
           const isActive = activeSlot === slotKey;
@@ -146,39 +165,44 @@ export const DayView: React.FC<DayViewProps> = ({ dayData, events, onEventMove }
                     })}
                   </div>
                 )}
-                {slotEvents.map((event) => (
+                {slotEvents.map((event, index) => {
+                  const eventStart = new Date(event.start);
+                  const minutesFromSlotStart = Math.max(
+                    Math.round((eventStart.getTime() - slotStart.getTime()) / 60000),
+                    0
+                  );
+                  const topOffsetPx = (minutesFromSlotStart / SLOT_MINUTES) * SLOT_HEIGHT_PX;
+                  const durationMinutes = getEventDurationMinutes(event);
+                  const heightPx = Math.max((durationMinutes / SLOT_MINUTES) * SLOT_HEIGHT_PX - 2, 12);
+
+                  return (
                   <div
                     key={event.id}
-                    className={`mb-2 p-2 rounded-lg border-l-4 cursor-move shadow-sm ${getColorClass(event.color)}`}
+                    className={`absolute z-10 p-2 rounded border-l-4 cursor-move shadow-sm ${getColorClass(event.color)} ${draggingEventId === event.id ? 'pointer-events-none opacity-90' : ''}`}
+                    style={{
+                      top: `${topOffsetPx}px`,
+                      left: `${4 + index * 6}px`,
+                      right: '4px',
+                      height: `${heightPx}px`,
+                    }}
                     draggable
                     onDragStart={(dragEvent) => handleDragStart(dragEvent, event)}
-                    onDrag={handleDrag}
                     onDragEnd={handleDragEnd}
-                    title="Drag to move"
+                    title={`${event.title} • ${getEventTimeLabel(event)} (Drag to move)`}
                   >
                     <p className="font-semibold text-sm">{event.title}</p>
+                    <p className="text-[10px] opacity-80">{getEventTimeLabel(event)}</p>
                     {event.description && (
                       <p className="text-xs opacity-75">{event.description}</p>
                     )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           );
         })}
       </div>
-      {dragGhost && (
-        <div
-          className={`fixed z-50 pointer-events-none px-2 py-1 rounded text-xs font-semibold border-l-2 shadow-lg opacity-90 drag-ghost ${getColorClass(
-            dragGhost.color
-          )}`}
-          style={{ left: dragGhost.x + 12, top: dragGhost.y + 12 }}
-        >
-          {dragGhost.title}
-          <div className="text-[10px] font-normal opacity-80">{dragGhost.durationLabel}</div>
-          <div className="text-[10px] font-normal opacity-70">{dragGhost.timeRangeLabel}</div>
-        </div>
-      )}
     </div>
   );
 };

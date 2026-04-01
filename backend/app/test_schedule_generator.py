@@ -339,6 +339,45 @@ class TestScheduleGeneratorNewFeatures(unittest.TestCase):
             daily_hours = sum(b.duration_minutes for b in day_blocks) / 60
             self.assertLessEqual(daily_hours, 4.1)
 
+    def test_lowercase_workdays_from_preferences_quiz(self):
+        """Lowercase workdays from profile quiz should still be respected"""
+        prefs_lowercase_days = Preferences(
+            workdays=["monday", "tuesday", "wednesday", "thursday", "friday"],
+            work_start=time(9, 0),
+            work_end=time(17, 0),
+            study_limit_hours=8,
+        )
+        tasks = [self.create_task("t1", 2, 2, 3)]
+        blocks = self.generator.generate_schedule(tasks, prefs_lowercase_days, start_date=self.start_date)
+
+        self.assertGreater(len(blocks), 0)
+        for block in blocks:
+            self.assertIn(block.start_time.strftime("%A"), ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"])
+
+    def test_empty_workdays_does_not_hang(self):
+        """If workdays are missing in preferences quiz, generator should still produce blocks"""
+        prefs_no_days = Preferences(
+            workdays=[],
+            work_start=time(9, 0),
+            work_end=time(17, 0),
+            study_limit_hours=8,
+        )
+        tasks = [self.create_task("t1", 1, 2, 2)]
+        blocks = self.generator.generate_schedule(tasks, prefs_no_days, start_date=self.start_date)
+        self.assertGreater(len(blocks), 0)
+
+    def test_non_positive_study_limit_uses_fallback(self):
+        """Invalid study_limit_hours should fall back to generator defaults"""
+        prefs_bad_limit = Preferences(
+            workdays=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+            work_start=time(9, 0),
+            work_end=time(17, 0),
+            study_limit_hours=0,
+        )
+        tasks = [self.create_task("t1", 2, 2, 2)]
+        blocks = self.generator.generate_schedule(tasks, prefs_bad_limit, start_date=self.start_date)
+        self.assertGreater(len(blocks), 0)
+
 
 if __name__ == "__main__":
     unittest.main()

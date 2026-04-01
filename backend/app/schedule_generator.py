@@ -39,11 +39,21 @@ class ScheduleGenerator:
         self.focus_block_hours = focus_block_hours
         self.break_minutes = 15
 
+    def normalized_day_set(self, days: Optional[List[str]]) -> set[str]:
+        return {
+            (day or "").strip().lower()
+            for day in (days or [])
+            if (day or "").strip()
+        }
+
     def day_name(self, dt: datetime) -> str:
         return dt.strftime("%A") # returns day names like mon, tues, etc.
     
     def is_workday(self, dt:datetime, pref: Preferences) -> bool:
-        return self.day_name(dt) in pref.workdays
+        workdays = self.normalized_day_set(pref.workdays)
+        if not workdays:
+            return True
+        return self.day_name(dt).lower() in workdays
     
     def set_time(self, dt: datetime, t: time) -> datetime:
         return dt.replace(hour=t.hour, minute =t.minute, second = 0, microsecond=0)
@@ -109,9 +119,12 @@ class ScheduleGenerator:
         ) -> datetime:
         if not preferred_days:
             return dt
+        preferred_day_set = self.normalized_day_set(preferred_days)
+        if not preferred_day_set:
+            return dt
         probe = dt
         for _ in range(14):
-            if self.day_name(probe) in preferred_days and self.is_workday(probe, prefs):
+            if self.day_name(probe).lower() in preferred_day_set and self.is_workday(probe, prefs):
                 return self.set_time(probe,prefs.work_start)
             probe += timedelta(days=1)
         return dt
@@ -183,6 +196,10 @@ class ScheduleGenerator:
         current_dt = self.skip_if_busy(current_dt, busy)
 
         max_hours_per_day = float(prefs.study_limit_hours)
+        if max_hours_per_day <= 0:
+            max_hours_per_day = float(self.max_hours_per_day)
+        if max_hours_per_day <= 0:
+            max_hours_per_day = 1.0
         hours_today = 0.0
         scheduled_blocks: List[ScheduleBlock] = []
 
@@ -229,6 +246,7 @@ class ScheduleGenerator:
 
         for task in sorted_tasks:
             task_preferred_days = preferred_days_map.get(str(task.id), [])
+            task_preferred_day_set = self.normalized_day_set(task_preferred_days)
             if task_preferred_days:
                 candidate_dt = self.move_to_preferred_day(current_dt, prefs, task_preferred_days)
                 candidate_dt = self.skip_if_busy(candidate_dt, busy)
@@ -243,13 +261,13 @@ class ScheduleGenerator:
 
             while hours_remaining > 0:
 
-                if self.day_name(current_dt) not in prefs.workdays:
+                if not self.is_workday(current_dt, prefs):
                     current_dt = self.move_to_next_work_start(current_dt, prefs)
                     current_dt = self.skip_if_busy(current_dt, busy)
                     hours_today = 0.0
                     continue
 
-                if task_preferred_days and self.day_name(current_dt) not in task_preferred_days:
+                if task_preferred_day_set and self.day_name(current_dt).lower() not in task_preferred_day_set:
                     moved_dt = self.move_to_preferred_day(current_dt, prefs, task_preferred_days)
                     moved_dt = self.skip_if_busy(moved_dt, busy)
                     if moved_dt.date() <= task.deadline.date():
