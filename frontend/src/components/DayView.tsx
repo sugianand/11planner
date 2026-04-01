@@ -105,12 +105,12 @@ export const DayView: React.FC<DayViewProps> = ({ dayData, events, onEventMove }
 
   return (
     <div className="flex flex-col h-full">
-      <div className="sticky top-0 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 dark:border-slate-700 p-4">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{dayData.dayOfWeek}</h2>
-        <p className="text-lg text-gray-600 dark:text-slate-300">{dayData.date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+      <div className="sticky top-0 z-10 border-b border-white/70 dark:border-slate-700/70 bg-white/85 dark:bg-slate-900/85 backdrop-blur px-4 py-3">
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{dayData.dayOfWeek}</h2>
+        <p className="text-base text-slate-600 dark:text-slate-300">{dayData.date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto bg-white/40 dark:bg-slate-900/30">
         {slots.map((slot) => {
           const slotEvents = events.filter((e) => {
             const startDate = new Date(e.start);
@@ -120,8 +120,8 @@ export const DayView: React.FC<DayViewProps> = ({ dayData, events, onEventMove }
           const isActive = activeSlot === slotKey;
 
           return (
-            <div key={slotKey} className="flex border-b border-gray-100 dark:border-slate-700">
-              <div className="w-20 flex-shrink-0 py-2 px-4 bg-gray-50 dark:bg-slate-800 text-sm font-semibold text-gray-700 dark:text-slate-200 border-r border-gray-100 dark:border-slate-700">
+            <div key={slotKey} className="flex border-b border-slate-200/60 dark:border-slate-700/70">
+              <div className="w-20 flex-shrink-0 py-2 px-4 bg-slate-50/85 dark:bg-slate-800/85 text-sm font-semibold text-slate-700 dark:text-slate-200 border-r border-slate-200/60 dark:border-slate-700/70">
                 {slot.minute === 0
                   ? new Date(0, 0, 0, slot.hour).toLocaleTimeString('en-US', {
                       hour: 'numeric',
@@ -131,14 +131,14 @@ export const DayView: React.FC<DayViewProps> = ({ dayData, events, onEventMove }
               </div>
               <div
                 className={`flex-1 py-2 px-4 relative min-h-10 transition-colors ${
-                  isActive ? 'bg-emerald-50 dark:bg-emerald-900/20' : 'bg-white dark:bg-slate-800'
+                  isActive ? 'bg-emerald-50/80 dark:bg-emerald-900/20' : 'bg-white/80 dark:bg-slate-800/70'
                 }`}
                 onDragOver={(event) => handleDragOver(event, slotKey)}
                 onDragLeave={() => handleDragLeave(slotKey)}
                 onDrop={(event) => handleDrop(event, slot.hour, slot.minute)}
               >
                 {isActive && (
-                  <div className="absolute right-2 top-1 text-[10px] text-emerald-700 bg-emerald-100 rounded px-1">
+                  <div className="absolute right-2 top-1 text-[10px] font-semibold text-emerald-700 bg-emerald-100 rounded-full px-1.5 py-0.5 dark:bg-emerald-900/30 dark:text-emerald-300">
                     {new Date(0, 0, 0, slot.hour, slot.minute).toLocaleTimeString('en-US', {
                       hour: 'numeric',
                       minute: '2-digit',
@@ -149,7 +149,7 @@ export const DayView: React.FC<DayViewProps> = ({ dayData, events, onEventMove }
                 {slotEvents.map((event) => (
                   <div
                     key={event.id}
-                    className={`mb-2 p-2 rounded border-l-4 cursor-move ${getColorClass(event.color)}`}
+                    className={`mb-2 p-2 rounded-lg border-l-4 cursor-move shadow-sm ${getColorClass(event.color)}`}
                     draggable
                     onDragStart={(dragEvent) => handleDragStart(dragEvent, event)}
                     onDrag={handleDrag}

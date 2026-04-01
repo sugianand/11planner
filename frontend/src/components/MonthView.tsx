@@ -132,18 +132,18 @@ export const MonthView: React.FC<MonthViewProps> = ({ daysInMonth, events, onEve
 
   return (
     <div className="flex flex-col h-full">
-      <div className="sticky top-0 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 dark:border-slate-700 p-4">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Month View</h2>
-        <p className="text-lg text-gray-600 dark:text-slate-300">{monthYear}</p>
+      <div className="sticky top-0 z-10 border-b border-white/70 dark:border-slate-700/70 bg-white/85 dark:bg-slate-900/85 backdrop-blur px-4 py-2.5">
+        <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">Month View</h2>
+        <p className="text-sm text-slate-600 dark:text-slate-300">{monthYear}</p>
       </div>
 
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto bg-white/40 dark:bg-slate-900/30">
         {/* Week day headers */}
-        <div className="grid grid-cols-7 gap-px bg-gray-200 dark:bg-slate-700">
+        <div className="grid grid-cols-7 gap-px bg-slate-200/70 dark:bg-slate-700/70">
           {weekDays.map((day) => (
             <div
               key={day}
-              className="bg-gray-100 dark:bg-slate-700 p-2 text-center font-semibold text-gray-700 dark:text-slate-200"
+              className="bg-slate-100/90 dark:bg-slate-700/90 p-1.5 text-center font-semibold text-slate-700 dark:text-slate-200"
             >
               {day}
             </div>
@@ -151,7 +151,7 @@ export const MonthView: React.FC<MonthViewProps> = ({ daysInMonth, events, onEve
         </div>
 
         {/* Calendar grid */}
-        <div className="grid grid-cols-7 gap-px bg-gray-200 dark:bg-slate-700">
+        <div className="grid grid-cols-7 gap-px bg-slate-200/70 dark:bg-slate-700/70">
           {daysInMonth.map((day) => {
             const dayEvents = events.filter((e) => {
               const eventDate = new Date(e.start);
@@ -164,19 +164,19 @@ export const MonthView: React.FC<MonthViewProps> = ({ daysInMonth, events, onEve
             return (
               <div
                 key={dayKey}
-                className={`min-h-24 p-2 transition-colors ${
+                className={`min-h-16 md:min-h-20 p-2 transition-colors ${
                   day.isCurrentMonth
                     ? day.isToday
-                      ? 'bg-emerald-50 dark:bg-emerald-900/20'
-                      : 'bg-white dark:bg-slate-800'
-                    : 'bg-white dark:bg-slate-800'
+                      ? 'bg-emerald-50/85 dark:bg-emerald-900/20'
+                      : 'bg-white/85 dark:bg-slate-800/75'
+                    : 'bg-slate-50/60 dark:bg-slate-800/60'
                 } ${isActive ? 'ring-2 ring-emerald-400 dark:ring-emerald-500' : ''}`}
                 onDragOver={(event) => handleDragOver(event, dayKey)}
                 onDragLeave={() => handleDragLeave(dayKey)}
                 onDrop={(event) => handleDrop(event, day)}
               >
                 {isActive && draggingEventId && (
-                  <div className="mb-1 text-[10px] text-emerald-700 bg-emerald-100 rounded px-1 inline-block">
+                  <div className="mb-1 text-[10px] font-semibold text-emerald-700 bg-emerald-100 rounded-full px-1.5 py-0.5 inline-block dark:bg-emerald-900/30 dark:text-emerald-300">
                     {day.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {getDragTimeLabel()}
                   </div>
                 )}
@@ -185,8 +185,8 @@ export const MonthView: React.FC<MonthViewProps> = ({ daysInMonth, events, onEve
                     day.isCurrentMonth
                       ? day.isToday
                         ? 'bg-emerald-600 text-white rounded-full w-6 h-6 flex items-center justify-center'
-                        : 'text-gray-900 dark:text-white'
-                      : 'text-gray-400'
+                        : 'text-slate-900 dark:text-white'
+                      : 'text-slate-400 dark:text-slate-500'
                   }`}
                 >
                   {day.dayNumber}
@@ -197,7 +197,7 @@ export const MonthView: React.FC<MonthViewProps> = ({ daysInMonth, events, onEve
                   {dayEvents.slice(0, 2).map((event) => (
                     <div
                       key={event.id}
-                      className={`text-xs p-1 rounded truncate border-l-2 cursor-move ${getColorClass(event.color)}`}
+                      className={`text-xs p-1 rounded-md truncate border-l-2 cursor-move shadow-sm ${getColorClass(event.color)}`}
                       draggable
                       onDragStart={(dragEvent) => handleDragStart(dragEvent, event.id)}
                       onDrag={handleDrag}
@@ -208,7 +208,7 @@ export const MonthView: React.FC<MonthViewProps> = ({ daysInMonth, events, onEve
                     </div>
                   ))}
                   {dayEvents.length > 2 && (
-                    <p className="text-xs text-gray-600 dark:text-slate-300">+{dayEvents.length - 2} more</p>
+                    <p className="text-xs text-slate-600 dark:text-slate-300">+{dayEvents.length - 2} more</p>
                   )}
                 </div>
               </div>

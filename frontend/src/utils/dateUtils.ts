@@ -105,12 +105,12 @@ export function formatDateRange(startDate: Date, endDate: Date): string {
 
 export function getColorClass(color?: string): string {
   const colorMap: { [key: string]: string } = {
-    blue: 'bg-blue-100 text-blue-800 border-blue-300',
-    red: 'bg-red-100 text-red-800 border-red-300',
-    green: 'bg-green-100 text-green-800 border-green-300',
-    yellow: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-    purple: 'bg-purple-100 text-purple-800 border-purple-300',
-    pink: 'bg-pink-100 text-pink-800 border-pink-300',
+    blue: 'bg-blue-100/85 text-blue-900 border-blue-300/80 dark:bg-blue-500/18 dark:text-blue-100 dark:border-blue-400/35',
+    red: 'bg-red-100/85 text-red-900 border-red-300/80 dark:bg-red-500/18 dark:text-red-100 dark:border-red-400/35',
+    green: 'bg-green-100/85 text-green-900 border-green-300/80 dark:bg-green-500/18 dark:text-green-100 dark:border-green-400/35',
+    yellow: 'bg-amber-100/90 text-amber-900 border-amber-300/85 dark:bg-amber-500/18 dark:text-amber-100 dark:border-amber-400/35',
+    purple: 'bg-violet-100/85 text-violet-900 border-violet-300/80 dark:bg-violet-500/18 dark:text-violet-100 dark:border-violet-400/35',
+    pink: 'bg-pink-100/85 text-pink-900 border-pink-300/80 dark:bg-pink-500/18 dark:text-pink-100 dark:border-pink-400/35',
   };
   return colorMap[color || 'blue'] || colorMap.blue;
 }

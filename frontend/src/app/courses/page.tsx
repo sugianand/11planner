@@ -6,6 +6,8 @@ import { CourseCreate, Course } from "@/types";
 import Footer from "@/components/Footer";
 import AppDialog from "@/components/AppDialog";
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 export default function CoursesPage() {
   const weekDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
   const {
@@ -153,43 +155,65 @@ export default function CoursesPage() {
     });
   };
 
-  const handleUploadSyllabus = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const uploadAndParseSyllabus = async (file: File, type: "course" | "lab") => {
     const formDataToSend = new FormData();
     formDataToSend.append("file", file);
 
     try {
-      const response = await fetch("http://localhost:8000/api/syllabus/parse", {
+      const response = await fetch(`${API_BASE_URL}/api/syllabus/parse`, {
         method: "POST",
         body: formDataToSend,
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({ success: false, error: "Invalid server response" }));
+
+      if (!response.ok) {
+        setDialog({
+          isOpen: true,
+          title: `${type === "lab" ? "Lab syllabus" : "Syllabus"} upload failed`,
+          message: data.error || `Server error (${response.status}). Please try again.`,
+        });
+        return;
+      }
 
       if (data.success && data.parsed) {
-        setFormData((prev) => ({
-          ...prev,
-          name: data.parsed.name || prev.name,
-          code: data.parsed.code || prev.code,
-          professor: data.parsed.professor || prev.professor,
-          description: data.parsed.description || prev.description,
-          courseDate: data.parsed.courseDate || prev.courseDate,
-          startTime: data.parsed.startTime || prev.startTime,
-          endTime: data.parsed.endTime || prev.endTime,
-          isOnline: data.parsed.isOnline || prev.isOnline,
-          hasLab: data.parsed.hasLab || prev.hasLab,
-          labDay: data.parsed.labDay || prev.labDay,
-          labStartTime: data.parsed.labStartTime || prev.labStartTime,
-          labEndTime: data.parsed.labEndTime || prev.labEndTime,
-          labIsOnline: data.parsed.labIsOnline || prev.labIsOnline,
-        }));
+        if (type === "lab") {
+          setFormData((prev) => ({
+            ...prev,
+            hasLab: true,
+            labDay: data.parsed.labDay || data.parsed.courseDate || prev.labDay,
+            labStartTime: data.parsed.labStartTime || data.parsed.startTime || prev.labStartTime,
+            labEndTime: data.parsed.labEndTime || data.parsed.endTime || prev.labEndTime,
+            labIsOnline:
+              typeof data.parsed.labIsOnline === "boolean"
+                ? data.parsed.labIsOnline
+                : typeof data.parsed.isOnline === "boolean"
+                ? data.parsed.isOnline
+                : prev.labIsOnline,
+          }));
+        } else {
+          setFormData((prev) => ({
+            ...prev,
+            name: data.parsed.name || prev.name,
+            code: data.parsed.code || prev.code,
+            professor: data.parsed.professor || prev.professor,
+            description: data.parsed.description || prev.description,
+            courseDate: data.parsed.courseDate || prev.courseDate,
+            startTime: data.parsed.startTime || prev.startTime,
+            endTime: data.parsed.endTime || prev.endTime,
+            isOnline: data.parsed.isOnline || prev.isOnline,
+            hasLab: data.parsed.hasLab || prev.hasLab,
+            labDay: data.parsed.labDay || prev.labDay,
+            labStartTime: data.parsed.labStartTime || prev.labStartTime,
+            labEndTime: data.parsed.labEndTime || prev.labEndTime,
+            labIsOnline: data.parsed.labIsOnline || prev.labIsOnline,
+          }));
+        }
       } else {
         setDialog({
           isOpen: true,
-          title: "Syllabus parsing failed",
-          message: "Could not parse this syllabus. Please fill in details manually.",
+          title: `${type === "lab" ? "Lab syllabus" : "Syllabus"} parsing failed`,
+          message: data.error || "Could not parse this syllabus. Please fill in details manually.",
         });
       }
     } catch (err) {
@@ -197,9 +221,27 @@ export default function CoursesPage() {
       setDialog({
         isOpen: true,
         title: "Upload error",
-        message: "Error uploading syllabus. Please try again.",
+        message: "Could not reach the backend. Make sure the backend server is running and try again.",
       });
     }
+  };
+
+  const handleUploadSyllabus = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputEl = e.currentTarget;
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    await uploadAndParseSyllabus(file, "course");
+    inputEl.value = "";
+  };
+
+  const handleUploadLabSyllabus = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputEl = e.currentTarget;
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    await uploadAndParseSyllabus(file, "lab");
+    inputEl.value = "";
   };
 
   return (
@@ -447,6 +489,24 @@ export default function CoursesPage() {
                 {formData.hasLab && (
                   <div className="border border-slate-200/80 dark:border-slate-700/40 rounded-xl p-4 space-y-4 bg-white/60 dark:bg-slate-900/30">
                     <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Lab Information</h3>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">
+                        Upload lab syllabus PDF (optional)
+                      </label>
+                      <label className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl cursor-pointer hover:border-blue-500 dark:hover:border-blue-400 transition bg-slate-50/70 dark:bg-slate-900/30">
+                        <div className="flex items-center justify-center gap-2 text-slate-700 dark:text-slate-200">
+                          <span className="material-symbols-outlined text-base">upload_file</span>
+                          <span className="text-sm font-medium">Upload Lab Syllabus PDF</span>
+                        </div>
+                        <input
+                          type="file"
+                          accept=".pdf"
+                          onChange={handleUploadLabSyllabus}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
                     
                     {!formData.labIsOnline && (
                       <div>

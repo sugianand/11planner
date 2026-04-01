@@ -170,7 +170,12 @@ export default function Navigation() {
               <div className="relative">
                 <button
                   onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
-                  className="flex items-center justify-center w-11 h-11 rounded-full border-2 border-emerald-400 dark:border-emerald-500 bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-200 font-bold shadow-md hover:shadow-lg hover:border-emerald-600 dark:hover:border-emerald-300 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                  className="flex items-center justify-center w-11 h-11 rounded-full border-2 bg-white dark:bg-slate-900 font-bold shadow-md hover:shadow-lg transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[var(--theme-accent)]"
+                  style={{
+                    borderColor: "var(--theme-accent)",
+                    color: "var(--theme-accent-strong)",
+                    boxShadow: "0 6px 20px -14px var(--theme-accent-strong)",
+                  }}
                   aria-label="Open user menu"
                 >
                   <span className="text-lg select-none">{userInitials}</span>

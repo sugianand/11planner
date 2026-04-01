@@ -4,7 +4,16 @@ import os
 import json
 from typing import Optional
 from pypdf import PdfReader
-import google.generativeai as genai
+
+
+def _get_genai_module():
+    """Lazily import Gemini SDK so parser can run even if optional deps are unavailable."""
+    try:
+        import google.generativeai as genai  # type: ignore
+        return genai
+    except Exception as e:
+        print(f"Gemini SDK unavailable: {str(e)}")
+        return None
 
 COURSE_CODE_RE = re.compile(r"\b([A-Z]{2,6})\s?-?\s?(\d{3,4}[A-Z]?)\b", re.IGNORECASE)
 COURSE_CODE_TITLE_RE = re.compile(
@@ -119,6 +128,10 @@ def _analyze_syllabus_with_gemini(course_code: str, course_name: str, full_sylla
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             return {}
+
+        genai = _get_genai_module()
+        if genai is None:
+            return {}
         
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel("gemini-pro")
@@ -169,6 +182,10 @@ def _generate_description_with_gemini(course_code: str, course_name: str, syllab
     try:
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
+            return None
+
+        genai = _get_genai_module()
+        if genai is None:
             return None
         
         genai.configure(api_key=api_key)

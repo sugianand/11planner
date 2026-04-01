@@ -896,14 +896,21 @@ async function extractAssignments() {
         ];
     }
 
-    // keep only upcoming tasks
-    const upcoming = found.filter(a => isDueAfterNow(a.dueDate));
+    // keep upcoming tasks; keep undated items too so users can decide manually
+    const upcoming = found.filter(a => !a.dueDate || isDueAfterNow(a.dueDate));
 
-    // deduplicate
+    // deduplicate with a stronger identity than title alone
     const seen = new Set();
     const deduped = upcoming.filter(a => {
-        if (seen.has(a.title)) return false;
-        seen.add(a.title);
+        const key = [
+            normalizeTitle(a.title),
+            String(a.course || '').toLowerCase().trim(),
+            String(a.contextCode || '').toLowerCase().trim(),
+            String(a.dueDate || '').trim(),
+        ].join('||');
+
+        if (seen.has(key)) return false;
+        seen.add(key);
         return true;
     });
 

@@ -10,6 +10,41 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 let extractedTasks = [];
 let extractedCourses = [];
 
+function isCanvasUrl(url) {
+        if (!url) return false;
+        return /https?:\/\/[^/]*instructure\.com\//i.test(url);
+}
+
+function setExtractAvailability(isAvailable) {
+        const extractBtn = document.getElementById('extractBtn');
+        const emptyState = document.getElementById('emptyState');
+        if (!extractBtn) return;
+
+        extractBtn.disabled = !isAvailable;
+        extractBtn.textContent = isAvailable ? 'Extract Courses and Tasks' : 'Open Canvas to Extract';
+
+        if (!isAvailable && emptyState) {
+                emptyState.style.display = 'block';
+                emptyState.innerHTML = `
+                    <h3>Open a Canvas Page</h3>
+                    <div class="steps">
+                        <div class="step">
+                            <span class="step-index">1</span>
+                            <div><strong>Go to Canvas</strong> in another tab.</div>
+                        </div>
+                        <div class="step">
+                            <span class="step-index">2</span>
+                            <div><strong>Open Calendar or Assignments</strong> for best extraction results.</div>
+                        </div>
+                        <div class="step">
+                            <span class="step-index">3</span>
+                            <div><strong>Re-open this popup</strong> and run extract.</div>
+                        </div>
+                    </div>
+                `;
+        }
+}
+
 // ── UI helpers ──
 function showStatus(message, type) {
     const el = document.getElementById('status');
@@ -43,14 +78,18 @@ async function login(email, password) {
 
 // ── On load: check if already logged in ──
 document.addEventListener('DOMContentLoaded', () => {
-    chrome.storage.local.get(['userId', 'userEmail', 'backendUrl'], result => {
+    chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+        const activeTab = tabs?.[0];
+        const available = isCanvasUrl(activeTab?.url || '');
+        setExtractAvailability(available);
+    });
+
+    chrome.storage.local.get(['userId', 'userEmail'], result => {
         if (result.userId && result.userEmail) {
             showPanel(true, result.userEmail);
         } else {
             showPanel(false);
         }
-        const backendEl = document.getElementById('backendUrl');
-        if (result.backendUrl && backendEl) backendEl.value = result.backendUrl;
     });
 
     // ── Login button ──
@@ -91,12 +130,15 @@ document.addEventListener('DOMContentLoaded', () => {
             extractedTasks = [];
             document.getElementById('preview').style.display = 'none';
             document.getElementById('syncBtn').style.display = 'none';
+            const emptyState = document.getElementById('emptyState');
+            if (emptyState) emptyState.style.display = 'block';
         });
     });
 
     // ── Preview renderer ──
     function renderPreview(tasks, courses) {
         const preview = document.getElementById('preview');
+        const emptyState = document.getElementById('emptyState');
         const list = document.getElementById('previewList');
         const courseList = document.getElementById('courseList');
         const syncCount = document.getElementById('syncCount');
@@ -108,8 +150,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (tasks.length === 0) {
             preview.style.display = 'none';
             syncBtn.style.display = 'none';
+            if (emptyState) emptyState.style.display = 'block';
             return;
         }
+
+        if (emptyState) emptyState.style.display = 'none';
 
         tasks.forEach(a => {
             const item = document.createElement('div');
@@ -148,12 +193,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // ── Extract button ──
     document.getElementById('extractBtn')?.addEventListener('click', async () => {
         const btn = document.getElementById('extractBtn');
+
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (!tab?.id || !isCanvasUrl(tab.url || '')) {
+            showStatus('Open a Canvas tab (instructure.com) to extract assignments.', 'error');
+            setExtractAvailability(false);
+            return;
+        }
+
         btn.disabled = true;
         btn.textContent = 'Extracting...';
         showStatus('Scanning this Canvas page...', 'info');
 
         try {
-            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
             await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
 
             chrome.tabs.sendMessage(tab.id, { action: 'extract' }, response => {
@@ -194,15 +246,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 showStatus(response.error, 'error');
             }
             btn.disabled = false;
-        });
-    });
-
-    // ── Save settings ──
-    document.getElementById('saveSettings')?.addEventListener('click', () => {
-        const backendUrl = document.getElementById('backendUrl')?.value?.trim() || 'http://localhost:8000';
-        chrome.storage.local.set({ backendUrl }, () => {
-            showStatus('Settings saved!', 'success');
-            setTimeout(() => { document.getElementById('status').className = 'status'; }, 2000);
         });
     });
 

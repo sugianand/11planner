@@ -70,7 +70,7 @@ export default function FocusDashboardPanel({
   } = usePlanner();
 
   const [spotifyPlaylist, setSpotifyPlaylist] = useState("0vvXsWCC9xrXsKd4FyS8kM"); // Default to Lofi Girl
-  const [musicProvider, setMusicProvider] = useState("spotify"); // 'spotify', 'apple', 'youtube'
+  const [musicProvider, setMusicProvider] = useState("spotify"); // 'spotify', 'youtube'
   const [isMusicOpen, setIsMusicOpen] = useState(false);
   const [spotifyConnected, setSpotifyConnected] = useState(false);
   const [spotifyConnecting, setSpotifyConnecting] = useState(false);
@@ -215,12 +215,34 @@ export default function FocusDashboardPanel({
       void startSpotifyPopupConnect();
       return;
     }
-    if (musicProvider === "apple") {
-      connectAppleInPopup();
-      return;
-    }
     window.open(providerSiteMap.youtube, "youtube-connect", "popup=yes,width=520,height=760");
   };
+
+  useEffect(() => {
+    if (musicProvider === "apple") {
+      setMusicProvider("spotify");
+    }
+  }, [musicProvider]);
+
+  useEffect(() => {
+    if (musicProvider !== "spotify" && connectMessage) {
+      setConnectMessage("");
+    }
+  }, [musicProvider, connectMessage]);
+
+  useEffect(() => {
+    if (!connectMessage) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setConnectMessage("");
+    }, 5000);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [connectMessage]);
 
   useEffect(() => {
     loadCourses();
@@ -424,13 +446,13 @@ export default function FocusDashboardPanel({
     return deadline < now && !task.completed;
   });
 
-  const activeProviderLabel = musicProvider.charAt(0).toUpperCase() + musicProvider.slice(1);
-  const activeProviderSite = providerSiteMap[musicProvider] || providerSiteMap.spotify;
+  const activeSpotifyPlaylistUrl = `https://open.spotify.com/playlist/${spotifyPlaylist}`;
   const isConnectedForActiveProvider = musicProvider === "spotify" ? spotifyConnected : false;
   const activeYoutubeTrack = youtubeTracks[activeYoutubeIndex];
   const activeAppleTrack = appleTracks[activeAppleIndex];
 
   const youtubeEmbedSrc = `https://www.youtube.com/embed/${activeYoutubeTrack.youtubeId}?autoplay=${isYoutubePlaying ? 1 : 0}&controls=1&rel=0&modestbranding=1`;
+  const activeYouTubeMusicUrl = `https://music.youtube.com/search?q=${encodeURIComponent(activeYoutubeTrack.searchQuery)}`;
 
   const handleYouTubePrev = () => {
     setActiveYoutubeIndex((prev) => (prev - 1 + youtubeTracks.length) % youtubeTracks.length);
@@ -496,60 +518,46 @@ export default function FocusDashboardPanel({
           
           {/* Music Player Panel */}
           <div className={`bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-3xl p-4 shadow-sm border border-white/40 dark:border-slate-700/40 mt-2 transition-[min-height] duration-200 ${isMusicOpen ? "" : "min-h-[110px]"}`}>
-            <div className="mb-3 grid grid-cols-[auto_1fr_auto] items-center gap-2 px-1">
+            <div className={`mb-3 items-center px-1 ${isMusicOpen ? "grid grid-cols-[auto_1fr_auto] gap-2" : "flex justify-between"}`}>
               <h3 className="text-sm font-semibold tracking-normal text-slate-500 dark:text-slate-300 flex items-center gap-2">
                 <span className="material-symbols-outlined text-sm">headphones</span>
                 Focus Music
               </h3>
 
-              <div className="flex items-center justify-center gap-2">
-                {musicProvider === 'spotify' && (
+              {isMusicOpen ? (
+                <div className="flex items-center justify-center gap-2">
+                  {musicProvider === 'spotify' && (
+                    <select 
+                      className="text-xs bg-transparent border-none text-slate-500 dark:text-slate-400 focus:ring-0 cursor-pointer outline-none font-medium p-0"
+                      value={spotifyPlaylist}
+                      onChange={(e) => setSpotifyPlaylist(e.target.value)}
+                    >
+                      <option value="0vvXsWCC9xrXsKd4FyS8kM">Lofi Beats</option>
+                      <option value="37i9dQZF1DWZeKCadgRdKQ">Deep Focus</option>
+                      <option value="37i9dQZF1DX8CwnimMFF76">Ambient</option>
+                    </select>
+                  )}
+                  {musicProvider === 'youtube' && (
+                    <select
+                      className="text-xs bg-transparent border-none text-slate-500 dark:text-slate-400 focus:ring-0 cursor-pointer outline-none font-medium p-0"
+                      value={youtubeMood}
+                      onChange={(e) => setYoutubeMood(e.target.value as YouTubeMood)}
+                    >
+                      <option value="lofi">Lofi Beats</option>
+                      <option value="synthwave">Synthwave</option>
+                      <option value="coding">Coding Mix</option>
+                    </select>
+                  )}
                   <select 
-                    className="text-xs bg-transparent border-none text-slate-500 dark:text-slate-400 focus:ring-0 cursor-pointer outline-none font-medium p-0"
-                    value={spotifyPlaylist}
-                    onChange={(e) => setSpotifyPlaylist(e.target.value)}
+                    className="text-xs bg-slate-100 dark:bg-slate-700 rounded-md px-2 py-1 border-none text-slate-700 dark:text-slate-200 focus:ring-0 cursor-pointer outline-none font-bold"
+                    value={musicProvider}
+                    onChange={(e) => setMusicProvider(e.target.value)}
                   >
-                    <option value="0vvXsWCC9xrXsKd4FyS8kM">Lofi Beats</option>
-                    <option value="37i9dQZF1DWZeKCadgRdKQ">Deep Focus</option>
-                    <option value="37i9dQZF1DX8CwnimMFF76">Ambient</option>
+                    <option value="spotify">Spotify</option>
+                    <option value="youtube">YouTube</option>
                   </select>
-                )}
-                {musicProvider === 'apple' && (
-                  <select
-                    className="text-xs bg-transparent border-none text-slate-500 dark:text-slate-400 focus:ring-0 cursor-pointer outline-none font-medium p-0"
-                    value={appleMood}
-                    onChange={(e) => {
-                      setAppleMood(e.target.value as AppleMood);
-                      setAppleTracks([]);
-                      setActiveAppleIndex(0);
-                    }}
-                  >
-                    <option value="lofi-beats">Lofi Beats</option>
-                    <option value="deep-focus">Deep Focus</option>
-                    <option value="ambient-study">Ambient Study</option>
-                  </select>
-                )}
-                {musicProvider === 'youtube' && (
-                  <select
-                    className="text-xs bg-transparent border-none text-slate-500 dark:text-slate-400 focus:ring-0 cursor-pointer outline-none font-medium p-0"
-                    value={youtubeMood}
-                    onChange={(e) => setYoutubeMood(e.target.value as YouTubeMood)}
-                  >
-                    <option value="lofi">Lofi Beats</option>
-                    <option value="synthwave">Synthwave</option>
-                    <option value="coding">Coding Mix</option>
-                  </select>
-                )}
-                <select 
-                  className="text-xs bg-slate-100 dark:bg-slate-700 rounded-md px-2 py-1 border-none text-slate-700 dark:text-slate-200 focus:ring-0 cursor-pointer outline-none font-bold"
-                  value={musicProvider}
-                  onChange={(e) => setMusicProvider(e.target.value)}
-                >
-                  <option value="spotify">Spotify</option>
-                  <option value="apple">Apple</option>
-                  <option value="youtube">YouTube</option>
-                </select>
-              </div>
+                </div>
+              ) : null}
 
               <button
                 type="button"
@@ -562,49 +570,60 @@ export default function FocusDashboardPanel({
                     return next;
                   });
                 }}
-                className="rounded-full border border-slate-300 px-2.5 py-1 text-[11px] font-semibold text-slate-600 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                className="h-7 min-w-[64px] rounded-full border border-slate-300 px-3 text-[11px] font-semibold text-slate-600 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
               >
                 {isMusicOpen ? "Hide" : "Show"}
               </button>
             </div>
 
-            {isMusicOpen && musicProvider === "spotify" ? (
-            <div className="mb-3 flex items-center justify-end gap-2">
-              {isConnectedForActiveProvider ? (
-                <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
-                  Connected
-                </span>
-              ) : null}
-              <button
-                type="button"
-                onClick={handleProviderConnect}
-                disabled={spotifyConnecting && musicProvider === "spotify"}
-                className="rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-70 dark:border-slate-500 dark:text-slate-200 dark:hover:bg-slate-600"
-              >
-                {spotifyConnecting ? "Connecting..." : "Connect Spotify"}
-              </button>
-            </div>
-            ) : null}
-
-            {isMusicOpen && connectMessage ? (
+            {isMusicOpen && musicProvider === "spotify" && connectMessage ? (
               <p className="mb-3 rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-600 dark:bg-slate-700/50 dark:text-slate-300">
                 {connectMessage}
               </p>
             ) : null}
 
             {isMusicOpen ? (
+            <>
             <div className="h-[520px] w-full overflow-hidden transition-all duration-300">
               {musicProvider === 'spotify' && (
-                <iframe
-                  style={{ borderRadius: '12px', border: 'none', height: '100%' }}
-                  src={`https://open.spotify.com/embed/playlist/${spotifyPlaylist}?utm_source=generator&theme=0`}
-                  width="100%"
-                  height="100%"
-                  allowFullScreen
-                  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                  loading="lazy"
-                  className="h-full shadow-sm"
-                ></iframe>
+                <div className="flex h-full flex-col">
+                  <div className="min-h-0 flex-1 overflow-hidden rounded-xl">
+                    <iframe
+                      style={{ border: 'none', borderRadius: '12px', height: '100%' }}
+                      src={`https://open.spotify.com/embed/playlist/${spotifyPlaylist}?utm_source=generator&theme=0`}
+                      width="100%"
+                      height="100%"
+                      allowFullScreen
+                      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                      loading="lazy"
+                      className="h-full shadow-sm"
+                    ></iframe>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {isConnectedForActiveProvider ? (
+                      <span className="inline-flex items-center rounded-full bg-emerald-100 px-3 py-2 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+                        Connected
+                      </span>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={handleProviderConnect}
+                      disabled={spotifyConnecting}
+                      className="inline-flex items-center rounded-full border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-70 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                    >
+                      {spotifyConnecting ? "Connecting..." : "Connect Spotify"}
+                    </button>
+                    <a
+                      href={activeSpotifyPlaylistUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700"
+                    >
+                      Open Spotify
+                    </a>
+                  </div>
+                </div>
               )}
               {musicProvider === 'apple' && (
                 <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-b from-[#f7f8fb] via-[#f4f2f8] to-[#fbecef] p-4 shadow-sm dark:border-slate-700 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
@@ -711,11 +730,17 @@ export default function FocusDashboardPanel({
                 <div className="flex h-full flex-col overflow-hidden rounded-xl border border-zinc-800 bg-gradient-to-b from-[#131313] via-[#0f0f0f] to-black p-4 text-zinc-100 shadow-sm">
                   <div className="mb-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-red-500/80 bg-red-600/95" aria-hidden="true">
+                      <a
+                        href={activeYouTubeMusicUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-red-500/80 bg-red-600/95"
+                        aria-label="Open YouTube Music"
+                      >
                         <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-white">
                           <path d="M9 7.5v9l8-4.5-8-4.5z" />
                         </svg>
-                      </span>
+                      </a>
                       <div className="leading-tight">
                         <p className="text-[13px] font-semibold tracking-wide text-white">YouTube Music</p>
                         <p className="text-[11px] text-zinc-400">
@@ -799,26 +824,30 @@ export default function FocusDashboardPanel({
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={handleProviderConnect}
-                      className="inline-flex items-center rounded-full border border-zinc-700 bg-zinc-900 px-4 py-2 text-xs font-semibold text-zinc-100 transition hover:bg-zinc-800"
-                    >
-                      Connect YouTube
-                    </button>
-                    <a
-                      href={`https://music.youtube.com/search?q=${encodeURIComponent(activeYoutubeTrack.searchQuery)}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center rounded-full bg-red-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-red-500"
-                    >
-                      Open YouTube Music
-                    </a>
-                  </div>
                 </div>
               )}
             </div>
+
+            {musicProvider === 'youtube' ? (
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={handleProviderConnect}
+                  className="inline-flex items-center rounded-full border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                >
+                  Connect YouTube
+                </button>
+                <a
+                  href={activeYouTubeMusicUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700"
+                >
+                  Open YouTube Music
+                </a>
+              </div>
+            ) : null}
+            </>
             ) : null}
           </div>
         </div>
