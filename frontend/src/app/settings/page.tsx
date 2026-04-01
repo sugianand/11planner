@@ -8,13 +8,16 @@ import Footer from "@/components/Footer";
 import { supabase } from "@/lib/supabaseClient";
 
 type Theme = "light" | "dark" | "auto";
-type ColorTheme = "emerald" | "ocean" | "rose" | "slate";
+type ColorTheme = "emerald" | "ocean" | "rose" | "slate" | "amber" | "violet" | "mint";
 
 const colorThemeSwatches: Record<ColorTheme, string> = {
   emerald: "linear-gradient(135deg, #10b981, #059669)",
   ocean: "linear-gradient(135deg, #0ea5e9, #0284c7)",
   rose: "linear-gradient(135deg, #f43f5e, #e11d48)",
   slate: "linear-gradient(135deg, #64748b, #475569)",
+  amber: "linear-gradient(135deg, #f59e0b, #d97706)",
+  violet: "linear-gradient(135deg, #a78bfa, #7c3aed)",
+  mint: "linear-gradient(135deg, #5eead4, #14b8a6)",
 };
 
 const sliderStyles = `

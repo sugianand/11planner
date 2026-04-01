@@ -209,7 +209,7 @@ export default function CoursesPage() {
       <div className="max-w-7xl w-full mx-auto p-6 md:p-10 flex-1">
         <div className="bg-white/65 dark:bg-slate-800/65 backdrop-blur-xl rounded-3xl p-6 md:p-8 shadow-sm border border-white/40 dark:border-slate-700/40">
           {/* Header */}
-          <div className="mb-8 rounded-2xl border border-white/50 dark:border-slate-700/50 bg-gradient-to-r from-white/80 via-white/70 to-emerald-50/70 dark:from-slate-900/80 dark:via-slate-900/70 dark:to-emerald-900/20 p-5 md:p-6">
+          <div className="mb-8 rounded-2xl border border-white/50 dark:border-slate-700/50 theme-header-gradient p-5 md:p-6">
             <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
               <div>
                 <h1 className="text-4xl font-bold text-slate-900 dark:text-white">Courses</h1>

@@ -127,41 +127,41 @@ export default function SchedulePage() {
       <div className="fixed inset-0 bg-focus-light dark:bg-focus-dark bg-cover bg-center -z-20"></div>
 
 
-      <div className="max-w-6xl mx-auto p-6 md:p-12">
-        <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm rounded-3xl shadow-sm p-8 mb-6 border border-white/40 dark:border-slate-700/40">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2 tracking-tight">
-                Schedule Generator
-              </h1>
-              <p className="text-slate-600 dark:text-slate-300 font-medium">
-                AI-powered schedule generation for optimal productivity
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-6 border-t border-slate-200/50 dark:border-slate-700/50">
-            <div>
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">
-                Generate Smart Schedule
-              </h2>
-              <p className="text-slate-600 dark:text-slate-300">
-                {pendingTasks.length} pending task{pendingTasks.length !== 1 ? "s" : ""} to schedule
-              </p>
-              {pendingTasks.length === 0 && (
-                <p className="text-sm text-amber-600 dark:text-amber-400 mt-2 font-medium">
-                  💡 Create tasks first to generate a schedule
+      <div className="max-w-7xl w-full mx-auto p-6 md:p-10 flex-1">
+        <div className="bg-white/65 dark:bg-slate-800/65 backdrop-blur-xl rounded-3xl p-8 md:p-10 shadow-sm border border-white/40 dark:border-slate-700/40 mb-6">
+          <div className="rounded-2xl border border-white/50 dark:border-slate-700/50 theme-header-gradient p-6 md:p-8">
+            <div className="grid grid-cols-1 md:grid-cols-[1.35fr_0.9fr] gap-6 md:gap-8 items-center">
+              <div>
+                <h1 className="text-4xl md:text-5xl font-bold text-slate-900 dark:text-white mb-2 tracking-tight">
+                  Schedule Generator
+                </h1>
+                <p className="text-slate-600 dark:text-slate-300 font-medium text-base md:text-lg">
+                  AI-powered schedule generation for optimal productivity
                 </p>
-              )}
+              </div>
+
+              <div className="rounded-2xl border border-white/60 dark:border-slate-700/60 bg-white/70 dark:bg-slate-900/45 p-5">
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">
+                  Generate Smart Schedule
+                </h2>
+                <p className="text-slate-600 dark:text-slate-300 mb-4">
+                  {pendingTasks.length} pending task{pendingTasks.length !== 1 ? "s" : ""} to schedule
+                </p>
+                {pendingTasks.length === 0 && (
+                  <p className="text-sm text-amber-600 dark:text-amber-400 mb-4 font-medium">
+                    Create tasks first to generate a schedule.
+                  </p>
+                )}
+                <button
+                  onClick={generateSchedule}
+                  disabled={loading || pendingTasks.length === 0}
+                  className="w-full bg-[#306844] hover:bg-[#255236] text-white font-semibold py-3 px-8 rounded-xl transition shadow-lg shadow-green-900/10 disabled:opacity-50 disabled:cursor-not-allowed text-lg"
+                  title={pendingTasks.length === 0 ? "Create at least one task to generate a schedule" : ""}
+                >
+                  {loading ? "Generating..." : "Generate Schedule"}
+                </button>
+              </div>
             </div>
-            <button
-              onClick={generateSchedule}
-              disabled={loading || pendingTasks.length === 0}
-              className="bg-[#306844] hover:bg-[#255236] text-white font-semibold py-3 px-8 rounded-xl transition shadow-lg shadow-green-900/10 disabled:opacity-50 disabled:cursor-not-allowed text-lg"
-              title={pendingTasks.length === 0 ? "Create at least one task to generate a schedule" : ""}
-            >
-              {loading ? "Generating..." : "Generate Schedule"}
-            </button>
           </div>
         </div>
 
@@ -177,35 +177,35 @@ export default function SchedulePage() {
 
         {scheduleStats && (
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-            <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm rounded-3xl shadow-sm p-4 border border-white/40 dark:border-slate-700/40">
+            <div className="bg-white/65 dark:bg-slate-800/65 backdrop-blur-xl rounded-2xl shadow-sm p-4 border border-white/40 dark:border-slate-700/40 border-l-4 border-l-theme">
               <p className="text-slate-600 dark:text-slate-300 text-sm font-medium">Total Blocks</p>
               <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">
                 {scheduleStats.total_blocks}
               </p>
             </div>
 
-            <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm rounded-3xl shadow-sm p-4 border border-white/40 dark:border-slate-700/40">
+            <div className="bg-white/65 dark:bg-slate-800/65 backdrop-blur-xl rounded-2xl shadow-sm p-4 border border-white/40 dark:border-slate-700/40 border-l-4 border-l-theme">
               <p className="text-slate-600 dark:text-slate-300 text-sm font-medium">Total Hours</p>
               <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">
                 {scheduleStats.total_hours}h
               </p>
             </div>
 
-            <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm rounded-3xl shadow-sm p-4 border border-white/40 dark:border-slate-700/40">
+            <div className="bg-white/65 dark:bg-slate-800/65 backdrop-blur-xl rounded-2xl shadow-sm p-4 border border-white/40 dark:border-slate-700/40 border-l-4 border-l-theme">
               <p className="text-slate-600 dark:text-slate-300 text-sm font-medium">Days Span</p>
               <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">
                 {scheduleStats.days_span}d
               </p>
             </div>
 
-            <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm rounded-3xl shadow-sm p-4 border border-white/40 dark:border-slate-700/40">
+            <div className="bg-white/65 dark:bg-slate-800/65 backdrop-blur-xl rounded-2xl shadow-sm p-4 border border-white/40 dark:border-slate-700/40 border-l-4 border-l-theme">
               <p className="text-slate-600 dark:text-slate-300 text-sm font-medium">Daily Average</p>
               <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">
                 {scheduleStats.avg_hours_per_day}h
               </p>
             </div>
 
-            <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm rounded-3xl shadow-sm p-4 border border-white/40 dark:border-slate-700/40">
+            <div className="bg-white/65 dark:bg-slate-800/65 backdrop-blur-xl rounded-2xl shadow-sm p-4 border border-white/40 dark:border-slate-700/40 border-l-4 border-l-theme">
               <p className="text-slate-600 dark:text-slate-300 text-sm font-medium">Valid</p>
               <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">
                 {scheduleStats.valid ? "✓" : "✗"}
@@ -215,7 +215,7 @@ export default function SchedulePage() {
         )}
 
         {generatedBlocks.length > 0 && (
-          <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm rounded-3xl shadow-sm p-6 border border-white/40 dark:border-slate-700/40">
+          <div className="bg-white/65 dark:bg-slate-800/65 backdrop-blur-xl rounded-3xl shadow-sm p-6 border border-white/40 dark:border-slate-700/40">
             <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">
               Generated Schedule Blocks
             </h3>
@@ -274,7 +274,7 @@ export default function SchedulePage() {
           </div>
         )}
 
-        <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm rounded-3xl shadow-sm p-6 mt-6 border border-white/40 dark:border-slate-700/40">
+        <div className="bg-white/65 dark:bg-slate-800/65 backdrop-blur-xl rounded-3xl shadow-sm p-6 mt-6 border border-white/40 dark:border-slate-700/40">
           <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">
             Weekly Schedule
           </h3>

@@ -65,7 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         btn.disabled = true;
-        btn.textContent = 'Logging in…';
+        btn.textContent = 'Logging in...';
         showStatus('', '');
 
         try {
@@ -79,7 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showStatus(`Login failed: ${err.message}`, 'error');
         } finally {
             btn.disabled = false;
-            btn.textContent = '🔑 Log In to 11Planner';
+            btn.textContent = 'Log In to 11Planner';
         }
     });
 
@@ -120,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 dueStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
                     + ' ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
             } else {
-                dueStr = '⚠️ No date found';
+                dueStr = 'No date found';
             }
                         const estHours = Number.isFinite(a.estimatedHours) ? `${a.estimatedHours.toFixed(1)}h` : '1.0h';
             const priority = Number.isFinite(a.priorityLevel) ? a.priorityLevel : 3;
@@ -149,8 +149,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('extractBtn')?.addEventListener('click', async () => {
         const btn = document.getElementById('extractBtn');
         btn.disabled = true;
-        btn.textContent = 'Extracting…';
-        showStatus('Scanning this Canvas page…', 'info');
+        btn.textContent = 'Extracting...';
+        showStatus('Scanning this Canvas page...', 'info');
 
         try {
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -160,7 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (chrome.runtime.lastError || !response) {
                     showStatus('Could not extract. Make sure you are on a Canvas page.', 'error');
                     btn.disabled = false;
-                    btn.textContent = '🎓 Extract Courses & Tasks';
+                    btn.textContent = 'Extract Courses and Tasks';
                     return;
                 }
                 extractedTasks = response.assignments || [];
@@ -172,12 +172,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 renderPreview(extractedTasks, extractedCourses);
                 btn.disabled = false;
-                btn.textContent = '🎓 Extract Courses & Tasks';
+                btn.textContent = 'Extract Courses and Tasks';
             });
         } catch (err) {
             showStatus(`Error: ${err.message}`, 'error');
             btn.disabled = false;
-            btn.textContent = '🎓 Extract Courses & Tasks';
+            btn.textContent = 'Extract Courses and Tasks';
         }
     });
 
@@ -185,13 +185,13 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('syncBtn')?.addEventListener('click', async () => {
         const btn = document.getElementById('syncBtn');
         btn.disabled = true;
-        showStatus('Syncing to 11Planner…', 'info');
+        showStatus('Syncing to 11Planner...', 'info');
 
         chrome.runtime.sendMessage({ action: 'sync', assignments: extractedTasks, courses: extractedCourses }, response => {
             if (response.success) {
-                showStatus(`✅ ${response.message || `Synced ${response.count} tasks!`}`, 'success');
+                showStatus(response.message || `Synced ${response.count} tasks!`, 'success');
             } else {
-                showStatus(`❌ ${response.error}`, 'error');
+                showStatus(response.error, 'error');
             }
             btn.disabled = false;
         });
