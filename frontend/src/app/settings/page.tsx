@@ -199,6 +199,15 @@ export default function SettingsPage() {
     [permission]
   );
 
+  const permissionButtonClass = useMemo(() => {
+    if (!isMounted) {
+      return "bg-slate-200 text-slate-700";
+    }
+    return permission === "granted"
+      ? "bg-emerald-100 text-emerald-700"
+      : "bg-slate-200 text-slate-700 hover:bg-slate-300";
+  }, [isMounted, permission]);
+
   const handleResetDefaults = () => {
     handleThemeChange("light");
     setNotificationsEnabled(true);
@@ -293,8 +302,8 @@ export default function SettingsPage() {
                   <p className="font-medium text-slate-900 dark:text-white">Browser Permission</p>
                   <p className="text-xs text-slate-600 dark:text-slate-300">{isMounted ? permissionLabel : "Loading..."}</p>
                 </div>
-                <button onClick={requestPermission} disabled={!isMounted || permission === "denied" || permission === "unsupported"} className={`px-4 py-2 rounded-lg text-xs font-semibold transition ${isMounted && permission === "granted" ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-700 hover:bg-slate-300"}`}>
-                  {permissionButtonLabel}
+                <button onClick={requestPermission} disabled={!isMounted || permission === "denied" || permission === "unsupported"} className={`px-4 py-2 rounded-lg text-xs font-semibold transition ${permissionButtonClass}`}>
+                  {isMounted ? permissionButtonLabel : "Enable"}
                 </button>
               </div>
 
