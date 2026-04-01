@@ -6,7 +6,149 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* Semantic theme tokens used for global remapping */
+  --theme-50: rgba(16, 185, 129, 0.1);
+  --theme-100: rgba(16, 185, 129, 0.18);
+  --theme-200: #a7f3d0;
+  --theme-300: #6ee7b7;
+  --theme-400: #34d399;
+  --theme-500: #10b981;
+  --theme-600: #059669;
+  --theme-700: #047857;
+  --theme-800: #065f46;
+
+  --brand-from: #306844;
+  --brand-via: #2f7f54;
+  --brand-to: #5ac693;
+  --brand-to-alt: #3d8658;
+  --brand-hover: #255236;
+
+  --theme-accent: #10b981;
+  --theme-accent-strong: #059669;
+  --theme-accent-soft: rgba(16, 185, 129, 0.18);
 }
+
+[data-theme="emerald"] {
+  --theme-50: rgba(16, 185, 129, 0.1);
+  --theme-100: rgba(16, 185, 129, 0.18);
+  --theme-200: #a7f3d0;
+  --theme-300: #6ee7b7;
+  --theme-400: #34d399;
+  --theme-500: #10b981;
+  --theme-600: #059669;
+  --theme-700: #047857;
+  --theme-800: #065f46;
+  --brand-from: #306844;
+  --brand-via: #2f7f54;
+  --brand-to: #5ac693;
+  --brand-to-alt: #3d8658;
+  --brand-hover: #255236;
+  --theme-accent: #10b981;
+  --theme-accent-strong: #059669;
+  --theme-accent-soft: rgba(16, 185, 129, 0.18);
+}
+
+[data-theme="ocean"] {
+  --theme-50: rgba(14, 165, 233, 0.1);
+  --theme-100: rgba(14, 165, 233, 0.18);
+  --theme-200: #bae6fd;
+  --theme-300: #7dd3fc;
+  --theme-400: #38bdf8;
+  --theme-500: #0ea5e9;
+  --theme-600: #0284c7;
+  --theme-700: #0369a1;
+  --theme-800: #075985;
+  --brand-from: #0f5f8a;
+  --brand-via: #0a7daf;
+  --brand-to: #38bdf8;
+  --brand-to-alt: #0a88be;
+  --brand-hover: #0a4f73;
+  --theme-accent: #0ea5e9;
+  --theme-accent-strong: #0284c7;
+  --theme-accent-soft: rgba(14, 165, 233, 0.2);
+}
+
+[data-theme="rose"] {
+  --theme-50: rgba(244, 63, 94, 0.1);
+  --theme-100: rgba(244, 63, 94, 0.18);
+  --theme-200: #fecdd3;
+  --theme-300: #fda4af;
+  --theme-400: #fb7185;
+  --theme-500: #f43f5e;
+  --theme-600: #e11d48;
+  --theme-700: #be123c;
+  --theme-800: #9f1239;
+  --brand-from: #8b1d45;
+  --brand-via: #be2f63;
+  --brand-to: #fb7185;
+  --brand-to-alt: #d63f6d;
+  --brand-hover: #6f1537;
+  --theme-accent: #f43f5e;
+  --theme-accent-strong: #e11d48;
+  --theme-accent-soft: rgba(244, 63, 94, 0.2);
+}
+
+[data-theme="slate"] {
+  --theme-50: rgba(100, 116, 139, 0.1);
+  --theme-100: rgba(100, 116, 139, 0.18);
+  --theme-200: #cbd5e1;
+  --theme-300: #94a3b8;
+  --theme-400: #64748b;
+  --theme-500: #64748b;
+  --theme-600: #475569;
+  --theme-700: #334155;
+  --theme-800: #1e293b;
+  --brand-from: #465569;
+  --brand-via: #5e7188;
+  --brand-to: #94a3b8;
+  --brand-to-alt: #6b7f97;
+  --brand-hover: #334155;
+  --theme-accent: #64748b;
+  --theme-accent-strong: #475569;
+  --theme-accent-soft: rgba(100, 116, 139, 0.22);
+}
+
+/* Global remap for emerald utility classes and brand hex classes. */
+[data-theme] .text-emerald-300 { color: var(--theme-300) !important; }
+[data-theme] .text-emerald-400 { color: var(--theme-400) !important; }
+[data-theme] .text-emerald-500 { color: var(--theme-500) !important; }
+[data-theme] .text-emerald-600 { color: var(--theme-600) !important; }
+[data-theme] .text-emerald-700 { color: var(--theme-700) !important; }
+
+[data-theme] .bg-emerald-50 { background-color: var(--theme-50) !important; }
+[data-theme] .bg-emerald-100 { background-color: var(--theme-100) !important; }
+[data-theme] .bg-emerald-500 { background-color: var(--theme-500) !important; }
+[data-theme] .bg-emerald-600 { background-color: var(--theme-600) !important; }
+[data-theme] .bg-emerald-700 { background-color: var(--theme-700) !important; }
+
+[data-theme] .hover\:bg-emerald-50:hover { background-color: var(--theme-50) !important; }
+[data-theme] .hover\:bg-emerald-100:hover { background-color: var(--theme-100) !important; }
+[data-theme] .hover\:bg-emerald-600:hover { background-color: var(--theme-600) !important; }
+[data-theme] .hover\:bg-emerald-700:hover { background-color: var(--theme-700) !important; }
+
+[data-theme] .border-emerald-200 { border-color: var(--theme-200) !important; }
+[data-theme] .border-emerald-300 { border-color: var(--theme-300) !important; }
+[data-theme] .border-emerald-500 { border-color: var(--theme-500) !important; }
+
+[data-theme] .ring-emerald-200 { --tw-ring-color: var(--theme-200) !important; }
+[data-theme] .ring-emerald-300 { --tw-ring-color: var(--theme-300) !important; }
+[data-theme] .ring-emerald-500 { --tw-ring-color: var(--theme-500) !important; }
+[data-theme] .accent-emerald-600 { accent-color: var(--theme-600) !important; }
+
+[data-theme] .from-emerald-500 { --tw-gradient-from: var(--theme-500) var(--tw-gradient-from-position) !important; }
+[data-theme] .via-emerald-500 { --tw-gradient-via: var(--theme-500) var(--tw-gradient-via-position) !important; }
+[data-theme] .to-emerald-500 { --tw-gradient-to: var(--theme-500) var(--tw-gradient-to-position) !important; }
+[data-theme] .to-emerald-900 { --tw-gradient-to: var(--theme-800) var(--tw-gradient-to-position) !important; }
+
+[data-theme] .bg-\[\#306844\] { background-color: var(--brand-from) !important; }
+[data-theme] .text-\[\#306844\] { color: var(--brand-from) !important; }
+[data-theme] .border-\[\#306844\] { border-color: var(--brand-from) !important; }
+[data-theme] .from-\[\#306844\] { --tw-gradient-from: var(--brand-from) var(--tw-gradient-from-position) !important; }
+[data-theme] .via-\[\#2f7f54\] { --tw-gradient-via: var(--brand-via) var(--tw-gradient-via-position) !important; }
+[data-theme] .to-\[\#5ac693\] { --tw-gradient-to: var(--brand-to) var(--tw-gradient-to-position) !important; }
+[data-theme] .to-\[\#3d8658\] { --tw-gradient-to: var(--brand-to-alt) var(--tw-gradient-to-position) !important; }
+[data-theme] .hover\:bg-\[\#255236\]:hover { background-color: var(--brand-hover) !important; }
 
 
 
@@ -64,6 +206,16 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-manrope), Arial, Helvetica, sans-serif;
+}
+
+::selection {
+  background: var(--theme-accent-soft);
+}
+
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--theme-accent);
+  outline-offset: 2px;
 }
 
 button,

@@ -8,17 +8,25 @@ import Footer from "@/components/Footer";
 import { supabase } from "@/lib/supabaseClient";
 
 type Theme = "light" | "dark" | "auto";
+type ColorTheme = "emerald" | "ocean" | "rose" | "slate";
+
+const colorThemeSwatches: Record<ColorTheme, string> = {
+  emerald: "linear-gradient(135deg, #10b981, #059669)",
+  ocean: "linear-gradient(135deg, #0ea5e9, #0284c7)",
+  rose: "linear-gradient(135deg, #f43f5e, #e11d48)",
+  slate: "linear-gradient(135deg, #64748b, #475569)",
+};
 
 const sliderStyles = `
   input[type="range"] {
-    accent-color: rgb(16, 185, 129);
+    accent-color: var(--theme-accent);
   }
   input[type="range"]::-webkit-slider-thumb {
-    accent-color: rgb(16, 185, 129);
+    accent-color: var(--theme-accent);
   }
   input[type="range"]::-moz-range-thumb {
-    background-color: rgb(16, 185, 129);
-    border-color: rgb(16, 185, 129);
+    background-color: var(--theme-accent);
+    border-color: var(--theme-accent);
   }
 `;
 
@@ -35,7 +43,7 @@ const readStoredNumber = (key: string, fallback: number): number => {
 };
 
 export default function SettingsPage() {
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, colorTheme, setColorTheme, colorThemes } = useTheme();
   const [isMounted, setIsMounted] = useState(false);
   const [user, setUser] = useState<{ email?: string } | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -63,6 +71,7 @@ export default function SettingsPage() {
 
   const [savedSettings, setSavedSettings] = useState({
     theme: theme as Theme,
+    colorTheme: colorTheme as ColorTheme,
     notifications: notificationsEnabled,
     emailUpdates,
     weeklyReport,
@@ -71,6 +80,7 @@ export default function SettingsPage() {
   });
 
   const handleThemeChange = (newTheme: Theme) => setTheme(newTheme);
+  const handleColorThemeChange = (newColorTheme: ColorTheme) => setColorTheme(newColorTheme);
 
   const handleNotificationChange = (value: boolean) => {
     setNotificationsEnabled(value);
@@ -130,6 +140,7 @@ export default function SettingsPage() {
   const hasChanges = useMemo(() => {
     return (
       theme !== savedSettings.theme ||
+      colorTheme !== savedSettings.colorTheme ||
       notificationsEnabled !== savedSettings.notifications ||
       emailUpdates !== savedSettings.emailUpdates ||
       weeklyReport !== savedSettings.weeklyReport ||
@@ -138,6 +149,7 @@ export default function SettingsPage() {
     );
   }, [
     theme,
+    colorTheme,
     notificationsEnabled,
     emailUpdates,
     weeklyReport,
@@ -162,6 +174,7 @@ export default function SettingsPage() {
     const timer = setTimeout(() => {
       setSavedSettings({
         theme: theme as Theme,
+        colorTheme: colorTheme as ColorTheme,
         notifications: notificationsEnabled,
         emailUpdates,
         weeklyReport,
@@ -180,6 +193,7 @@ export default function SettingsPage() {
   }, [
     hasChanges,
     theme,
+    colorTheme,
     notificationsEnabled,
     emailUpdates,
     weeklyReport,
@@ -210,6 +224,7 @@ export default function SettingsPage() {
 
   const handleResetDefaults = () => {
     handleThemeChange("light");
+    handleColorThemeChange("emerald");
     setNotificationsEnabled(true);
     handleEmailUpdatesChange(true);
     handleWeeklyReportChange(true);
@@ -258,6 +273,29 @@ export default function SettingsPage() {
                   <input type="radio" name="theme" value="auto" checked={theme === "auto"} onChange={() => handleThemeChange("auto")} className="w-4 h-4 accent-emerald-600" />
                   <span className="ml-2 text-slate-900 dark:text-white">Auto</span>
                 </label>
+              </div>
+
+              <div className="mt-4">
+                <p className="text-sm text-slate-700 dark:text-slate-300 mb-2">Color Theme</p>
+                <div className="flex flex-wrap gap-3">
+                  {colorThemes.map((option) => (
+                    <button
+                      key={option}
+                      onClick={() => handleColorThemeChange(option as ColorTheme)}
+                      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold capitalize transition ${
+                        colorTheme === option
+                          ? "border-slate-800 dark:border-slate-100 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow"
+                          : "border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+                      }`}
+                    >
+                      <span
+                        className="h-3 w-3 rounded-full border border-white/60"
+                        style={{ background: colorThemeSwatches[option as ColorTheme] }}
+                      />
+                      {option}
+                    </button>
+                  ))}
+                </div>
               </div>
             </section>
 
