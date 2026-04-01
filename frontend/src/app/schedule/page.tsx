@@ -20,6 +20,8 @@ export default function SchedulePage() {
   const [error, setError] = useState<string | null>(null);
   const [scheduleStats, setScheduleStats] = useState<any>(null);
   const [generatedBlocks, setGeneratedBlocks] = useState<any[]>([]);
+  const [selectedBlock, setSelectedBlock] = useState<any | null>(null);
+  const [showModal, setShowModal] = useState(false);
 
 
   useEffect(() => {
@@ -78,6 +80,15 @@ export default function SchedulePage() {
   };
 
   const pendingTasks = tasks.filter((t) => !t.completed);
+
+  const handleBlockClick = (block: any) => {
+    setSelectedBlock(block);
+    setShowModal(true);
+  };
+
+  const getTaskDetails = (taskId: string) => {
+    return tasks.find((t) => t.id === taskId);
+  };
 
   const scheduleEvents = useMemo(() => {
     const taskMap = new Map(tasks.map((task) => [task.id, task]));
@@ -242,7 +253,8 @@ export default function SchedulePage() {
                   {generatedBlocks.map((block, idx) => (
                     <tr
                       key={idx}
-                      className="border-b border-slate-200/70 dark:border-slate-700/70 hover:bg-white/60 dark:hover:bg-slate-800/60 transition"
+                      onClick={() => handleBlockClick(block)}
+                      className="border-b border-slate-200/70 dark:border-slate-700/70 hover:bg-white/60 dark:hover:bg-slate-800/60 transition cursor-pointer"
                     >
                       <td className="py-3 px-4 text-slate-900 dark:text-white font-medium">
                         {block.task_id}
@@ -284,6 +296,136 @@ export default function SchedulePage() {
         </div>
 
       </div>
+
+      {/* Task Details Modal */}
+      {showModal && selectedBlock && (
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
+          onClick={() => setShowModal(false)}
+        >
+          <div
+            className="bg-white/95 dark:bg-slate-800/95 rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl border border-white/40 dark:border-slate-700/40"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close Button */}
+            <button
+              onClick={() => setShowModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition"
+            >
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+
+            {/* Task Details */}
+            {(() => {
+              const task = getTaskDetails(selectedBlock.task_id);
+              const startDate = new Date(selectedBlock.start_time);
+              const endDate = new Date(selectedBlock.end_time);
+              const duration = selectedBlock.duration_minutes / 60;
+
+              return (
+                <>
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
+                    {task?.title || "Untitled Task"}
+                  </h2>
+                  
+                  {task?.course_id && (
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+                      Course ID: {task.course_id}
+                    </p>
+                  )}
+
+                  <div className="space-y-4 mt-6">
+                    {/* Start Time */}
+                    <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200/50 dark:border-blue-800/50">
+                      <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wide">
+                        Start Time
+                      </p>
+                      <p className="text-sm text-slate-900 dark:text-white mt-1">
+                        {startDate.toLocaleString("en-US", {
+                          weekday: "short",
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    </div>
+
+                    {/* End Time */}
+                    <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200/50 dark:border-amber-800/50">
+                      <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wide">
+                        End Time
+                      </p>
+                      <p className="text-sm text-slate-900 dark:text-white mt-1">
+                        {endDate.toLocaleString("en-US", {
+                          weekday: "short",
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    </div>
+
+                    {/* Duration */}
+                    <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200/50 dark:border-green-800/50">
+                      <p className="text-xs font-semibold text-green-600 dark:text-green-400 uppercase tracking-wide">
+                        Duration
+                      </p>
+                      <p className="text-sm text-slate-900 dark:text-white mt-1">
+                        {duration.toFixed(1)} hours ({selectedBlock.duration_minutes} minutes)
+                      </p>
+                    </div>
+
+                    {/* Priority Badge */}
+                    {task?.priority && (
+                      <div className="p-3 bg-slate-100 dark:bg-slate-700/50 rounded-lg border border-slate-200/50 dark:border-slate-600/50">
+                        <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">
+                          Priority
+                        </p>
+                        <div className="mt-1">
+                          <span
+                            className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+                              task.priority >= 4
+                                ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
+                                : task.priority === 3
+                                ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300"
+                                : "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+                            }`}
+                          >
+                            {task.priority >= 4 ? "High" : task.priority === 3 ? "Medium" : "Low"}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Close Button */}
+                  <button
+                    onClick={() => setShowModal(false)}
+                    className="w-full mt-6 bg-[#306844] hover:bg-[#255236] text-white font-semibold py-2 px-4 rounded-lg transition"
+                  >
+                    Close
+                  </button>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
       <Footer />
     </div>
   );

@@ -388,10 +388,10 @@ export default function SettingsPage() {
                 <p className="font-medium text-slate-900 dark:text-white">Change Password</p>
                 <p className="text-xs text-slate-600 dark:text-slate-300">Update your login password</p>
               </button>
-              <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition">
+              <Link href="/privacy" className="w-full text-left px-4 py-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition inline-block">
                 <p className="font-medium text-slate-900 dark:text-white">Privacy & Security</p>
                 <p className="text-xs text-slate-600 dark:text-slate-300">Manage your privacy settings</p>
-              </button>
+              </Link>
               <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800 transition">
                 <p className="font-medium text-red-600">Delete Account</p>
                 <p className="text-xs text-red-600">Permanently delete your account</p>

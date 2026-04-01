@@ -40,9 +40,33 @@ def get_supabase() -> Client:
 
 def parse_dt(value: str | datetime) -> datetime:
     if isinstance(value, datetime):
-        return value
+        dt = value
     else:
-        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+        # Normalize the ISO string - handle various formats
+        iso_str = value.replace("Z", "+00:00")
+        
+        try:
+            # Try Python 3.11+ fromisoformat
+            dt = datetime.fromisoformat(iso_str)
+        except ValueError:
+            try:
+                # Try removing timezone info and parsing without it
+                if "+" in iso_str or iso_str.endswith("00:00"):
+                    # Split at timezone marker
+                    iso_str_no_tz = iso_str[:iso_str.rfind("+") if "+" in iso_str else len(iso_str)]
+                    dt = datetime.fromisoformat(iso_str_no_tz)
+                else:
+                    raise ValueError(f"Could not parse ISO format: {value}")
+            except (ValueError, IndexError):
+                # Last resort: use datetime.strptime with a flexible format
+                try:
+                    dt = datetime.strptime(iso_str.split("+")[0].split("Z")[0], "%Y-%m-%dT%H:%M:%S.%f")
+                except ValueError:
+                    dt = datetime.strptime(iso_str.split("+")[0].split("Z")[0], "%Y-%m-%dT%H:%M:%S")
+    
+    if dt.tzinfo is not None:
+        return dt.astimezone().replace(tzinfo=None)
+    return dt
 
 
 def map_row_to_block(row: dict) -> dict:
