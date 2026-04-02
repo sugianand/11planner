@@ -426,6 +426,38 @@ export default function FocusDashboardPanel({
     .filter((t) => scheduleBlocks.some((b) => b.task_id === t.id))
     .reduce((sum, t) => sum + t.estimated_hours, 0);
 
+  // Get today's tasks and assignments for the checklist sidebar
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  // Filter schedule blocks for today
+  const todaysScheduleBlocks = scheduleBlocks.filter((block) => {
+    const blockDate = new Date(block.start_time);
+    blockDate.setHours(0, 0, 0, 0);
+    return blockDate.getTime() === today.getTime();
+  });
+
+  // Map blocks to task details with timing info
+  const todaysScheduledTasks = todaysScheduleBlocks.map((block) => {
+    const task = tasks.find((t) => t.id === block.task_id);
+    return {
+      id: block.id,
+      taskId: block.task_id,
+      title: task?.title || "Untitled Task",
+      startTime: new Date(block.start_time),
+      endTime: new Date(block.end_time),
+      completed: task?.completed || false,
+    };
+  });
+
+  const dueTodayTasks = tasks.filter((task) => {
+    const deadline = new Date(task.deadline);
+    deadline.setHours(0, 0, 0, 0);
+    return deadline.getTime() === today.getTime() && !task.completed;
+  });
+
   const formatHours = (hours: number) => {
     const rounded = Math.round(hours * 10) / 10;
     if (rounded === 0) {
@@ -467,37 +499,27 @@ export default function FocusDashboardPanel({
 
   return (
     <div className={`flex flex-col gap-8 transition-opacity duration-150 ${uiHidden ? "pointer-events-none" : "pointer-events-auto"}`}>
-      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-        <div className={`bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-2xl px-6 py-4 shadow-sm border border-white/60 dark:border-slate-700/60 transition-all duration-150 ease-out ${uiHidden ? "-translate-x-8 opacity-0" : "translate-x-0 opacity-100"}`}>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
-            Focus Dashboard
-          </h1>
-          <p className="text-slate-600 dark:text-slate-300 font-medium">
-            Let&apos;s get in the zone, {userId ? "Student" : "Guest"}.
-          </p>
-        </div>
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         <div className={`lg:col-span-3 flex flex-col gap-4 transition-all duration-150 ease-out ${uiHidden ? "-translate-x-8 opacity-0" : "translate-x-0 opacity-100"}`}>
           <StatCard
             label="Total Tasks"
             value={totalTasks}
-            subtext={`${completedTasks} completed`}
-            icon="task_alt"
+            subtext={completedTasks > 0 ? `${completedTasks} completed` : "No tasks yet"}
+            icon="checklist"
             accentColor="blue"
           />
+
           <StatCard
             label="Total Hours"
             value={formatHours(totalHours)}
             subtext={`${formatHours(scheduledHours)} scheduled`}
             icon="schedule"
-            accentColor="blue"
+            accentColor="indigo"
           />
-          
+
           {/* Music Player Panel */}
-          <div className={`bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-3xl p-4 shadow-sm border border-white/40 dark:border-slate-700/40 mt-2 transition-[min-height] duration-200 ${isMusicOpen ? "" : "min-h-[110px]"}`}>
-            <div className={`mb-3 items-center px-1 ${isMusicOpen ? "grid grid-cols-[auto_1fr_auto] gap-2" : "flex justify-between"}`}>
+          <div className={`bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-3xl p-6 shadow-sm border border-white/40 dark:border-slate-700/40 mt-2 transition-[min-height] duration-200 ${isMusicOpen ? "" : "min-h-[110px]"}`}>
+            <div className={`mb-3 items-center px-2 py-2 ${isMusicOpen ? "grid grid-cols-[auto_1fr_auto] gap-2" : "flex justify-between"}`}>
               <h3 className="text-sm font-semibold tracking-normal text-slate-500 dark:text-slate-300 flex items-center gap-2">
                 <span className="material-symbols-outlined text-sm">headphones</span>
                 Focus Music
@@ -593,8 +615,9 @@ export default function FocusDashboardPanel({
                     >
                       {spotifyConnecting ? "Connecting..." : "Connect Spotify"}
                     </button>
+                    {/* Open Spotify login screen */}
                     <a
-                      href={activeSpotifyPlaylistUrl}
+                      href="https://accounts.spotify.com/login"
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex items-center rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700"
@@ -809,17 +832,15 @@ export default function FocusDashboardPanel({
 
             {musicProvider === 'youtube' ? (
               <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={handleProviderConnect}
+                {/* YouTube Music login and navigation - opens in same tab */}
+                <a
+                  href="https://accounts.google.com/signin"
                   className="inline-flex items-center rounded-full border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
                 >
                   Connect YouTube
-                </button>
+                </a>
                 <a
-                  href={activeYouTubeMusicUrl}
-                  target="_blank"
-                  rel="noreferrer"
+                  href="https://music.youtube.com/"
                   className="inline-flex items-center rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700"
                 >
                   Open YouTube Music
@@ -849,7 +870,7 @@ export default function FocusDashboardPanel({
           </div>
         </div>
 
-        <div className={`lg:col-span-3 lg:-mt-24 flex flex-col gap-4 transition-all duration-150 ease-out ${uiHidden ? "translate-x-8 opacity-0" : "translate-x-0 opacity-100"}`}>
+        <div className={`lg:col-span-3 flex flex-col gap-4 transition-all duration-150 ease-out ${uiHidden ? "translate-x-8 opacity-0" : "translate-x-0 opacity-100"}`}>
           <StatCard
             label="Productivity Score"
             value={`${productivityScore}%`}
@@ -865,33 +886,78 @@ export default function FocusDashboardPanel({
             accentColor={overdueTasks.length > 0 ? "red" : "green"}
           />
 
+          {/* Display today's scheduled tasks and due assignments in a checklist format */}
           <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-3xl p-6 shadow-sm border border-white/40 dark:border-slate-700/40">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-4">
-              Quick Actions
+              Today's Checklist
             </h3>
-            <div className="flex flex-col gap-3">
-              <Link
-                href="/tasks"
-                className="flex items-center gap-3 bg-[#306844] hover:bg-[#255236] text-white font-semibold py-3 px-4 rounded-xl transition shadow-lg shadow-green-900/10"
-              >
-                <span className="material-symbols-outlined text-sm">add</span>
-                Add Task
-              </Link>
-              <Link
-                href="/courses"
-                className="flex items-center gap-3 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-700 dark:text-white font-semibold py-3 px-4 rounded-xl transition border border-slate-200 dark:border-slate-600"
-              >
-                <span className="material-symbols-outlined text-sm">school</span>
-                Add Course
-              </Link>
-              <Link
-                href="/schedule"
-                className="flex items-center gap-3 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-700 dark:text-white font-semibold py-3 px-4 rounded-xl transition border border-slate-200 dark:border-slate-600"
-              >
-                <span className="material-symbols-outlined text-sm">calendar_month</span>
-                View Schedule
-              </Link>
-            </div>
+            
+            {todaysScheduledTasks.length === 0 && dueTodayTasks.length === 0 ? (
+              <div className="text-center py-6">
+                <p className="text-sm text-slate-500 dark:text-slate-400">No tasks or assignments for today</p>
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                {/* Scheduled Tasks Section */}
+                {todaysScheduledTasks.length > 0 && (
+                  <div>
+                    <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">
+                      Scheduled
+                    </p>
+                    <div className="space-y-2">
+                      {todaysScheduledTasks.map((item) => (
+                        <div key={item.id} className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                          <input
+                            type="checkbox"
+                            checked={item.completed}
+                            readOnly
+                            className="mt-0.5 rounded border-slate-300 text-emerald-600 cursor-pointer"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm font-medium ${item.completed ? "line-through text-slate-400 dark:text-slate-500" : "text-slate-700 dark:text-slate-200"}`}>
+                              {item.title}
+                            </p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                              {item.startTime.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })} - {item.endTime.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Due Today Section */}
+                {dueTodayTasks.length > 0 && (
+                  <div>
+                    {todaysScheduledTasks.length > 0 && <div className="border-t border-slate-200 dark:border-slate-600 my-3"></div>}
+                    <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">
+                      Due Today
+                    </p>
+                    <div className="space-y-2">
+                      {dueTodayTasks.map((task) => (
+                        <div key={task.id} className="flex items-start gap-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition border border-amber-200/50 dark:border-amber-800/50">
+                          <input
+                            type="checkbox"
+                            checked={task.completed}
+                            readOnly
+                            className="mt-0.5 rounded border-amber-300 text-amber-600 cursor-pointer"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm font-medium ${task.completed ? "line-through text-slate-400 dark:text-slate-500" : "text-slate-700 dark:text-slate-200"}`}>
+                              {task.title}
+                            </p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                              {new Date(task.deadline).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
