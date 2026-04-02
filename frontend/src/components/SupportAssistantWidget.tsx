@@ -40,6 +40,13 @@ type HelpArticle = {
   }>;
 };
 
+type SupportChatApiResponse = {
+  reply: string;
+  suggested_view?: string | null;
+};
+
+const SUPPORT_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 const routeHints: Array<{ match: RegExp; hint: string }> = [
   { match: /^\/dashboard/, hint: "Use Focus Mode in Dashboard to lock into deep work blocks." },
   { match: /^\/tasks/, hint: "Tag tasks as assignment, exam, or project to stay organized." },
@@ -286,26 +293,36 @@ const helpArticles: HelpArticle[] = [
 ];
 
 const createAssistantReply = (input: string, pathname: string): string => {
-  const normalized = input.toLowerCase();
-
-  if (normalized.includes("task") || normalized.includes("assignment") || normalized.includes("exam")) {
-    return "Use Tasks to add and organize assignments, exams, and projects.";
-  }
-  if (normalized.includes("schedule") || normalized.includes("calendar") || normalized.includes("time block")) {
-    return "Use Schedule to review and adjust your weekly focus blocks.";
-  }
-  if (normalized.includes("course") || normalized.includes("syllabus") || normalized.includes("lab")) {
-    return "Open Courses to manage classes and upload class/lab syllabi.";
-  }
-  if (normalized.includes("notification") || normalized.includes("reminder") || normalized.includes("email")) {
-    return "Go to Settings to tune reminders, lead time, and notification channels.";
-  }
-  if (normalized.includes("bug") || normalized.includes("error") || normalized.includes("issue") || normalized.includes("support")) {
-    return "Open Support and include page, steps, and screenshots so we can help quickly.";
-  }
-
   const hint = routeHints.find((entry) => entry.match.test(pathname))?.hint;
-  return hint || "I can guide you through Tasks, Courses, Schedule, Settings, and Help Center articles.";
+  return (
+    "I couldn't reach the AI support service just now. " +
+    (hint ? `${hint} ` : "") +
+    "Please try again in a moment."
+  );
+};
+
+const sendSupportChatMessage = async (
+  message: string,
+  pathname: string,
+  history: ChatMessage[]
+): Promise<SupportChatApiResponse> => {
+  const response = await fetch(`${SUPPORT_API_URL}/api/support/chat`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      message,
+      pathname,
+      messages: history.slice(-8),
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to load support response");
+  }
+
+  return response.json() as Promise<SupportChatApiResponse>;
 };
 
 const getReadTimeLabel = (article: HelpArticle): string => {
@@ -410,12 +427,16 @@ export default function SupportAssistantWidget() {
   const [activeThreadId, setActiveThreadId] = useState<string>("");
 
   const listRef = useRef<HTMLDivElement | null>(null);
-  const messageIdRef = useRef(0);
-
-  const nextMessageId = (prefix: string) => {
-    messageIdRef.current += 1;
-    return `${prefix}-${messageIdRef.current}`;
+  const makeUniqueId = (prefix: string) => {
+    const randomPart =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    return `${prefix}-${randomPart}`;
   };
+
+  const nextMessageId = (prefix: string) => makeUniqueId(prefix);
+  const nextThreadId = () => makeUniqueId("thread");
 
   const createInitialMessages = (): ChatMessage[] => [
     {
@@ -437,6 +458,32 @@ export default function SupportAssistantWidget() {
     messages: createInitialMessages(),
   });
 
+  const normalizeLoadedThreads = (loadedThreads: ChatThread[]): ChatThread[] => {
+    const usedThreadIds = new Set<string>();
+
+    return loadedThreads.map((thread) => {
+      const safeThreadId =
+        thread.id && !usedThreadIds.has(thread.id) ? thread.id : nextThreadId();
+      usedThreadIds.add(safeThreadId);
+
+      const usedMessageIds = new Set<string>();
+      const safeMessages = (thread.messages || []).map((message) => {
+        const safeMessageId =
+          message.id && !usedMessageIds.has(message.id)
+            ? message.id
+            : nextMessageId(message.role || "message");
+        usedMessageIds.add(safeMessageId);
+        return { ...message, id: safeMessageId };
+      });
+
+      return {
+        ...thread,
+        id: safeThreadId,
+        messages: safeMessages,
+      };
+    });
+  };
+
   const storageKey = userId ? `support-assistant-threads:${userId}` : "support-assistant-threads:guest";
 
   useEffect(() => {
@@ -449,8 +496,9 @@ export default function SupportAssistantWidget() {
       if (raw) {
         const parsed = JSON.parse(raw) as { threads: ChatThread[]; activeThreadId: string };
         if (Array.isArray(parsed.threads) && parsed.threads.length > 0) {
-          setThreads(parsed.threads);
-          setActiveThreadId(parsed.activeThreadId || parsed.threads[0].id);
+          const safeThreads = normalizeLoadedThreads(parsed.threads);
+          setThreads(safeThreads);
+          setActiveThreadId(parsed.activeThreadId || safeThreads[0].id);
           return;
         }
       }
@@ -458,7 +506,7 @@ export default function SupportAssistantWidget() {
       // fall back to default thread
     }
 
-    const id = `thread-${Date.now()}`;
+    const id = nextThreadId();
     const first = createThread(id);
     setThreads([first]);
     setActiveThreadId(first.id);
@@ -509,7 +557,7 @@ export default function SupportAssistantWidget() {
   };
 
   const startNewChat = () => {
-    const id = `thread-${Date.now()}`;
+    const id = nextThreadId();
     const newThread = createThread(id);
     persistThreads([newThread, ...threads], id);
     setIsThreadListOpen(false);
@@ -597,12 +645,22 @@ export default function SupportAssistantWidget() {
     setIsThinking(true);
     scrollChatToBottom();
 
-    await new Promise((resolve) => setTimeout(resolve, 900));
+    let replyText = createAssistantReply(trimmed, pathname || "");
+    try {
+      const apiResponse = await sendSupportChatMessage(
+        trimmed,
+        pathname || "",
+        [...messages, userMessage]
+      );
+      replyText = apiResponse.reply || replyText;
+    } catch (_) {
+      // fall back to the local assistant reply
+    }
 
     const assistantMessage: ChatMessage = {
       id: nextMessageId("assistant"),
       role: "assistant",
-      text: createAssistantReply(trimmed, pathname || ""),
+      text: replyText,
     };
 
     updateActiveThreadMessages((prev) => [...prev, assistantMessage]);
@@ -613,16 +671,24 @@ export default function SupportAssistantWidget() {
   const handleQuickQuestion = async (question: string) => {
     if (isThinking) return;
 
-    updateActiveThreadMessages((prev) => [...prev, { id: nextMessageId("user"), role: "user", text: question }]);
+    const userMessage: ChatMessage = { id: nextMessageId("user"), role: "user", text: question };
+    updateActiveThreadMessages((prev) => [...prev, userMessage]);
     setIsThinking(true);
     scrollChatToBottom();
 
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    const history = [...messages, userMessage];
+    let replyText = createAssistantReply(question, pathname || "");
+    try {
+      const apiResponse = await sendSupportChatMessage(question, pathname || "", history);
+      replyText = apiResponse.reply || replyText;
+    } catch (_) {
+      // fall back to the local assistant reply
+    }
 
     const assistantMessage: ChatMessage = {
       id: nextMessageId("assistant"),
       role: "assistant",
-      text: createAssistantReply(question, pathname || ""),
+      text: replyText,
     };
 
     updateActiveThreadMessages((prev) => [...prev, assistantMessage]);
@@ -853,7 +919,7 @@ export default function SupportAssistantWidget() {
                     <div key={message.id} className={`flex gap-2 ${message.role === "assistant" ? "justify-start" : "justify-end"}`}>
                       {message.role === "assistant" && <ElevenAvatar size="sm" />}
                       <div
-                        className={`max-w-[82%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
+                        className={`max-w-[82%] rounded-2xl px-3 py-2 text-sm leading-relaxed whitespace-pre-line break-words ${
                           message.role === "assistant"
                             ? "border border-slate-200/80 dark:border-slate-700/80 bg-slate-50/90 dark:bg-slate-900/75 text-slate-800 dark:text-slate-100"
                             : "text-white"
