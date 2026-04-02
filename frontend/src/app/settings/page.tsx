@@ -63,6 +63,9 @@ export default function SettingsPage() {
   const [activePanel, setActivePanel] = useState<SettingsPanel>("personalize");
   const [settingsSearch, setSettingsSearch] = useState("");
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [isSendingPasswordReset, setIsSendingPasswordReset] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [actionMessage, setActionMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const {
     notificationsEnabled,
@@ -168,6 +171,8 @@ export default function SettingsPage() {
   };
 
   const handleChangePassword = async () => {
+    setActionMessage(null);
+    setIsSendingPasswordReset(true);
     try {
       const {
         data: { user: authUser },
@@ -175,12 +180,12 @@ export default function SettingsPage() {
       } = await supabase.auth.getUser();
 
       if (userError) {
-        alert(`Error: Could not get user. ${userError.message}`);
+        setActionMessage({ type: "error", text: `Could not get user. ${userError.message}` });
         return;
       }
 
       if (!authUser?.email) {
-        alert("Could not retrieve your email address. Please log out and log back in.");
+        setActionMessage({ type: "error", text: "Could not retrieve your email address. Please log out and log back in." });
         return;
       }
 
@@ -189,20 +194,25 @@ export default function SettingsPage() {
       });
 
       if (error) {
-        alert(`Error: ${error.message}`);
+        setActionMessage({ type: "error", text: error.message });
         return;
       }
 
-      alert("Password reset email sent! Check your inbox for the reset link.");
+      setActionMessage({ type: "success", text: "Password reset email sent. Check your inbox for the reset link." });
     } catch {
-      alert("Failed to send reset email. Check the browser console for details.");
+      setActionMessage({ type: "error", text: "Failed to send reset email. Please try again." });
+    } finally {
+      setIsSendingPasswordReset(false);
     }
   };
 
   const handleExportScheduleAsPdf = () => {
+    setActionMessage(null);
+    setIsExportingPdf(true);
     const scheduleWindow = window.open("/schedule", "_blank");
     if (!scheduleWindow) {
-      alert("Please allow pop-ups to export schedule as PDF.");
+      setActionMessage({ type: "error", text: "Please allow pop-ups to export schedule as PDF." });
+      setIsExportingPdf(false);
       return;
     }
 
@@ -210,10 +220,13 @@ export default function SettingsPage() {
     setTimeout(() => {
       scheduleWindow.focus();
       scheduleWindow.print();
+      setActionMessage({ type: "success", text: "Schedule opened in a new tab. Use your browser print dialog to save as PDF." });
+      setIsExportingPdf(false);
     }, 1200);
   };
 
   const handleClearAccountData = () => {
+    setActionMessage(null);
     const confirmed = window.confirm(
       "Clear local account data and preferences on this device?"
     );
@@ -232,12 +245,13 @@ export default function SettingsPage() {
 
     keysToClear.forEach((key) => localStorage.removeItem(key));
     handleResetDefaults();
-    alert("Local account data cleared.");
+    setActionMessage({ type: "success", text: "Local account data and preferences were cleared on this device." });
   };
 
   const handleDeleteAccount = async () => {
+    setActionMessage(null);
     if (!user?.id) {
-      alert("Please sign in to delete your account.");
+      setActionMessage({ type: "error", text: "Please sign in to delete your account." });
       return;
     }
 
@@ -267,11 +281,11 @@ export default function SettingsPage() {
       localStorage.removeItem("privacyShareProgress");
       localStorage.removeItem("soundEnabled");
 
-      alert("Account deleted successfully.");
+      setActionMessage({ type: "success", text: "Account deleted successfully." });
       window.location.href = "/auth";
     } catch (error) {
       const message = error instanceof Error ? error.message : "Could not delete account.";
-      alert(message);
+      setActionMessage({ type: "error", text: message });
     } finally {
       setIsDeletingAccount(false);
     }
@@ -497,6 +511,18 @@ export default function SettingsPage() {
             </aside>
 
             <main className="p-4 md:p-6 space-y-5 bg-gradient-to-b from-white/45 to-white/25 dark:from-slate-900/45 dark:to-slate-900/25">
+              {actionMessage && (
+                <div
+                  className={`rounded-xl border px-4 py-3 text-sm font-medium ${
+                    actionMessage.type === "success"
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800/60 dark:bg-emerald-900/25 dark:text-emerald-200"
+                      : "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-800/60 dark:bg-rose-900/25 dark:text-rose-200"
+                  }`}
+                >
+                  {actionMessage.text}
+                </div>
+              )}
+
               <div className="flex items-center gap-3 rounded-2xl border border-slate-200/70 dark:border-slate-700/70 bg-white/70 dark:bg-slate-800/55 px-4 py-3">
                 <div
                   className="w-11 h-11 rounded-full border flex items-center justify-center text-lg font-bold"
@@ -707,8 +733,12 @@ export default function SettingsPage() {
                   <div className="text-xl font-bold text-slate-900 dark:text-white mb-1">Account & Privacy</div>
                   <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Manage login and privacy controls.</p>
 
-                  <button onClick={handleChangePassword} className="w-full text-left px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/75 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-700 transition mb-4">
-                    <p className="font-medium text-slate-900 dark:text-white">Change Password</p>
+                  <button
+                    onClick={handleChangePassword}
+                    disabled={isSendingPasswordReset}
+                    className="w-full text-left px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/75 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-700 transition mb-4 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    <p className="font-medium text-slate-900 dark:text-white">{isSendingPasswordReset ? "Sending reset link..." : "Change Password"}</p>
                     <p className="text-xs text-slate-500 dark:text-slate-400">Send a reset link to your email</p>
                   </button>
 
@@ -775,9 +805,10 @@ export default function SettingsPage() {
                   <div className="space-y-3 mt-4">
                     <button
                       onClick={handleExportScheduleAsPdf}
-                      className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-slate-200/70 dark:border-slate-700/70 bg-white/70 dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition"
+                      disabled={isExportingPdf}
+                      className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-slate-200/70 dark:border-slate-700/70 bg-white/70 dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                      <span className="flex items-center gap-2 text-slate-800 dark:text-slate-100"><span className="material-symbols-outlined text-base">picture_as_pdf</span>Export Schedule as PDF</span>
+                      <span className="flex items-center gap-2 text-slate-800 dark:text-slate-100"><span className="material-symbols-outlined text-base">picture_as_pdf</span>{isExportingPdf ? "Preparing PDF export..." : "Export Schedule as PDF"}</span>
                       <span className="material-symbols-outlined text-base text-slate-400">chevron_right</span>
                     </button>
                     <button
