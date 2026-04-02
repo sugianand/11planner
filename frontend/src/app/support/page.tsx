@@ -12,7 +12,7 @@ export default function SupportPage() {
     {
       icon: "mail",
       title: "Direct Email Support",
-      body: "Reach us at support@11planner.com for account, bug, and usage questions."
+      body: "Reach us at 11planner.support@gmail.com for account, bug, and usage questions."
     },
     {
       icon: "schedule",
@@ -72,7 +72,7 @@ export default function SupportPage() {
           >
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">Contact support</h2>
             <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
-              Email: <span className="font-semibold">support@11planner.app</span>
+              Email: <span className="font-semibold">11planner.support@gmail.com</span>
             </p>
             <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
               Typical response time: within a few business days.

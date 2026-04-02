@@ -143,7 +143,7 @@ export default function FaqPage() {
           >
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">Need more help?</h2>
             <p className="text-slate-700 dark:text-slate-300 mt-2">
-              For account-specific support, email support@11planner.app.
+              For account-specific support, email 11planner.support@gmail.com.
             </p>
           </section>
 

@@ -255,13 +255,6 @@ export default function AboutPage() {
                 <span className="material-symbols-outlined text-base">support_agent</span>
                 Contact Support
               </Link>
-              <Link
-                href="/"
-                className="inline-flex items-center gap-2 bg-white/70 dark:bg-slate-800/70 border border-white/60 dark:border-slate-600/60 text-slate-900 dark:text-slate-100 px-6 py-3 rounded-pill font-bold hover:bg-white dark:hover:bg-slate-700 transition-colors"
-              >
-                <span className="material-symbols-outlined text-base">arrow_back</span>
-                Back to home
-              </Link>
             </div>
           </div>
         </div>

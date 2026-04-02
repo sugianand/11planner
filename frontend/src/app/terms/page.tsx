@@ -127,7 +127,7 @@ export default function TermsPage() {
           >
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">Questions about terms</h2>
             <p className="text-slate-700 dark:text-slate-300">
-              Questions about these terms? Email support@11planner.app.
+              Questions about these terms? Email 11planner.support@gmail.com.
             </p>
             <p className="text-slate-700 dark:text-slate-300">
               You can also visit{' '}

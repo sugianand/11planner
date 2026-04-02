@@ -147,7 +147,7 @@ export default function PrivacyPage() {
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">Questions or requests</h2>
             <p className="text-slate-700 dark:text-slate-300">
               For privacy questions, access requests, correction requests, or account deletion,
-              contact: support@11planner.app
+              contact: 11planner.support@gmail.com
             </p>
             <p className="text-slate-700 dark:text-slate-300">
               You can also review our terms at{" "}
