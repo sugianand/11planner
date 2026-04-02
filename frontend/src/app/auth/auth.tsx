@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./auth.css";
 import { supabase } from "@/lib/supabaseClient";
+import { AuthChangeEvent } from "@supabase/supabase-js";
 import AppDialog from "@/components/AppDialog";
 
 type Mode = "login" | "register" | "forgot-password";
@@ -57,7 +58,7 @@ export default function AuthPage() {
   useEffect(() => {
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session) => {
       if (!session) {
         setMode("login");
       }
