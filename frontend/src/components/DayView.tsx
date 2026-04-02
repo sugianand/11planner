@@ -14,10 +14,13 @@ interface DayViewProps {
 
 export const DayView: React.FC<DayViewProps> = ({ dayData, events, onEventMove, errorMessage, onDismissError }) => {
   const [activeSlot, setActiveSlot] = React.useState<string | null>(null);
+  const [activeDropLabel, setActiveDropLabel] = React.useState<string | null>(null);
   const [draggingEventId, setDraggingEventId] = React.useState<string | null>(null);
   const [isErrorFading, setIsErrorFading] = React.useState(false);
-  const SLOT_MINUTES = 15;
+  const SLOT_MINUTES = 15;  // Visual slot size (compact view)
+  const DRAG_PRECISION = 5;  // Internal drag snapping precision
   const SLOT_HEIGHT_PX = 40;
+  const SUBSLOTS_PER_SLOT = SLOT_MINUTES / DRAG_PRECISION;
   const slots = Array.from({ length: 96 }, (_, i) => ({
     hour: Math.floor(i / 4),
     minute: (i % 4) * 15,
@@ -27,6 +30,10 @@ export const DayView: React.FC<DayViewProps> = ({ dayData, events, onEventMove, 
     event: React.DragEvent<HTMLDivElement>,
     eventItem: Event
   ) => {
+    if (eventItem.kind === 'class') {
+      event.preventDefault();
+      return;
+    }
     event.dataTransfer.setData('text/plain', eventItem.id);
     event.dataTransfer.effectAllowed = 'move';
     requestAnimationFrame(() => {
@@ -37,6 +44,7 @@ export const DayView: React.FC<DayViewProps> = ({ dayData, events, onEventMove, 
   const handleDragEnd = () => {
     setDraggingEventId(null);
     setActiveSlot(null);
+    setActiveDropLabel(null);
   };
 
   const handleDrop = (event: React.DragEvent<HTMLDivElement>, hour: number, minute: number) => {
@@ -45,21 +53,46 @@ export const DayView: React.FC<DayViewProps> = ({ dayData, events, onEventMove, 
     if (!eventId || !onEventMove) {
       return;
     }
+    const slotElement = event.currentTarget as HTMLDivElement;
+    const bounds = slotElement.getBoundingClientRect();
+    const relativeY = Math.max(0, Math.min(bounds.height, event.clientY - bounds.top));
+    const subslotIndex = Math.min(
+      SUBSLOTS_PER_SLOT - 1,
+      Math.floor((relativeY / bounds.height) * SUBSLOTS_PER_SLOT)
+    );
+    const snappedMinute = minute + subslotIndex * DRAG_PRECISION;
     const newStart = new Date(dayData.date);
-    newStart.setHours(hour, minute, 0, 0);
+    newStart.setHours(hour, snappedMinute, 0, 0);
     onEventMove(eventId, newStart);
     setActiveSlot(null);
+    setActiveDropLabel(null);
     setDraggingEventId(null);
   };
 
-  const handleDragOver = (event: React.DragEvent<HTMLDivElement>, slotKey: string) => {
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>, slotKey: string, hour: number, minute: number) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
     setActiveSlot(slotKey);
+    const slotElement = event.currentTarget as HTMLDivElement;
+    const bounds = slotElement.getBoundingClientRect();
+    const relativeY = Math.max(0, Math.min(bounds.height, event.clientY - bounds.top));
+    const subslotIndex = Math.min(
+      SUBSLOTS_PER_SLOT - 1,
+      Math.floor((relativeY / bounds.height) * SUBSLOTS_PER_SLOT)
+    );
+    const snappedMinute = minute + subslotIndex * DRAG_PRECISION;
+    setActiveDropLabel(
+      new Date(0, 0, 0, hour, snappedMinute).toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      })
+    );
   };
 
   const handleDragLeave = (slotKey: string) => {
     setActiveSlot((prev) => (prev === slotKey ? null : prev));
+    setActiveDropLabel(null);
   };
 
   React.useEffect(() => {
@@ -152,13 +185,23 @@ export const DayView: React.FC<DayViewProps> = ({ dayData, events, onEventMove, 
                 className={`flex-1 py-2 px-4 relative min-h-10 transition-colors ${
                   isActive ? 'bg-emerald-50/80 dark:bg-emerald-900/20' : 'bg-white/80 dark:bg-slate-800/70'
                 }`}
-                onDragOver={(event) => handleDragOver(event, slotKey)}
+                onDragOver={(event) => handleDragOver(event, slotKey, slot.hour, slot.minute)}
                 onDragLeave={() => handleDragLeave(slotKey)}
                 onDrop={(event) => handleDrop(event, slot.hour, slot.minute)}
+                style={{
+                  backgroundImage: `repeating-linear-gradient(
+                    to bottom,
+                    transparent,
+                    transparent ${Math.max(SLOT_HEIGHT_PX / 3 - 1, 1)}px,
+                    rgba(148, 163, 184, 0.06) ${Math.max(SLOT_HEIGHT_PX / 3 - 1, 1)}px,
+                    rgba(148, 163, 184, 0.06) ${Math.max(SLOT_HEIGHT_PX / 3, 1)}px
+                  )`,
+                  backgroundSize: `100% ${SLOT_HEIGHT_PX}px`,
+                }}
               >
                 {isActive && (
                   <div className="absolute right-2 top-1 text-[10px] font-semibold text-emerald-700 bg-emerald-100 rounded-full px-1.5 py-0.5 dark:bg-emerald-900/30 dark:text-emerald-300">
-                    {new Date(0, 0, 0, slot.hour, slot.minute).toLocaleTimeString('en-US', {
+                    {activeDropLabel ?? new Date(0, 0, 0, slot.hour, slot.minute).toLocaleTimeString('en-US', {
                       hour: 'numeric',
                       minute: '2-digit',
                       hour12: true,
@@ -178,19 +221,22 @@ export const DayView: React.FC<DayViewProps> = ({ dayData, events, onEventMove, 
                   return (
                   <div
                     key={event.id}
-                    className={`absolute z-10 p-2 rounded border-l-4 cursor-move shadow-sm ${getColorClass(event.color)} ${draggingEventId === event.id ? 'pointer-events-none opacity-90' : ''}`}
+                    className={`absolute z-10 p-2 rounded border-l-4 shadow-sm ${getColorClass(event.color)} ${event.kind === 'class' ? 'cursor-default border-dashed opacity-90' : 'cursor-move'} ${draggingEventId === event.id ? 'pointer-events-none opacity-90' : ''}`}
                     style={{
                       top: `${topOffsetPx}px`,
                       left: `${4 + index * 6}px`,
                       right: '4px',
                       height: `${heightPx}px`,
                     }}
-                    draggable
+                    draggable={event.kind !== 'class'}
                     onDragStart={(dragEvent) => handleDragStart(dragEvent, event)}
                     onDragEnd={handleDragEnd}
                     title={`${event.title} • ${getEventTimeLabel(event)} (Drag to move)`}
                   >
                     <p className="font-semibold text-sm">{event.title}</p>
+                    {event.kind === 'class' && (
+                      <p className="text-[10px] font-semibold uppercase tracking-wide opacity-80">Class</p>
+                    )}
                     <p className="text-[10px] opacity-80">{getEventTimeLabel(event)}</p>
                     {event.description && (
                       <p className="text-xs opacity-75">{event.description}</p>

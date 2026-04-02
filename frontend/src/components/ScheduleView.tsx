@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { ViewMode, Event, DayData } from '@/types/schedule';
 import { getDaysInMonth, getWeekDays, getDayData, getMonthsInYear } from '@/utils/dateUtils';
 import { exportEventsToICS } from '@/utils/icsUtils';
@@ -21,7 +21,7 @@ interface ScheduleViewProps {
 }
 
 export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEventMove, colorBy = "priority", onColorByChange, errorMessage = null, onDismissError }) => {
-  const { userId } = usePlanner();
+  const { userId, courses, loadCourses } = usePlanner();
   const [viewMode, setViewMode] = useState<ViewMode>('monthly');
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [weekDays, setWeekDays] = useState<DayData[]>(getWeekDays(currentDate));
@@ -38,6 +38,154 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
   useEffect(() => {
     setEventList(events);
   }, [events]);
+
+  useEffect(() => {
+    loadCourses();
+  }, [loadCourses]);
+
+  const parseTime = (value?: string | null) => {
+    if (!value) {
+      return null;
+    }
+    const trimmed = value.trim();
+    const isoMatch = trimmed.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(am|pm)?$/i);
+    if (!isoMatch) {
+      return null;
+    }
+    let hour = Number(isoMatch[1]);
+    const minute = Number(isoMatch[2]);
+    const second = Number(isoMatch[3] || '0');
+    const meridiem = isoMatch[4]?.toLowerCase();
+
+    if (meridiem) {
+      if (meridiem === 'pm' && hour !== 12) hour += 12;
+      if (meridiem === 'am' && hour === 12) hour = 0;
+    }
+    return { hour, minute, second };
+  };
+
+  const parseCourseDays = (value?: string | null) => {
+    const text = (value || '').trim();
+    if (!text) return [] as string[];
+    const normalized = text.replace(/[,/]+/g, ' ').replace(/\s+/g, ' ').trim();
+    const tokens = normalized.split(' ');
+    const dayLookup: Record<string, string> = {
+      monday: 'Monday', mon: 'Monday', m: 'Monday',
+      tuesday: 'Tuesday', tue: 'Tuesday', tues: 'Tuesday', t: 'Tuesday',
+      wednesday: 'Wednesday', wed: 'Wednesday', w: 'Wednesday',
+      thursday: 'Thursday', thu: 'Thursday', thurs: 'Thursday', r: 'Thursday',
+      friday: 'Friday', fri: 'Friday', f: 'Friday',
+      saturday: 'Saturday', sat: 'Saturday', s: 'Saturday',
+      sunday: 'Sunday', sun: 'Sunday', u: 'Sunday',
+    };
+
+    const dayMatches = tokens
+      .map((token) => dayLookup[token.toLowerCase()])
+      .filter((day): day is string => Boolean(day));
+
+    if (dayMatches.length > 0) {
+      return Array.from(new Set(dayMatches));
+    }
+
+    const compact = normalized.toLowerCase();
+    if (compact === 'mwf') return ['Monday', 'Wednesday', 'Friday'];
+    if (compact === 'tth') return ['Tuesday', 'Thursday'];
+    return [];
+  };
+
+  const classEvents = useMemo(() => {
+    const rangeStart =
+      viewMode === 'daily'
+        ? new Date(currentDate)
+        : viewMode === 'weekly'
+          ? new Date(weekDays[0]?.date || currentDate)
+          : viewMode === 'monthly'
+            ? new Date(daysInMonth[0]?.date || currentDate)
+            : new Date(currentDate.getFullYear(), 0, 1);
+    const rangeEnd =
+      viewMode === 'daily'
+        ? new Date(currentDate)
+        : viewMode === 'weekly'
+          ? new Date(weekDays[6]?.date || currentDate)
+          : viewMode === 'monthly'
+            ? new Date(daysInMonth[daysInMonth.length - 1]?.date || currentDate)
+            : new Date(currentDate.getFullYear(), 11, 31);
+
+    rangeStart.setHours(0, 0, 0, 0);
+    rangeEnd.setHours(23, 59, 59, 999);
+
+    const occurrences: Event[] = [];
+
+    courses.forEach((course) => {
+      const startTime = parseTime(course.startTime);
+      const endTime = parseTime(course.endTime);
+      const courseDays = parseCourseDays(course.courseDate);
+      if (!startTime || !endTime || courseDays.length === 0) {
+        return;
+      }
+
+      const daySet = new Set(courseDays.map((day) => day.toLowerCase()));
+      const cursor = new Date(rangeStart);
+      while (cursor <= rangeEnd) {
+        const dayName = cursor.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+        if (daySet.has(dayName)) {
+          const startDate = new Date(cursor);
+          startDate.setHours(startTime.hour, startTime.minute, startTime.second, 0);
+          const endDate = new Date(cursor);
+          endDate.setHours(endTime.hour, endTime.minute, endTime.second, 0);
+          if (endDate <= startDate) {
+            endDate.setDate(endDate.getDate() + 1);
+          }
+          occurrences.push({
+            id: `class-${course.id}-${cursor.toISOString().slice(0, 10)}`,
+            title: course.code ? `${course.code}` : course.name,
+            description: course.name,
+            start: startDate,
+            end: endDate,
+            color: 'indigo',
+            kind: 'class',
+          });
+        }
+        cursor.setDate(cursor.getDate() + 1);
+      }
+
+      if (course.hasLab && course.labDay && course.labStartTime && course.labEndTime) {
+        const labStart = parseTime(course.labStartTime);
+        const labEnd = parseTime(course.labEndTime);
+        const labDays = parseCourseDays(course.labDay);
+        if (labStart && labEnd && labDays.length > 0) {
+          const labDaySet = new Set(labDays.map((day) => day.toLowerCase()));
+          const labCursor = new Date(rangeStart);
+          while (labCursor <= rangeEnd) {
+            const dayName = labCursor.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+            if (labDaySet.has(dayName)) {
+              const startDate = new Date(labCursor);
+              startDate.setHours(labStart.hour, labStart.minute, labStart.second, 0);
+              const endDate = new Date(labCursor);
+              endDate.setHours(labEnd.hour, labEnd.minute, labEnd.second, 0);
+              if (endDate <= startDate) {
+                endDate.setDate(endDate.getDate() + 1);
+              }
+              occurrences.push({
+                id: `lab-${course.id}-${labCursor.toISOString().slice(0, 10)}`,
+                title: `${course.code || course.name} Lab`,
+                description: course.name,
+                start: startDate,
+                end: endDate,
+                color: 'cyan',
+                kind: 'class',
+              });
+            }
+            labCursor.setDate(labCursor.getDate() + 1);
+          }
+        }
+      }
+    });
+
+    return occurrences;
+  }, [courses, currentDate, viewMode, weekDays, daysInMonth]);
+
+  const displayEvents = useMemo(() => [...eventList, ...classEvents], [eventList, classEvents]);
 
   const updateDate = (newDate: Date) => {
     setCurrentDate(newDate);
@@ -280,16 +428,16 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
       {/* Content */}
       <div className="flex-1 overflow-hidden bg-white/55 dark:bg-slate-900/55">
         {viewMode === 'daily' && (
-          <DayView dayData={dayData} events={eventList} onEventMove={handleEventMove} errorMessage={errorMessage} onDismissError={onDismissError} />
+          <DayView dayData={dayData} events={displayEvents} onEventMove={handleEventMove} errorMessage={errorMessage} onDismissError={onDismissError} />
         )}
         {viewMode === 'weekly' && (
-          <WeekView weekDays={weekDays} events={eventList} onEventMove={handleEventMove} errorMessage={errorMessage} onDismissError={onDismissError} />
+          <WeekView weekDays={weekDays} events={displayEvents} onEventMove={handleEventMove} errorMessage={errorMessage} onDismissError={onDismissError} />
         )}
         {viewMode === 'monthly' && (
-          <MonthView daysInMonth={daysInMonth} events={eventList} onEventMove={handleEventMove} errorMessage={errorMessage} onDismissError={onDismissError} />
+          <MonthView daysInMonth={daysInMonth} events={displayEvents} onEventMove={handleEventMove} errorMessage={errorMessage} onDismissError={onDismissError} />
         )}
         {viewMode === 'yearly' && (
-          <YearView year={currentDate.getFullYear()} monthsData={monthsInYear} events={eventList} />
+          <YearView year={currentDate.getFullYear()} monthsData={monthsInYear} events={displayEvents} />
         )}
       </div>
       <AppDialog

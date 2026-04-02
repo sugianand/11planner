@@ -27,6 +27,14 @@ export default function SchedulePage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [colorBy, setColorBy] = useState<"priority" | "course">("priority");
 
+  const getStoredDailyLimit = () => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+    const stored = Number(window.localStorage.getItem("dailyLimit"));
+    return Number.isFinite(stored) && stored > 0 ? stored : undefined;
+  };
+
   useEffect(() => {
     loadTasks();
     loadScheduleBlocks();
@@ -56,7 +64,7 @@ export default function SchedulePage() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            study_limit_hours: preferences?.dailyLimit,
+            study_limit_hours: preferences?.dailyLimit ?? getStoredDailyLimit(),
           }),
         }
       );

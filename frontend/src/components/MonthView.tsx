@@ -21,6 +21,11 @@ export const MonthView: React.FC<MonthViewProps> = ({ daysInMonth, events, onEve
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   const handleDragStart = (event: React.DragEvent<HTMLDivElement>, eventId: string) => {
+    const eventItem = events.find((item) => item.id === eventId);
+    if (eventItem?.kind === 'class') {
+      event.preventDefault();
+      return;
+    }
     event.dataTransfer.setData('text/plain', eventId);
     event.dataTransfer.effectAllowed = 'move';
     const dragPreview = event.currentTarget.cloneNode(true) as HTMLDivElement;
@@ -146,7 +151,7 @@ export const MonthView: React.FC<MonthViewProps> = ({ daysInMonth, events, onEve
           {daysInMonth.map((day) => {
             const dayEvents = events.filter((e) => {
               const eventDate = new Date(e.start);
-              return eventDate.toDateString() === day.date.toDateString();
+              return eventDate.toDateString() === day.date.toDateString() && e.kind !== 'class';
             });
 
             const dayKey = day.date.toDateString();
@@ -188,8 +193,8 @@ export const MonthView: React.FC<MonthViewProps> = ({ daysInMonth, events, onEve
                   {dayEvents.slice(0, 2).map((event) => (
                     <div
                       key={event.id}
-                      className={`text-xs p-1 rounded-md truncate border-l-2 cursor-move shadow-sm ${getColorClass(event.color)}`}
-                      draggable
+                      className={`text-xs p-1 rounded-md truncate border-l-2 shadow-sm ${getColorClass(event.color)} ${event.kind === 'class' ? 'cursor-default border-dashed opacity-90' : 'cursor-move'}`}
+                      draggable={event.kind !== 'class'}
                       onDragStart={(dragEvent) => handleDragStart(dragEvent, event.id)}
                       onDragEnd={handleDragEnd}
                       title="Drag to move"
