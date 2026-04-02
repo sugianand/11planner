@@ -37,6 +37,10 @@ export default function AuthPage() {
     message: "",
   });
 
+  function goToNextPage(): void {
+    window.location.href = "frontend/src/app/page.tsx";
+  }
+
   useEffect(() => {
     async function checkSession() {
       try {
@@ -79,12 +83,6 @@ export default function AuthPage() {
       updatedForm[name as keyof FormState] = value;
       return updatedForm;
     });
-  }
-
-
-
-  function goToNextPage(): void {
-    window.location.href = "frontend/src/app/page.tsx";
   }
 
   async function registerUser(): Promise<void> {
@@ -255,7 +253,7 @@ export default function AuthPage() {
         ) : mode === "forgot-password" ? (
           <>
             <p style={{ fontSize: "14px", marginBottom: "20px" }}>
-              Enter your email address and we'll send you a link to reset your password.
+              Enter your email address and we&apos;ll send you a link to reset your password.
             </p>
             <input
               type="email"

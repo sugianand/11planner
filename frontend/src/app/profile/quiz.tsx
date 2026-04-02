@@ -11,12 +11,13 @@ type Preferences = {
   workdays: string[];
   workstyle: string;
   assignmentplan: string;
+  dailyLimit: number;
   additionalInfo: string;
 };
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-const TOTAL_STEPS = 5;
-const STEP_LABELS = ["Work Time", "Work Days", "Break Style", "Assignments", "Extra Notes"];
+const TOTAL_STEPS = 6;
+const STEP_LABELS = ["Work Time", "Work Days", "Break Style", "Assignments", "Productivity", "Extra Notes"];
 
 const WORKTIME_OPTIONS = [
   { value: "morning", label: "Morning", description: "6am-12pm" },
@@ -52,6 +53,7 @@ export default function Quiz() {
     workdays: [],
     workstyle: "",
     assignmentplan: "",
+    dailyLimit: 4,
     additionalInfo: "",
   });
   const [hasEdited, setHasEdited] = useState(false);
@@ -67,6 +69,7 @@ export default function Quiz() {
           workdays: savedPreferences.workdays,
           workstyle: savedPreferences.workstyle,
           assignmentplan: savedPreferences.assignmentplan,
+          dailyLimit: savedPreferences.dailyLimit,
           additionalInfo: savedPreferences.additionalInfo,
         }
       : preferences;
@@ -118,6 +121,7 @@ export default function Quiz() {
       workdays: currentPreferences.workdays,
       workstyle: currentPreferences.workstyle,
       assignmentplan: currentPreferences.assignmentplan,
+      daily_study_limit: currentPreferences.dailyLimit,
       additional_info: currentPreferences.additionalInfo,
     };
 
@@ -162,13 +166,13 @@ export default function Quiz() {
             <div className="quiz-panel rounded-3xl border border-white/50 bg-white/65 p-5 shadow-sm dark:border-slate-700/55 dark:bg-slate-800/55 sm:p-7">
                 <div className="rounded-2xl border border-white/55 bg-white/75 p-5 shadow-sm dark:border-slate-700/60 dark:bg-slate-900/35 sm:p-6">
                   <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                    <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Personalization Quiz</h1>
+                    <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Preference Quiz</h1>
                     <span className="rounded-full border border-emerald-200/80 bg-emerald-50/80 px-3 py-1 text-xs font-bold uppercase tracking-wider text-emerald-700 dark:border-emerald-500/35 dark:bg-emerald-500/10 dark:text-emerald-300">
                       Step {step} of {TOTAL_STEPS}
                     </span>
                   </div>
 
-                  <div className="mb-4 grid grid-cols-5 gap-2">
+                  <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
                     {STEP_LABELS.map((label, index) => {
                       const stepNumber = index + 1;
                       const isCurrent = step === stepNumber;
@@ -331,6 +335,36 @@ export default function Quiz() {
                   )}
 
                   {step === 5 && (
+                    <div>
+                      <h2 className="mb-2 text-2xl font-black text-slate-900 dark:text-white">Daily Study Limit</h2>
+                      <p className="mb-5 text-slate-600 dark:text-slate-300">Set your preferred max hours per day for schedule generation.</p>
+
+                      <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-4 dark:border-slate-700/75 dark:bg-slate-800/65">
+                        <div className="flex items-center gap-4">
+                          <input
+                            type="range"
+                            min="1"
+                            max="12"
+                            value={currentPreferences.dailyLimit}
+                            onChange={(e) => {
+                              setHasEdited(true);
+                              setPreferences({
+                                ...currentPreferences,
+                                dailyLimit: Math.min(12, Math.max(1, parseInt(e.target.value) || 1)),
+                              });
+                            }}
+                            className="h-2 flex-1 cursor-pointer appearance-none rounded-lg bg-slate-200 accent-[#306844]"
+                          />
+                          <div className="w-20 rounded-lg border border-slate-200 bg-white px-2 py-1 text-right text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-white">
+                            {currentPreferences.dailyLimit}h
+                          </div>
+                        </div>
+
+                      </div>
+                    </div>
+                  )}
+
+                  {step === 6 && (
                     <div>
                       <h2 className="mb-2 text-2xl font-black text-slate-900 dark:text-white">Additional Information</h2>
                       <p className="mb-5 text-slate-600 dark:text-slate-300">Share anything that can help us personalize your plan better.</p>

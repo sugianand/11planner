@@ -22,12 +22,14 @@ interface TimerContextType {
   timerMode: TimerMode;
   timeLeft: number;
   isTimerActive: boolean;
+  activeTimerMode: TimerMode | null;
+  activeTimeLeft: number | null;
   customTimerDurations: Record<TimerMode, number>;
   timerModes: Record<TimerMode, { label: string; minutes: number }>;
   toggleTimer: () => void;
   handleTimerModeChange: (mode: TimerMode) => void;
   resetTimer: () => void;
-  applyTimerSettings: () => void;
+  applyTimerSettings: (nextDurations?: Record<TimerMode, number>) => void;
   setCustomTimerDurations: React.Dispatch<React.SetStateAction<Record<TimerMode, number>>>;
 }
 
@@ -40,8 +42,12 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     longBreak: defaultTimerDurations.longBreak,
   });
   const [timerMode, setTimerMode] = useState<TimerMode>("pomodoro");
-  const [timeLeft, setTimeLeft] = useState(defaultTimerDurations.pomodoro * 60);
-  const [isTimerActive, setIsTimerActive] = useState(false);
+  const [remainingSeconds, setRemainingSeconds] = useState<Record<TimerMode, number>>({
+    pomodoro: defaultTimerDurations.pomodoro * 60,
+    shortBreak: defaultTimerDurations.shortBreak * 60,
+    longBreak: defaultTimerDurations.longBreak * 60,
+  });
+  const [activeTimerMode, setActiveTimerMode] = useState<TimerMode | null>(null);
   const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const timerModes = useMemo(
@@ -61,56 +67,89 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!isTimerActive) {
+    if (!activeTimerMode) {
       return;
     }
 
+    const runningMode = activeTimerMode;
+
     timerIntervalRef.current = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
+      setRemainingSeconds((prev) => {
+        const currentValue = prev[runningMode];
+
+        if (currentValue <= 1) {
           clearTimerInterval();
-          setIsTimerActive(false);
-          return 0;
+          setActiveTimerMode(null);
+          return {
+            ...prev,
+            [runningMode]: 0,
+          };
         }
-        return prev - 1;
+
+        return {
+          ...prev,
+          [runningMode]: currentValue - 1,
+        };
       });
     }, 1000);
 
     return () => {
       clearTimerInterval();
     };
-  }, [clearTimerInterval, isTimerActive]);
+  }, [activeTimerMode, clearTimerInterval]);
+
+  const timeLeft = remainingSeconds[timerMode];
+  const isTimerActive = activeTimerMode === timerMode;
+  const activeTimeLeft = activeTimerMode ? remainingSeconds[activeTimerMode] : null;
 
   const toggleTimer = useCallback(() => {
-    if (isTimerActive) {
+    if (activeTimerMode === timerMode) {
       clearTimerInterval();
-      setIsTimerActive(false);
+      setActiveTimerMode(null);
       return;
     }
-    setIsTimerActive(true);
-  }, [isTimerActive, clearTimerInterval]);
 
-  const handleTimerModeChange = useCallback(
-    (mode: TimerMode) => {
-      clearTimerInterval();
-      setTimerMode(mode);
-      setIsTimerActive(false);
-      setTimeLeft(timerModes[mode].minutes * 60);
-    },
-    [clearTimerInterval, timerModes]
-  );
+    setRemainingSeconds((prev) => {
+      if (prev[timerMode] > 0) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        [timerMode]: timerModes[timerMode].minutes * 60,
+      };
+    });
+
+    setActiveTimerMode(timerMode);
+  }, [activeTimerMode, clearTimerInterval, timerMode, timerModes]);
+
+  const handleTimerModeChange = useCallback((mode: TimerMode) => {
+    setTimerMode(mode);
+  }, []);
 
   const resetTimer = useCallback(() => {
-    clearTimerInterval();
-    setIsTimerActive(false);
-    setTimeLeft(timerModes[timerMode].minutes * 60);
-  }, [clearTimerInterval, timerModes, timerMode]);
+    setRemainingSeconds((prev) => ({
+      ...prev,
+      [timerMode]: timerModes[timerMode].minutes * 60,
+    }));
 
-  const applyTimerSettings = useCallback(() => {
+    if (activeTimerMode === timerMode) {
+      clearTimerInterval();
+      setActiveTimerMode(null);
+    }
+  }, [activeTimerMode, clearTimerInterval, timerModes, timerMode]);
+
+  const applyTimerSettings = useCallback((nextDurations?: Record<TimerMode, number>) => {
+    const durationsToApply = nextDurations ?? customTimerDurations;
+
     clearTimerInterval();
-    setIsTimerActive(false);
-    setTimeLeft(customTimerDurations[timerMode] * 60);
-  }, [clearTimerInterval, customTimerDurations, timerMode]);
+    setActiveTimerMode(null);
+    setRemainingSeconds({
+      pomodoro: durationsToApply.pomodoro * 60,
+      shortBreak: durationsToApply.shortBreak * 60,
+      longBreak: durationsToApply.longBreak * 60,
+    });
+  }, [clearTimerInterval, customTimerDurations]);
 
   return (
     <TimerContext.Provider
@@ -118,6 +157,8 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
         timerMode,
         timeLeft,
         isTimerActive,
+        activeTimerMode,
+        activeTimeLeft,
         customTimerDurations,
         timerModes,
         toggleTimer,

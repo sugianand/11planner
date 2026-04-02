@@ -8,7 +8,7 @@ import Footer from "@/components/Footer";
 import { supabase } from "@/lib/supabaseClient";
 
 type Theme = "light" | "dark" | "auto";
-type ColorTheme = "emerald" | "ocean" | "rose" | "slate" | "amber" | "violet" | "mint";
+type ColorTheme = "emerald" | "ocean" | "rose" | "slate" | "amber" | "violet";
 
 const colorThemeSwatches: Record<ColorTheme, string> = {
   emerald: "linear-gradient(135deg, #10b981, #059669)",
@@ -17,7 +17,6 @@ const colorThemeSwatches: Record<ColorTheme, string> = {
   slate: "linear-gradient(135deg, #64748b, #475569)",
   amber: "linear-gradient(135deg, #f59e0b, #d97706)",
   violet: "linear-gradient(135deg, #a78bfa, #7c3aed)",
-  mint: "linear-gradient(135deg, #5eead4, #14b8a6)",
 };
 
 const sliderStyles = `
@@ -39,21 +38,22 @@ const readStoredBoolean = (key: string, fallback: boolean): boolean => {
   return value === null ? fallback : value !== "false";
 };
 
-const readStoredNumber = (key: string, fallback: number): number => {
-  if (typeof window === "undefined") return fallback;
-  const value = Number(localStorage.getItem(key));
-  return Number.isNaN(value) ? fallback : value;
-};
-
 export default function SettingsPage() {
   const { theme, setTheme, colorTheme, setColorTheme, colorThemes } = useTheme();
   const [isMounted, setIsMounted] = useState(false);
   const [user, setUser] = useState<{ email?: string } | null>(null);
-  const [soundEnabled, setSoundEnabled] = useState(true);
-  const [emailUpdates, setEmailUpdates] = useState(true);
-  const [weeklyReport, setWeeklyReport] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState(() => readStoredBoolean("soundEnabled", true));
+  const [privacyProfileVisible, setPrivacyProfileVisible] = useState(() => readStoredBoolean("privacyProfileVisible", true));
+  const [privacyAnalyticsEnabled, setPrivacyAnalyticsEnabled] = useState(() => readStoredBoolean("privacyAnalyticsEnabled", false));
+  const [privacyPersonalizationEnabled, setPrivacyPersonalizationEnabled] = useState(() => readStoredBoolean("privacyPersonalizationEnabled", true));
+  const [privacyShareProgress, setPrivacyShareProgress] = useState(() => readStoredBoolean("privacyShareProgress", false));
+  const [emailUpdates, setEmailUpdates] = useState(() => readStoredBoolean("emailUpdates", true));
+  const [weeklyReport, setWeeklyReport] = useState(() => readStoredBoolean("weeklyReport", true));
   const [dailyLimit, setDailyLimit] = useState(4);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [activePanel, setActivePanel] = useState<
+    "schedule" | "personalize" | "reminders" | "account" | "support"
+  >("personalize");
 
   const {
     notificationsEnabled,
@@ -67,18 +67,18 @@ export default function SettingsPage() {
   useEffect(() => {
     setIsMounted(true);
     supabase.auth.getUser().then(({ data }) => setUser(data?.user ?? null));
-    setEmailUpdates(readStoredBoolean("emailUpdates", true));
-    setWeeklyReport(readStoredBoolean("weeklyReport", true));
-    setDailyLimit(readStoredNumber("dailyLimit", 4));
   }, []);
 
   const [savedSettings, setSavedSettings] = useState({
     theme: theme as Theme,
     colorTheme: colorTheme as ColorTheme,
     notifications: notificationsEnabled,
+    privacyProfileVisible,
+    privacyAnalyticsEnabled,
+    privacyPersonalizationEnabled,
+    privacyShareProgress,
     emailUpdates,
     weeklyReport,
-    dailyLimit,
     reminderLeadHours,
   });
 
@@ -105,8 +105,25 @@ export default function SettingsPage() {
     localStorage.setItem("weeklyReport", String(value));
   };
 
-  const handleExport = () => alert("Exported data!");
-  const handleImport = () => alert("Import dialog!");
+  const handlePrivacyProfileVisibleChange = (value: boolean) => {
+    setPrivacyProfileVisible(value);
+    localStorage.setItem("privacyProfileVisible", String(value));
+  };
+
+  const handlePrivacyAnalyticsChange = (value: boolean) => {
+    setPrivacyAnalyticsEnabled(value);
+    localStorage.setItem("privacyAnalyticsEnabled", String(value));
+  };
+
+  const handlePrivacyPersonalizationChange = (value: boolean) => {
+    setPrivacyPersonalizationEnabled(value);
+    localStorage.setItem("privacyPersonalizationEnabled", String(value));
+  };
+
+  const handlePrivacyShareProgressChange = (value: boolean) => {
+    setPrivacyShareProgress(value);
+    localStorage.setItem("privacyShareProgress", String(value));
+  };
 
   const handleChangePassword = async () => {
     try {
@@ -140,36 +157,68 @@ export default function SettingsPage() {
     }
   };
 
+  const handleExportScheduleAsPdf = () => {
+    const scheduleWindow = window.open("/schedule", "_blank");
+    if (!scheduleWindow) {
+      alert("Please allow pop-ups to export schedule as PDF.");
+      return;
+    }
+
+    // Trigger browser print to save schedule page as PDF.
+    setTimeout(() => {
+      scheduleWindow.focus();
+      scheduleWindow.print();
+    }, 1200);
+  };
+
+  const handleClearAccountData = () => {
+    const confirmed = window.confirm(
+      "Clear local account data and preferences on this device?"
+    );
+    if (!confirmed) return;
+
+    const keysToClear = [
+      "emailUpdates",
+      "weeklyReport",
+      "dailyLimit",
+      "privacyProfileVisible",
+      "privacyAnalyticsEnabled",
+      "privacyPersonalizationEnabled",
+      "privacyShareProgress",
+      "soundEnabled",
+    ];
+
+    keysToClear.forEach((key) => localStorage.removeItem(key));
+    handleResetDefaults();
+    alert("Local account data cleared.");
+  };
+
   const hasChanges = useMemo(() => {
     return (
       theme !== savedSettings.theme ||
       colorTheme !== savedSettings.colorTheme ||
       notificationsEnabled !== savedSettings.notifications ||
+      privacyProfileVisible !== savedSettings.privacyProfileVisible ||
+      privacyAnalyticsEnabled !== savedSettings.privacyAnalyticsEnabled ||
+      privacyPersonalizationEnabled !== savedSettings.privacyPersonalizationEnabled ||
+      privacyShareProgress !== savedSettings.privacyShareProgress ||
       emailUpdates !== savedSettings.emailUpdates ||
       weeklyReport !== savedSettings.weeklyReport ||
-      dailyLimit !== savedSettings.dailyLimit ||
       reminderLeadHours !== savedSettings.reminderLeadHours
     );
   }, [
     theme,
     colorTheme,
     notificationsEnabled,
+    privacyProfileVisible,
+    privacyAnalyticsEnabled,
+    privacyPersonalizationEnabled,
+    privacyShareProgress,
     emailUpdates,
     weeklyReport,
-    dailyLimit,
     reminderLeadHours,
     savedSettings,
   ]);
-
-  const isDailyLimitDirty = useMemo(
-    () => dailyLimit !== savedSettings.dailyLimit,
-    [dailyLimit, savedSettings.dailyLimit]
-  );
-
-  const isReminderDirty = useMemo(
-    () => reminderLeadHours !== savedSettings.reminderLeadHours,
-    [reminderLeadHours, savedSettings.reminderLeadHours]
-  );
 
   useEffect(() => {
     if (!hasChanges) return;
@@ -179,9 +228,12 @@ export default function SettingsPage() {
         theme: theme as Theme,
         colorTheme: colorTheme as ColorTheme,
         notifications: notificationsEnabled,
+        privacyProfileVisible,
+        privacyAnalyticsEnabled,
+        privacyPersonalizationEnabled,
+        privacyShareProgress,
         emailUpdates,
         weeklyReport,
-        dailyLimit,
         reminderLeadHours,
       });
       setLastSavedAt(
@@ -198,9 +250,12 @@ export default function SettingsPage() {
     theme,
     colorTheme,
     notificationsEnabled,
+    privacyProfileVisible,
+    privacyAnalyticsEnabled,
+    privacyPersonalizationEnabled,
+    privacyShareProgress,
     emailUpdates,
     weeklyReport,
-    dailyLimit,
     reminderLeadHours,
   ]);
 
@@ -217,209 +272,420 @@ export default function SettingsPage() {
   );
 
   const permissionButtonClass = useMemo(() => {
-    if (!isMounted) {
-      return "bg-slate-200 text-slate-700";
-    }
     return permission === "granted"
-      ? "bg-emerald-100 text-emerald-700"
+      ? "text-white"
       : "bg-slate-200 text-slate-700 hover:bg-slate-300";
-  }, [isMounted, permission]);
+  }, [permission]);
+
+  const accentSoftStyle = {
+    backgroundColor: "var(--theme-accent-soft)",
+    color: "var(--theme-accent-strong)",
+    borderColor: "var(--theme-accent)",
+  } as const;
+
+  const accentStrongStyle = {
+    backgroundColor: "var(--theme-accent-strong)",
+    borderColor: "var(--theme-accent-strong)",
+    color: "#ffffff",
+  } as const;
 
   const handleResetDefaults = () => {
-    handleThemeChange("light");
-    handleColorThemeChange("emerald");
-    setNotificationsEnabled(true);
-    handleEmailUpdatesChange(true);
-    handleWeeklyReportChange(true);
-    handleDailyLimitChange(4);
-    setReminderLeadHours(24);
+    switch (activePanel) {
+      case "personalize":
+        handleThemeChange("light");
+        handleColorThemeChange("emerald");
+        break;
+      case "schedule":
+        handleDailyLimitChange(4);
+        break;
+      case "reminders":
+        setNotificationsEnabled(true);
+        setSoundEnabled(true);
+        handleEmailUpdatesChange(true);
+        handleWeeklyReportChange(true);
+        setReminderLeadHours(24);
+        break;
+      case "account":
+        handlePrivacyProfileVisibleChange(true);
+        handlePrivacyAnalyticsChange(false);
+        handlePrivacyPersonalizationChange(true);
+        handlePrivacyShareProgressChange(false);
+        break;
+      default:
+        break;
+    }
   };
+
+  const navItems: Array<{ id: "schedule" | "personalize" | "reminders" | "account" | "support"; label: string; icon: string }> = [
+    { id: "schedule", label: "Schedule Setup", icon: "event" },
+    { id: "personalize", label: "Personalize", icon: "palette" },
+    { id: "reminders", label: "Reminders", icon: "notifications" },
+    { id: "account", label: "Account", icon: "person" },
+    { id: "support", label: "Support", icon: "support_agent" },
+  ];
+
+  const sectionCardClass =
+    "rounded-2xl border border-slate-200/70 dark:border-slate-700/70 bg-white/70 dark:bg-slate-800/55 backdrop-blur-md p-5 md:p-6";
 
   return (
     <div className="min-h-screen relative">
       <style>{sliderStyles}</style>
       <div className="fixed inset-0 bg-focus-light dark:bg-focus-dark bg-cover bg-center -z-20"></div>
 
-      <div className="p-4">
-        <div className="max-w-xl mx-auto">
-          <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-            <div className="flex items-center gap-4 px-6 pt-7 pb-4 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-emerald-50/80 dark:from-slate-800/80 to-transparent">
-              <div className="w-14 h-14 rounded-full bg-emerald-100 dark:bg-slate-700 flex items-center justify-center text-2xl font-bold text-emerald-600 dark:text-emerald-300 border-2 border-emerald-200 dark:border-emerald-700 shadow">
-                {user?.email ? user.email.charAt(0).toUpperCase() : "U"}
-              </div>
-              <div>
-                <div className="font-semibold text-lg text-slate-900 dark:text-white">{user?.email || "User"}</div>
-                <div className="text-xs text-slate-500 dark:text-slate-400">Account Settings</div>
-              </div>
+      <div className="p-4 md:p-6">
+        <div className="max-w-6xl mx-auto rounded-3xl border border-slate-200/70 dark:border-slate-700/60 bg-white/85 dark:bg-slate-900/80 backdrop-blur-xl shadow-[0_30px_70px_-35px_rgba(15,23,42,0.6)] overflow-hidden">
+          <div
+            className="px-5 md:px-8 py-5 border-b border-slate-200/70 dark:border-slate-700/70 dark:from-slate-800/80 dark:via-slate-900/75 dark:to-slate-800/80"
+            style={{
+              backgroundImage:
+                "linear-gradient(to right, var(--theme-accent-soft), rgba(255,255,255,0.72), rgba(125,211,252,0.32))",
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-slate-700 dark:text-slate-100">settings</span>
+              <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Settings</h1>
             </div>
+          </div>
 
-            <div className="px-6 pt-4 pb-4 border-b border-slate-100 dark:border-slate-800">
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Settings</h1>
-              <p className="text-slate-600 dark:text-slate-300 mt-1 text-sm">Customize your 11Planner experience</p>
-            </div>
-
-            <section className="px-6 py-6 border-b border-slate-100 dark:border-slate-800">
-              <div className="font-semibold text-lg text-slate-900 dark:text-white mb-2 flex items-center gap-2">
-                <span className="material-symbols-outlined text-emerald-500">palette</span>
-                Appearance & Theme
+          <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] min-h-[700px]">
+            <aside className="border-r border-slate-200/70 dark:border-slate-700/70 bg-white/55 dark:bg-slate-900/45 p-4 md:p-5">
+              <div className="mb-4 rounded-xl border border-slate-200/80 dark:border-slate-700/70 bg-white/75 dark:bg-slate-800/65 px-3 py-2.5 flex items-center gap-2">
+                <span className="material-symbols-outlined text-base text-slate-500 dark:text-slate-300">search</span>
+                <span className="text-sm text-slate-500 dark:text-slate-300">Search Settings</span>
               </div>
-              <div className="flex gap-4 items-center">
-                <label className="flex items-center cursor-pointer">
-                  <input type="radio" name="theme" value="light" checked={theme === "light"} onChange={() => handleThemeChange("light")} className="w-4 h-4 accent-emerald-600" />
-                  <span className="ml-2 text-slate-900 dark:text-white">Light</span>
-                </label>
-                <label className="flex items-center cursor-pointer">
-                  <input type="radio" name="theme" value="dark" checked={theme === "dark"} onChange={() => handleThemeChange("dark")} className="w-4 h-4 accent-emerald-600" />
-                  <span className="ml-2 text-slate-900 dark:text-white">Dark</span>
-                </label>
-                <label className="flex items-center cursor-pointer">
-                  <input type="radio" name="theme" value="auto" checked={theme === "auto"} onChange={() => handleThemeChange("auto")} className="w-4 h-4 accent-emerald-600" />
-                  <span className="ml-2 text-slate-900 dark:text-white">Auto</span>
-                </label>
+              <nav className="space-y-1.5">
+                {navItems.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setActivePanel(item.id)}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left text-sm font-semibold transition ${
+                      activePanel === item.id
+                        ? "border"
+                        : "text-slate-600 dark:text-slate-300 hover:bg-slate-100/70 dark:hover:bg-slate-800/60"
+                    }`}
+                    style={activePanel === item.id ? accentSoftStyle : undefined}
+                  >
+                    <span className="material-symbols-outlined text-base">{item.icon}</span>
+                    {item.label}
+                  </button>
+                ))}
+              </nav>
+            </aside>
+
+            <main className="p-4 md:p-6 space-y-5 bg-gradient-to-b from-white/45 to-white/25 dark:from-slate-900/45 dark:to-slate-900/25">
+              <div className="flex items-center gap-3 rounded-2xl border border-slate-200/70 dark:border-slate-700/70 bg-white/70 dark:bg-slate-800/55 px-4 py-3">
+                <div
+                  className="w-11 h-11 rounded-full border flex items-center justify-center text-lg font-bold"
+                  style={accentSoftStyle}
+                >
+                  {user?.email ? user.email.charAt(0).toUpperCase() : "U"}
+                </div>
+                <div>
+                  <div className="font-semibold text-slate-900 dark:text-white">{user?.email || "User"}</div>
+                  <div className="text-xs text-slate-500 dark:text-slate-300">Customize your 11Planner experience</div>
+                </div>
               </div>
 
-              <div className="mt-4">
-                <p className="text-sm text-slate-700 dark:text-slate-300 mb-2">Color Theme</p>
-                <div className="flex flex-wrap gap-3">
-                  {colorThemes.map((option) => (
+              {activePanel === "personalize" && (
+                <section className={sectionCardClass}>
+                  <div className="text-xl font-bold text-slate-900 dark:text-white mb-1">Personalize</div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Customize the look and feel of your planner.</p>
+
+                    <div className="mb-5">
+                    <p className="text-xs uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400 mb-2">Theme Mode</p>
+                    <div className="flex gap-2.5">
+                      {(["light", "dark"] as Theme[]).map((mode) => (
+                        <button
+                          key={mode}
+                          onClick={() => handleThemeChange(mode)}
+                          className={`px-4 py-2 rounded-lg text-sm font-semibold capitalize transition border ${
+                            theme === mode
+                              ? "text-white"
+                              : "bg-white/75 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700"
+                          }`}
+                          style={theme === mode ? accentStrongStyle : undefined}
+                        >
+                          {mode}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400 mb-2">Accent Theme</p>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {colorThemes.map((option) => (
+                        <button
+                          key={option}
+                          onClick={() => handleColorThemeChange(option as ColorTheme)}
+                          className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border text-sm font-semibold capitalize transition ${
+                            colorTheme === option
+                              ? ""
+                              : "border-slate-200 dark:border-slate-700 bg-white/75 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700"
+                          }`}
+                          style={colorTheme === option ? accentSoftStyle : undefined}
+                        >
+                          <span className="h-3.5 w-3.5 rounded-full border border-white/50" style={{ background: colorThemeSwatches[option as ColorTheme] }} />
+                          {option}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {activePanel === "schedule" && (
+                <section className={sectionCardClass}>
+                  <div className="text-xl font-bold text-slate-900 dark:text-white mb-1">Schedule Setup</div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Tune planning density and pace.</p>
+
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">Daily Study Limit</label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="range"
+                      min="1"
+                      max="12"
+                      value={dailyLimit}
+                      onChange={(e) => handleDailyLimitChange(parseInt(e.target.value, 10))}
+                      className="flex-1 h-2 rounded-lg appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700"
+                    />
+                    <input
+                      type="number"
+                      min={1}
+                      max={12}
+                      value={dailyLimit}
+                      onChange={(e) => handleDailyLimitChange(parseInt(e.target.value, 10) || 1)}
+                      className="w-16 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1.5 text-right text-slate-900 dark:text-white"
+                    />
+                    <span className="text-xs text-slate-500 dark:text-slate-400">hours</span>
+                  </div>
+                  <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                    Cap schedule generation per day
+                  </div>
+                </section>
+              )}
+
+              {activePanel === "reminders" && (
+                <section className={sectionCardClass}>
+                  <div className="text-xl font-bold text-slate-900 dark:text-white mb-1">Reminders</div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Control reminder channels and timing.</p>
+
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-slate-900 dark:text-white">Push Notifications</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Receive alerts about upcoming deadlines</p>
+                      </div>
+                      <button
+                        onClick={() => handleNotificationChange(!notificationsEnabled)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${notificationsEnabled ? "" : "bg-slate-300 dark:bg-slate-600"}`}
+                        style={notificationsEnabled ? { backgroundColor: "var(--theme-accent-strong)" } : undefined}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${notificationsEnabled ? "translate-x-6" : "translate-x-1"}`} />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-slate-900 dark:text-white">Notification Sound</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Play a sound with reminders</p>
+                      </div>
+                      <button
+                        onClick={() => setSoundEnabled(!soundEnabled)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${soundEnabled ? "" : "bg-slate-300 dark:bg-slate-600"}`}
+                        style={soundEnabled ? { backgroundColor: "var(--theme-accent-strong)" } : undefined}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${soundEnabled ? "translate-x-6" : "translate-x-1"}`} />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-slate-900 dark:text-white">Browser Permission</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{isMounted ? permissionLabel : "Loading..."}</p>
+                      </div>
+                      <button
+                        onClick={requestPermission}
+                        disabled={!isMounted || permission === "denied" || permission === "unsupported"}
+                        className={`px-4 py-2 rounded-lg text-xs font-semibold transition ${permissionButtonClass}`}
+                        style={isMounted && permission === "granted" ? { backgroundColor: "var(--theme-accent-strong)" } : undefined}
+                      >
+                        {isMounted ? permissionButtonLabel : "Enable"}
+                      </button>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">Reminder lead time (hours)</label>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="range"
+                          min="1"
+                          max="168"
+                          value={reminderLeadHours}
+                          onChange={(e) => setReminderLeadHours(Math.min(168, Math.max(1, parseInt(e.target.value, 10) || 1)))}
+                          className="flex-1 h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer"
+                        />
+                        <input
+                          type="number"
+                          min={1}
+                          max={168}
+                          value={reminderLeadHours}
+                          onChange={(e) => setReminderLeadHours(Math.min(168, Math.max(1, parseInt(e.target.value, 10) || 1)))}
+                          className="w-16 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1.5 text-right text-slate-900 dark:text-white"
+                        />
+                        <span className="text-xs text-slate-500 dark:text-slate-400">hours</span>
+                      </div>
+                      <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                        How far in advance to remind about deadlines
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-slate-900 dark:text-white">Email Updates</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Get email reminders for important tasks</p>
+                      </div>
+                      <button
+                        onClick={() => handleEmailUpdatesChange(!emailUpdates)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${emailUpdates ? "" : "bg-slate-300 dark:bg-slate-600"}`}
+                        style={emailUpdates ? { backgroundColor: "var(--theme-accent-strong)" } : undefined}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${emailUpdates ? "translate-x-6" : "translate-x-1"}`} />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-slate-900 dark:text-white">Weekly Report</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Receive a summary of your weekly progress</p>
+                      </div>
+                      <button
+                        onClick={() => handleWeeklyReportChange(!weeklyReport)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${weeklyReport ? "" : "bg-slate-300 dark:bg-slate-600"}`}
+                        style={weeklyReport ? { backgroundColor: "var(--theme-accent-strong)" } : undefined}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${weeklyReport ? "translate-x-6" : "translate-x-1"}`} />
+                      </button>
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {activePanel === "account" && (
+                <section className={sectionCardClass}>
+                  <div className="text-xl font-bold text-slate-900 dark:text-white mb-1">Account & Privacy</div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Manage login and privacy controls.</p>
+
+                  <button onClick={handleChangePassword} className="w-full text-left px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/75 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-700 transition mb-4">
+                    <p className="font-medium text-slate-900 dark:text-white">Change Password</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Send a reset link to your email</p>
+                  </button>
+
+                  <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white/75 dark:bg-slate-800/60 p-4 space-y-3">
+                    <p className="font-medium text-slate-900 dark:text-white">Privacy & Security</p>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Public Profile Visibility</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Allow profile details in shared views.</p>
+                      </div>
+                      <button
+                        onClick={() => handlePrivacyProfileVisibleChange(!privacyProfileVisible)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${privacyProfileVisible ? "" : "bg-slate-300 dark:bg-slate-600"}`}
+                        style={privacyProfileVisible ? { backgroundColor: "var(--theme-accent-strong)" } : undefined}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${privacyProfileVisible ? "translate-x-6" : "translate-x-1"}`} />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Usage Analytics</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Share anonymous product metrics.</p>
+                      </div>
+                      <button
+                        onClick={() => handlePrivacyAnalyticsChange(!privacyAnalyticsEnabled)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${privacyAnalyticsEnabled ? "" : "bg-slate-300 dark:bg-slate-600"}`}
+                        style={privacyAnalyticsEnabled ? { backgroundColor: "var(--theme-accent-strong)" } : undefined}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${privacyAnalyticsEnabled ? "translate-x-6" : "translate-x-1"}`} />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Personalized Insights</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Use planner activity for smart recommendations.</p>
+                      </div>
+                      <button
+                        onClick={() => handlePrivacyPersonalizationChange(!privacyPersonalizationEnabled)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${privacyPersonalizationEnabled ? "" : "bg-slate-300 dark:bg-slate-600"}`}
+                        style={privacyPersonalizationEnabled ? { backgroundColor: "var(--theme-accent-strong)" } : undefined}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${privacyPersonalizationEnabled ? "translate-x-6" : "translate-x-1"}`} />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Share Progress with Integrations</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Allow connected tools to read progress status.</p>
+                      </div>
+                      <button
+                        onClick={() => handlePrivacyShareProgressChange(!privacyShareProgress)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${privacyShareProgress ? "" : "bg-slate-300 dark:bg-slate-600"}`}
+                        style={privacyShareProgress ? { backgroundColor: "var(--theme-accent-strong)" } : undefined}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${privacyShareProgress ? "translate-x-6" : "translate-x-1"}`} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 mt-4">
                     <button
-                      key={option}
-                      onClick={() => handleColorThemeChange(option as ColorTheme)}
-                      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold capitalize transition ${
-                        colorTheme === option
-                          ? "border-slate-800 dark:border-slate-100 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow"
-                          : "border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
-                      }`}
+                      onClick={handleExportScheduleAsPdf}
+                      className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-slate-200/70 dark:border-slate-700/70 bg-white/70 dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition"
                     >
-                      <span
-                        className="h-3 w-3 rounded-full border border-white/60"
-                        style={{ background: colorThemeSwatches[option as ColorTheme] }}
-                      />
-                      {option}
+                      <span className="flex items-center gap-2 text-slate-800 dark:text-slate-100"><span className="material-symbols-outlined text-base">picture_as_pdf</span>Export Schedule as PDF</span>
+                      <span className="material-symbols-outlined text-base text-slate-400">chevron_right</span>
                     </button>
-                  ))}
-                </div>
-              </div>
-            </section>
+                    <button
+                      onClick={handleClearAccountData}
+                      className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-red-200/70 dark:border-red-800/50 bg-red-50/70 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 transition"
+                    >
+                      <span className="flex items-center gap-2 text-red-700 dark:text-red-300"><span className="material-symbols-outlined text-base">delete</span>Clear Account Data</span>
+                      <span className="material-symbols-outlined text-base text-red-300">chevron_right</span>
+                    </button>
+                  </div>
 
-            <section className="px-6 py-6 border-b border-slate-100 dark:border-slate-800 space-y-4">
-              <div className="font-semibold text-lg text-slate-900 dark:text-white">Productivity</div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Daily Study Limit (hours)</label>
-              <div className="flex items-center gap-4">
-                <input type="range" min="1" max="12" value={dailyLimit} onChange={(e) => handleDailyLimitChange(parseInt(e.target.value, 10))} className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer" />
-                <input type="number" min={1} max={12} value={dailyLimit} onChange={(e) => handleDailyLimitChange(parseInt(e.target.value, 10) || 1)} className="w-16 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-right text-slate-900 dark:text-white" />
-                <span className="text-xs text-slate-500 dark:text-slate-400">hours</span>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <p className="text-slate-500 dark:text-slate-400">Cap schedule generation at this number of hours per day</p>
-                <span className={isDailyLimitDirty ? "text-amber-600" : "text-emerald-600"}>{isDailyLimitDirty ? "Not saved" : "Saved"}</span>
-              </div>
-            </section>
+                  <button className="w-full text-left mt-4 px-4 py-3 rounded-xl border border-red-300 dark:border-red-700 bg-red-50/80 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 transition">
+                    <p className="font-medium text-red-700 dark:text-red-300">Delete Account</p>
+                    <p className="text-xs text-red-400 dark:text-red-300">Permanently remove your account and data</p>
+                  </button>
+                </section>
+              )}
 
-            <section className="px-6 py-6 border-b border-slate-100 dark:border-slate-800 space-y-4">
-              <div className="font-semibold text-lg text-slate-900 dark:text-white">Notifications</div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-slate-900 dark:text-white">Push Notifications</p>
-                  <p className="text-xs text-slate-600 dark:text-slate-300">Receive alerts about upcoming deadlines</p>
-                </div>
-                <button onClick={() => handleNotificationChange(!notificationsEnabled)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${notificationsEnabled ? "bg-emerald-600" : "bg-slate-300"}`}>
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${notificationsEnabled ? "translate-x-6" : "translate-x-1"}`} />
+              {activePanel === "support" && (
+                <section className={sectionCardClass}>
+                  <div className="text-xl font-bold text-slate-900 dark:text-white mb-1">Support</div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Need help? Reach support resources quickly.</p>
+                  <Link href="/support" className="flex items-center justify-between px-4 py-3 rounded-xl border border-slate-200/70 dark:border-slate-700/70 bg-white/70 dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition">
+                    <span className="flex items-center gap-2 text-slate-800 dark:text-slate-100"><span className="material-symbols-outlined text-base">support_agent</span>Open Support Page</span>
+                    <span className="material-symbols-outlined text-base text-slate-400">chevron_right</span>
+                  </Link>
+                </section>
+              )}
+
+              <div className="rounded-2xl border border-slate-200/70 dark:border-slate-700/70 bg-white/70 dark:bg-slate-800/55 px-4 py-3 flex items-center justify-between gap-3">
+                <span className="text-xs text-slate-700 dark:text-slate-200">
+                  {hasChanges ? "Saving..." : "All changes saved"}
+                  {lastSavedAt && <span className="ml-2 text-slate-500 dark:text-slate-300">Last saved at {lastSavedAt}</span>}
+                </span>
+                <button onClick={handleResetDefaults} className="bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-900 dark:text-white text-sm font-semibold py-2 px-4 rounded-lg transition border border-slate-300 dark:border-slate-600">
+                  Reset This Section
                 </button>
               </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-slate-900 dark:text-white">Notification Sound</p>
-                  <p className="text-xs text-slate-600 dark:text-slate-300">Play a sound when reminders arrive</p>
-                </div>
-                <button onClick={() => setSoundEnabled(!soundEnabled)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${soundEnabled ? "bg-emerald-600" : "bg-slate-300"}`}>
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${soundEnabled ? "translate-x-6" : "translate-x-1"}`} />
-                </button>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-slate-900 dark:text-white">Browser Permission</p>
-                  <p className="text-xs text-slate-600 dark:text-slate-300">{isMounted ? permissionLabel : "Loading..."}</p>
-                </div>
-                <button onClick={requestPermission} disabled={!isMounted || permission === "denied" || permission === "unsupported"} className={`px-4 py-2 rounded-lg text-xs font-semibold transition ${permissionButtonClass}`}>
-                  {isMounted ? permissionButtonLabel : "Enable"}
-                </button>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-700 dark:text-slate-200 mb-1">Reminder lead time (hours)</label>
-                <div className="flex items-center gap-4">
-                  <input type="range" min="1" max="168" value={reminderLeadHours} onChange={(e) => setReminderLeadHours(Math.min(168, Math.max(1, parseInt(e.target.value, 10) || 1)))} className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer" />
-                  <input type="number" min={1} max={168} value={reminderLeadHours} onChange={(e) => setReminderLeadHours(Math.min(168, Math.max(1, parseInt(e.target.value, 10) || 1)))} className="w-16 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-right text-slate-900 dark:text-white" />
-                  <span className="text-xs text-slate-500 dark:text-slate-400">hours</span>
-                </div>
-                <div className="flex items-center justify-between mt-2 text-xs">
-                  <p className="text-slate-500 dark:text-slate-400">How far in advance to remind you about deadlines</p>
-                  <span className={isReminderDirty ? "text-amber-600" : "text-emerald-600"}>{isReminderDirty ? "Not saved" : "Saved"}</span>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-slate-900 dark:text-white">Email Updates</p>
-                  <p className="text-xs text-slate-600 dark:text-slate-300">Get email reminders for important tasks</p>
-                </div>
-                <button onClick={() => handleEmailUpdatesChange(!emailUpdates)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${emailUpdates ? "bg-emerald-600" : "bg-slate-300"}`}>
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${emailUpdates ? "translate-x-6" : "translate-x-1"}`} />
-                </button>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-slate-900 dark:text-white">Weekly Report</p>
-                  <p className="text-xs text-slate-600 dark:text-slate-300">Receive a summary of your weekly progress</p>
-                </div>
-                <button onClick={() => handleWeeklyReportChange(!weeklyReport)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${weeklyReport ? "bg-emerald-600" : "bg-slate-300"}`}>
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${weeklyReport ? "translate-x-6" : "translate-x-1"}`} />
-                </button>
-              </div>
-            </section>
-
-            <section className="px-6 py-6 border-b border-slate-100 dark:border-slate-800 space-y-3">
-              <div className="font-semibold text-lg text-slate-900 dark:text-white">Account</div>
-              <button onClick={handleChangePassword} className="w-full text-left px-4 py-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition">
-                <p className="font-medium text-slate-900 dark:text-white">Change Password</p>
-                <p className="text-xs text-slate-600 dark:text-slate-300">Update your login password</p>
-              </button>
-              <Link href="/privacy" className="w-full text-left px-4 py-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition inline-block">
-                <p className="font-medium text-slate-900 dark:text-white">Privacy & Security</p>
-                <p className="text-xs text-slate-600 dark:text-slate-300">Manage your privacy settings</p>
-              </Link>
-              <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800 transition">
-                <p className="font-medium text-red-600">Delete Account</p>
-                <p className="text-xs text-red-600">Permanently delete your account</p>
-              </button>
-            </section>
-
-            <section className="px-6 py-6 border-b border-slate-100 dark:border-slate-800">
-              <div className="font-semibold text-lg text-slate-900 dark:text-white mb-3">Data</div>
-              <div className="flex items-center gap-4">
-                <button onClick={handleExport} className="font-medium text-emerald-700 dark:text-emerald-300 hover:underline">Export Data</button>
-                <button onClick={handleImport} className="font-medium text-emerald-700 dark:text-emerald-300 hover:underline">Import Data</button>
-              </div>
-            </section>
-
-            <section className="px-6 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center gap-6 text-sm">
-              <Link href="/support" className="text-emerald-700 dark:text-emerald-300 hover:underline">Support</Link>
-              <Link href="/about" className="text-emerald-700 dark:text-emerald-300 hover:underline">About</Link>
-            </section>
-
-            <div className="sticky bottom-0 left-0 right-0 z-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur border-t border-slate-200 dark:border-slate-700/40 px-6 py-3 flex items-center justify-between gap-4">
-              <span className="text-xs text-slate-700 dark:text-slate-200">
-                {hasChanges ? "Saving..." : "All changes saved"}
-                {lastSavedAt && <span className="ml-2">Last saved at {lastSavedAt}</span>}
-              </span>
-              <button onClick={handleResetDefaults} className="bg-slate-300 hover:bg-slate-400 text-slate-900 font-semibold py-2 px-5 rounded-lg transition">
-                Reset to Defaults
-              </button>
-            </div>
+            </main>
           </div>
         </div>
       </div>

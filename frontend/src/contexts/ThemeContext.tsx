@@ -4,10 +4,10 @@ import { ReactNode, createContext, useContext, useEffect, useMemo, useState } fr
 import { ThemeProvider as NextThemesProvider, useTheme as useNextTheme } from 'next-themes';
 
 type Theme = 'light' | 'dark' | 'auto';
-type ColorTheme = 'emerald' | 'ocean' | 'rose' | 'slate' | 'amber' | 'violet' | 'mint';
+type ColorTheme = 'emerald' | 'ocean' | 'rose' | 'slate' | 'amber' | 'violet';
 
 const COLOR_THEME_STORAGE_KEY = 'colorTheme';
-const COLOR_THEMES: ColorTheme[] = ['emerald', 'ocean', 'rose', 'slate', 'amber', 'violet', 'mint'];
+const COLOR_THEMES: ColorTheme[] = ['emerald', 'ocean', 'rose', 'slate', 'amber', 'violet'];
 
 interface ColorThemeContextType {
   colorTheme: ColorTheme;
@@ -27,14 +27,16 @@ interface ThemeContextType {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [colorTheme, setColorTheme] = useState<ColorTheme>('emerald');
-
-  useEffect(() => {
+  const [colorTheme, setColorTheme] = useState<ColorTheme>(() => {
+    if (typeof window === 'undefined') {
+      return 'emerald';
+    }
     const stored = localStorage.getItem(COLOR_THEME_STORAGE_KEY) as ColorTheme | null;
     if (stored && COLOR_THEMES.includes(stored)) {
-      setColorTheme(stored);
+      return stored;
     }
-  }, []);
+    return 'emerald';
+  });
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', colorTheme);

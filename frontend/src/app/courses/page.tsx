@@ -6,6 +6,34 @@ import { CourseCreate, Course } from "@/types";
 import Footer from "@/components/Footer";
 import AppDialog from "@/components/AppDialog";
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+const toTimeInputValue = (value?: string | null): string => {
+  if (!value) return "";
+  const trimmed = value.trim();
+
+  const isoMatch = trimmed.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+  if (isoMatch) {
+    const hour = Math.min(23, Math.max(0, parseInt(isoMatch[1], 10)));
+    const minute = Math.min(59, Math.max(0, parseInt(isoMatch[2], 10)));
+    return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+  }
+
+  const amPmMatch = trimmed.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (amPmMatch) {
+    let hour = parseInt(amPmMatch[1], 10);
+    const minute = parseInt(amPmMatch[2], 10);
+    const meridiem = amPmMatch[3].toUpperCase();
+
+    if (hour < 1 || hour > 12 || minute < 0 || minute > 59) return "";
+    if (meridiem === "PM" && hour !== 12) hour += 12;
+    if (meridiem === "AM" && hour === 12) hour = 0;
+    return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+  }
+
+  return "";
+};
+
 export default function CoursesPage() {
   const weekDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
   const {
@@ -105,13 +133,13 @@ export default function CoursesPage() {
       description: course.description,
       user_id: course.user_id,
       courseDate: course.courseDate,
-      startTime: course.startTime,
-      endTime: course.endTime,
+      startTime: toTimeInputValue(course.startTime),
+      endTime: toTimeInputValue(course.endTime),
       isOnline: course.isOnline || false,
       hasLab: course.hasLab || false,
       labDay: course.labDay || "",
-      labStartTime: course.labStartTime || "",
-      labEndTime: course.labEndTime || "",
+      labStartTime: toTimeInputValue(course.labStartTime),
+      labEndTime: toTimeInputValue(course.labEndTime),
       labIsOnline: course.labIsOnline || false,
     });
     setEditingId(course.id);
@@ -153,43 +181,69 @@ export default function CoursesPage() {
     });
   };
 
-  const handleUploadSyllabus = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const uploadAndParseSyllabus = async (file: File, type: "course" | "lab") => {
     const formDataToSend = new FormData();
     formDataToSend.append("file", file);
 
     try {
-      const response = await fetch("http://localhost:8000/api/syllabus/parse", {
+      const response = await fetch(`${API_BASE_URL}/api/syllabus/parse`, {
         method: "POST",
         body: formDataToSend,
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({ success: false, error: "Invalid server response" }));
+
+      if (!response.ok) {
+        setDialog({
+          isOpen: true,
+          title: `${type === "lab" ? "Lab syllabus" : "Syllabus"} upload failed`,
+          message: data.error || `Server error (${response.status}). Please try again.`,
+        });
+        return;
+      }
 
       if (data.success && data.parsed) {
-        setFormData((prev) => ({
-          ...prev,
-          name: data.parsed.name || prev.name,
-          code: data.parsed.code || prev.code,
-          professor: data.parsed.professor || prev.professor,
-          description: data.parsed.description || prev.description,
-          courseDate: data.parsed.courseDate || prev.courseDate,
-          startTime: data.parsed.startTime || prev.startTime,
-          endTime: data.parsed.endTime || prev.endTime,
-          isOnline: data.parsed.isOnline || prev.isOnline,
-          hasLab: data.parsed.hasLab || prev.hasLab,
-          labDay: data.parsed.labDay || prev.labDay,
-          labStartTime: data.parsed.labStartTime || prev.labStartTime,
-          labEndTime: data.parsed.labEndTime || prev.labEndTime,
-          labIsOnline: data.parsed.labIsOnline || prev.labIsOnline,
-        }));
+        if (type === "lab") {
+          setFormData((prev) => ({
+            ...prev,
+            hasLab: true,
+            labDay: data.parsed.labDay || data.parsed.courseDate || prev.labDay,
+            labStartTime:
+              toTimeInputValue(data.parsed.labStartTime || data.parsed.startTime) ||
+              prev.labStartTime,
+            labEndTime:
+              toTimeInputValue(data.parsed.labEndTime || data.parsed.endTime) ||
+              prev.labEndTime,
+            labIsOnline:
+              typeof data.parsed.labIsOnline === "boolean"
+                ? data.parsed.labIsOnline
+                : typeof data.parsed.isOnline === "boolean"
+                ? data.parsed.isOnline
+                : prev.labIsOnline,
+          }));
+        } else {
+          setFormData((prev) => ({
+            ...prev,
+            name: data.parsed.name || prev.name,
+            code: data.parsed.code || prev.code,
+            professor: data.parsed.professor || prev.professor,
+            description: data.parsed.description || prev.description,
+            courseDate: data.parsed.courseDate || prev.courseDate,
+            startTime: toTimeInputValue(data.parsed.startTime) || prev.startTime,
+            endTime: toTimeInputValue(data.parsed.endTime) || prev.endTime,
+            isOnline: data.parsed.isOnline || prev.isOnline,
+            hasLab: data.parsed.hasLab || prev.hasLab,
+            labDay: data.parsed.labDay || prev.labDay,
+            labStartTime: toTimeInputValue(data.parsed.labStartTime) || prev.labStartTime,
+            labEndTime: toTimeInputValue(data.parsed.labEndTime) || prev.labEndTime,
+            labIsOnline: data.parsed.labIsOnline || prev.labIsOnline,
+          }));
+        }
       } else {
         setDialog({
           isOpen: true,
-          title: "Syllabus parsing failed",
-          message: "Could not parse this syllabus. Please fill in details manually.",
+          title: `${type === "lab" ? "Lab syllabus" : "Syllabus"} parsing failed`,
+          message: data.error || "Could not parse this syllabus. Please fill in details manually.",
         });
       }
     } catch (err) {
@@ -197,9 +251,27 @@ export default function CoursesPage() {
       setDialog({
         isOpen: true,
         title: "Upload error",
-        message: "Error uploading syllabus. Please try again.",
+        message: "Could not reach the backend. Make sure the backend server is running and try again.",
       });
     }
+  };
+
+  const handleUploadSyllabus = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputEl = e.currentTarget;
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    await uploadAndParseSyllabus(file, "course");
+    inputEl.value = "";
+  };
+
+  const handleUploadLabSyllabus = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputEl = e.currentTarget;
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    await uploadAndParseSyllabus(file, "lab");
+    inputEl.value = "";
   };
 
   return (
@@ -386,12 +458,12 @@ export default function CoursesPage() {
                           Start Time *
                         </label>
                         <input
-                          type="text"
+                          type="time"
                           value={formData.startTime || ""}
                           onChange={(e) =>
                             setFormData({ ...formData, startTime: e.target.value })
                           }
-                          placeholder="e.g., 9:00 AM"
+                          step={60}
                           className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800"
                         />
                       </div>
@@ -401,12 +473,12 @@ export default function CoursesPage() {
                           End Time *
                         </label>
                         <input
-                          type="text"
+                          type="time"
                           value={formData.endTime || ""}
                           onChange={(e) =>
                             setFormData({ ...formData, endTime: e.target.value })
                           }
-                          placeholder="e.g., 10:00 AM"
+                          step={60}
                           className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800"
                         />
                       </div>
@@ -447,6 +519,24 @@ export default function CoursesPage() {
                 {formData.hasLab && (
                   <div className="border border-slate-200/80 dark:border-slate-700/40 rounded-xl p-4 space-y-4 bg-white/60 dark:bg-slate-900/30">
                     <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Lab Information</h3>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">
+                        Upload lab syllabus PDF (optional)
+                      </label>
+                      <label className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl cursor-pointer hover:border-blue-500 dark:hover:border-blue-400 transition bg-slate-50/70 dark:bg-slate-900/30">
+                        <div className="flex items-center justify-center gap-2 text-slate-700 dark:text-slate-200">
+                          <span className="material-symbols-outlined text-base">upload_file</span>
+                          <span className="text-sm font-medium">Upload Lab Syllabus PDF</span>
+                        </div>
+                        <input
+                          type="file"
+                          accept=".pdf"
+                          onChange={handleUploadLabSyllabus}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
                     
                     {!formData.labIsOnline && (
                       <div>
@@ -477,12 +567,12 @@ export default function CoursesPage() {
                             Lab Start Time *
                           </label>
                           <input
-                            type="text"
+                            type="time"
                             value={formData.labStartTime || ""}
                             onChange={(e) =>
                               setFormData({ ...formData, labStartTime: e.target.value })
                             }
-                            placeholder="e.g., 1:00 PM"
+                            step={60}
                             className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800"
                           />
                         </div>
@@ -491,12 +581,12 @@ export default function CoursesPage() {
                             Lab End Time *
                           </label>
                           <input
-                            type="text"
+                            type="time"
                             value={formData.labEndTime || ""}
                             onChange={(e) =>
                               setFormData({ ...formData, labEndTime: e.target.value })
                             }
-                            placeholder="e.g., 3:00 PM"
+                            step={60}
                             className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800"
                           />
                         </div>
@@ -582,7 +672,7 @@ export default function CoursesPage() {
                       <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
                         {course.name}
                       </h3>
-                      <p className="text-sm font-bold uppercase tracking-wider text-[#306844] dark:text-green-400">
+                      <p className="text-sm font-bold uppercase tracking-wider text-[#306844] dark:text-emerald-400">
                         {course.code}
                       </p>
                     </div>

@@ -1,12 +1,14 @@
 import json
 
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 from app.models import (
     CourseBase, CourseCreate, Course, 
     AssignmentBase, AssignmentCreate, Assignment,
     TaskBase, TaskCreate, Task
 )
 from app.schedule_generator import BusyBlock, Preferences, ScheduleGenerator
+from app.ai_task_estimator import estimate_task_hours
 from typing import List
 from datetime import date, datetime, time, timedelta
 import os
@@ -19,6 +21,14 @@ except Exception:
 from supabase import Client, create_client
 
 router = APIRouter(prefix="/api", tags=["tasks"])
+
+
+class TaskEstimateRequest(BaseModel):
+    user_id: str
+
+
+class ScheduleGenerateRequest(BaseModel):
+    study_limit_hours: float | None = None
 
 # Supabase client is used for all data operations
 _supabase_client: Client | None = None
@@ -111,6 +121,14 @@ def focus_hours_from_workstyle(workstyle: str | None) -> float:
     if value == "full-immersion":
         return 2.0
     return 2.0
+
+
+def parse_study_limit(value: object, fallback: float = 4.0) -> float:
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return fallback
+    return max(1.0, min(12.0, numeric))
 
 
 def map_schedule_block_row(row: dict) -> dict:
@@ -291,12 +309,57 @@ def ai__optimizer(context: dict) -> dict:
 
 # ========== TASK ENDPOINTS ==========
 # Tasks are handled via the schedule generation endpoints below
-# Do not create duplicate endpoints here
+@router.post("/tasks/{task_id}/estimate-time")
+async def estimate_task_time(task_id: str, request: TaskEstimateRequest):
+    try:
+        supabase = get_supabase()
+        task_result = (
+            supabase.table("tasks")
+            .select("id, user_id, task_title, deadline_at, estimated_hours, priority_level, description")
+            .eq("id", task_id)
+            .eq("user_id", request.user_id)
+            .limit(1)
+            .execute()
+        )
+        rows = task_result.data or []
+        if not rows:
+            raise HTTPException(status_code=404, detail="Task not found")
+
+        row = rows[0]
+        estimated_hours = estimate_task_hours(
+            {
+                "title": row.get("task_title") or "Untitled task",
+                "description": row.get("description") or "",
+                "deadline": row.get("deadline_at"),
+                "priority": int(row.get("priority_level") or 2),
+                "estimated_hours": float(row.get("estimated_hours") or 0),
+            }
+        )
+
+        update_result = (
+            supabase.table("tasks")
+            .update({"estimated_hours": estimated_hours})
+            .eq("id", task_id)
+            .eq("user_id", request.user_id)
+            .execute()
+        )
+        if getattr(update_result, "error", None):
+            raise HTTPException(status_code=500, detail="Failed to save estimated time")
+
+        return {
+            "task id": task_id,
+            "estimated_hours": estimated_hours,
+            "message": "AI estimated time updated"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to estimate task time: {str(e)}")
 
 # ========== SCHEDULE GENERATION ENDPOINTS ==========
 
 @router.post("/schedule/generate/{user_id}")
-async def generate_schedule(user_id: str):
+async def generate_schedule(user_id: str, payload: ScheduleGenerateRequest | None = None):
     """
     Generate optimal schedule for all pending tasks.
     Uses smart algorithm that considers:
@@ -325,13 +388,17 @@ async def generate_schedule(user_id: str):
         # Fetch user preferences/profile
         profile_result = (
             supabase.table("profiles")
-            .select("worktime, workdays, workstyle, additional_info, assignmentplan")
+            .select("worktime, workdays, workstyle, additional_info, assignmentplan, daily_study_limit")
             .eq("id", user_id)
             .limit(1)
             .execute()
         )
         profile_row = (profile_result.data or [{}])[0]
         work_start, work_end = work_window_from_profile(profile_row.get("worktime"))
+        profile_study_limit = parse_study_limit(profile_row.get("daily_study_limit"), 4.0)
+        requested_study_limit = payload.study_limit_hours if payload else None
+        study_limit_hours = parse_study_limit(requested_study_limit, profile_study_limit)
+
         prefs = Preferences(
             workdays=profile_row.get("workdays") or [
                 "Monday",
@@ -342,7 +409,7 @@ async def generate_schedule(user_id: str):
             ],
             work_start=work_start,
             work_end=work_end,
-            study_limit_hours=4,
+            study_limit_hours=study_limit_hours,
             workstyle=profile_row.get("workstyle"),
             additional_info=profile_row.get("additional_info"),
             assignment_plan=profile_row.get("assignmentplan"),

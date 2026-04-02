@@ -9,18 +9,22 @@ type TimerProps = {
     mode: TimerMode;
     timeLeft: number;
     isActive: boolean;
+    activeMode: TimerMode | null;
+    activeTimeLeft: number | null;
     customDurations: Record<TimerMode, number>;
     onToggleTimer: () => void;
     onResetTimer: () => void;
     onModeChange: (nextMode: TimerMode) => void;
     onSetCustomDurations: (next: Record<TimerMode, number>) => void;
-    onSaveSettings: () => void;
+    onSaveSettings: (nextDurations?: Record<TimerMode, number>) => void;
 };
 
 export default function Timer({
     mode,
     timeLeft,
     isActive,
+    activeMode,
+    activeTimeLeft,
     customDurations,
     onToggleTimer,
     onResetTimer,
@@ -29,12 +33,19 @@ export default function Timer({
     onSaveSettings,
 }: TimerProps) {
     const [showSettings, setShowSettings] = useState(false);
+    const [timerDraft, setTimerDraft] = useState<Record<TimerMode, string>>({
+        pomodoro: customDurations.pomodoro.toString(),
+        shortBreak: customDurations.shortBreak.toString(),
+        longBreak: customDurations.longBreak.toString(),
+    });
 
     const modes = {
         pomodoro: { label: "Focus", minutes: customDurations.pomodoro, color: "text-slate-900 dark:text-white" },
         shortBreak: { label: "Short Break", minutes: customDurations.shortBreak, color: "text-teal-600 dark:text-teal-400" },
         longBreak: { label: "Long Break", minutes: customDurations.longBreak, color: "text-blue-600 dark:text-blue-400" },
     };
+
+    const hasBackgroundRunningTimer = activeMode !== null && activeMode !== mode;
 
     const formatTime = (seconds: number) => {
         const mins = Math.floor(seconds / 60);
@@ -48,8 +59,56 @@ export default function Timer({
     };
 
     const handleSaveSettings = () => {
-        onSaveSettings();
+        const clampDraftMinutes = (rawValue: string, min: number, max: number) => {
+            const parsed = Number.parseInt(rawValue.trim(), 10);
+            if (!Number.isFinite(parsed) || parsed <= 0) {
+                return min;
+            }
+            return Math.min(max, Math.max(min, parsed));
+        };
+
+        const nextDurations = {
+            pomodoro: clampDraftMinutes(timerDraft.pomodoro, 1, 60),
+            shortBreak: clampDraftMinutes(timerDraft.shortBreak, 1, 30),
+            longBreak: clampDraftMinutes(timerDraft.longBreak, 1, 60),
+        };
+
+        onSetCustomDurations(nextDurations);
+        onSaveSettings(nextDurations);
         setShowSettings(false);
+    };
+
+    const handleDraftChange = (timerMode: TimerMode, rawValue: string) => {
+        const digitsOnly = rawValue.replace(/\D/g, "");
+
+        if (digitsOnly === "") {
+            setTimerDraft((prev) => ({ ...prev, [timerMode]: "0" }));
+            return;
+        }
+
+        setTimerDraft((prev) => ({ ...prev, [timerMode]: digitsOnly }));
+    };
+
+    const handleDraftBlur = (timerMode: TimerMode, min: number, max: number) => {
+        setTimerDraft((prev) => {
+            const parsed = Number.parseInt(prev[timerMode].trim(), 10);
+
+            if (!Number.isFinite(parsed) || parsed <= 0) {
+                return { ...prev, [timerMode]: min.toString() };
+            }
+
+            const clamped = Math.min(max, Math.max(min, parsed));
+            return { ...prev, [timerMode]: clamped.toString() };
+        });
+    };
+
+    const openSettings = () => {
+        setTimerDraft({
+            pomodoro: customDurations.pomodoro.toString(),
+            shortBreak: customDurations.shortBreak.toString(),
+            longBreak: customDurations.longBreak.toString(),
+        });
+        setShowSettings(true);
     };
 
     return (
@@ -127,7 +186,7 @@ export default function Timer({
                 </button>
 
                 <button
-                    onClick={() => setShowSettings(true)}
+                    onClick={openSettings}
                     className="w-12 h-12 rounded-full flex items-center justify-center bg-white dark:bg-slate-800 shadow-md text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:shadow-lg hover:scale-110 active:scale-95 transition-all duration-200"
                     aria-label="Settings"
                 >
@@ -151,69 +210,111 @@ export default function Timer({
                 ))}
             </div>
 
+            {hasBackgroundRunningTimer && activeMode && activeTimeLeft !== null ? (
+                <div className="mt-4 rounded-full border border-emerald-200/70 bg-emerald-50/75 px-4 py-2 text-xs font-semibold text-emerald-700 dark:border-emerald-500/35 dark:bg-emerald-900/20 dark:text-emerald-300">
+                    {modes[activeMode].label} running: {formatTime(activeTimeLeft)}
+                </div>
+            ) : null}
+
             {/* Settings Modal */}
             {showSettings && typeof document !== "undefined" && createPortal(
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60]" onClick={() => setShowSettings(false)}>
-                    <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 shadow-2xl max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
-                        <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">Timer Settings</h2>
-
-                        <div className="space-y-6">
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                    Focus Duration (minutes)
-                                </label>
-                                <input
-                                    type="number"
-                                    min="1"
-                                    max="60"
-                                    value={customDurations.pomodoro}
-                                    onChange={(e) => onSetCustomDurations({ ...customDurations, pomodoro: parseInt(e.target.value, 10) || 25 })}
-                                    className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#306844] outline-none"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                    Short Break Duration (minutes)
-                                </label>
-                                <input
-                                    type="number"
-                                    min="1"
-                                    max="30"
-                                    value={customDurations.shortBreak}
-                                    onChange={(e) => onSetCustomDurations({ ...customDurations, shortBreak: parseInt(e.target.value, 10) || 5 })}
-                                    className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#306844] outline-none"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                    Long Break Duration (minutes)
-                                </label>
-                                <input
-                                    type="number"
-                                    min="1"
-                                    max="60"
-                                    value={customDurations.longBreak}
-                                    onChange={(e) => onSetCustomDurations({ ...customDurations, longBreak: parseInt(e.target.value, 10) || 15 })}
-                                    className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#306844] outline-none"
-                                />
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/50 backdrop-blur-md px-4">
+                    <div className="w-full max-w-lg overflow-hidden rounded-3xl border border-white/60 dark:border-slate-700/70 bg-white/95 dark:bg-slate-900/95 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                        <div
+                            className="px-6 py-5 text-white"
+                            style={{
+                                backgroundImage: "linear-gradient(to right, var(--brand-from), var(--brand-via), var(--brand-to))",
+                            }}
+                        >
+                            <div className="flex items-start justify-between gap-3">
+                                <div>
+                                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/80">Focus Setup</p>
+                                    <h2 className="mt-1 text-2xl font-bold leading-tight">Timer Settings</h2>
+                                    <p className="mt-1 text-sm text-white/85">Set your session lengths for focus and breaks.</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowSettings(false)}
+                                    className="h-9 w-9 rounded-full border border-white/40 bg-white/10 transition hover:bg-white/20"
+                                    aria-label="Close timer settings"
+                                >
+                                    <span className="material-symbols-outlined text-base">close</span>
+                                </button>
                             </div>
                         </div>
 
-                        <div className="flex gap-3 mt-8">
-                            <button
-                                onClick={() => setShowSettings(false)}
-                                className="flex-1 px-6 py-3 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold hover:bg-slate-300 dark:hover:bg-slate-600 transition"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleSaveSettings}
-                                className="flex-1 px-6 py-3 rounded-lg bg-[#306844] hover:bg-[#255236] text-white font-semibold transition shadow-md"
-                            >
-                                Save
-                            </button>
+                        <div className="px-6 py-6 space-y-4">
+                            <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/70 p-4">
+                                <div className="mb-2 flex items-center justify-between gap-2">
+                                    <label className="text-sm font-semibold text-slate-800 dark:text-slate-100">Focus Duration</label>
+                                    <span className="text-[11px] font-semibold rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300 px-2 py-1">1-60 min</span>
+                                </div>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
+                                        value={timerDraft.pomodoro}
+                                        onChange={(e) => handleDraftChange("pomodoro", e.target.value)}
+                                        onBlur={() => handleDraftBlur("pomodoro", 1, 60)}
+                                        className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 pr-14 py-3 text-base font-semibold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-600"
+                                    />
+                                    <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-300">min</span>
+                                </div>
+                            </div>
+
+                            <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/70 p-4">
+                                <div className="mb-2 flex items-center justify-between gap-2">
+                                    <label className="text-sm font-semibold text-slate-800 dark:text-slate-100">Short Break</label>
+                                    <span className="text-[11px] font-semibold rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300 px-2 py-1">1-30 min</span>
+                                </div>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
+                                        value={timerDraft.shortBreak}
+                                        onChange={(e) => handleDraftChange("shortBreak", e.target.value)}
+                                        onBlur={() => handleDraftBlur("shortBreak", 1, 30)}
+                                        className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 pr-14 py-3 text-base font-semibold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-600"
+                                    />
+                                    <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-300">min</span>
+                                </div>
+                            </div>
+
+                            <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/70 p-4">
+                                <div className="mb-2 flex items-center justify-between gap-2">
+                                    <label className="text-sm font-semibold text-slate-800 dark:text-slate-100">Long Break</label>
+                                    <span className="text-[11px] font-semibold rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300 px-2 py-1">1-60 min</span>
+                                </div>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
+                                        value={timerDraft.longBreak}
+                                        onChange={(e) => handleDraftChange("longBreak", e.target.value)}
+                                        onBlur={() => handleDraftBlur("longBreak", 1, 60)}
+                                        className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 pr-14 py-3 text-base font-semibold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-600"
+                                    />
+                                    <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-300">min</span>
+                                </div>
+                            </div>
+
+                            <div className="mt-2 flex gap-3 pt-2">
+                                <button
+                                    onClick={() => setShowSettings(false)}
+                                    className="flex-1 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-6 py-3 font-semibold text-slate-700 dark:text-slate-300 transition hover:bg-slate-100 dark:hover:bg-slate-700"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleSaveSettings}
+                                    className="flex-1 rounded-xl bg-emerald-600 px-6 py-3 font-semibold text-white transition hover:bg-emerald-700 shadow-md"
+                                >
+                                    Save Settings
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>,

@@ -6,6 +6,8 @@ import { NotificationProvider } from "@/contexts/NotificationContext";
 import { TimerProvider } from "@/contexts/TimerContext";
 import Navigation from "@/components/Navigation";
 import NotificationToasts from "@/components/NotificationToasts";
+import GlobalTimerTicker from "@/components/GlobalTimerTicker";
+import SupportAssistantWidget from "@/components/SupportAssistantWidget";
 import "./globals.css";
 import "@material-symbols/font-400/outlined.css";
 
@@ -47,6 +49,8 @@ export default function RootLayout({
                 <Navigation />
                 <NotificationToasts />
                 {children}
+                <GlobalTimerTicker />
+                <SupportAssistantWidget />
               </NotificationProvider>
             </TimerProvider>
           </PlannerProvider>

@@ -8,19 +8,14 @@ interface MonthViewProps {
   daysInMonth: DayData[];
   events: Event[];
   onEventMove?: (eventId: string, newStart: Date) => void;
+  errorMessage?: string | null;
+  onDismissError?: () => void;
 }
 
-export const MonthView: React.FC<MonthViewProps> = ({ daysInMonth, events, onEventMove }) => {
+export const MonthView: React.FC<MonthViewProps> = ({ daysInMonth, events, onEventMove, errorMessage, onDismissError }) => {
   const [activeDay, setActiveDay] = React.useState<string | null>(null);
   const [draggingEventId, setDraggingEventId] = React.useState<string | null>(null);
-  const [dragGhost, setDragGhost] = React.useState<{
-    title: string;
-    color?: Event['color'];
-    x: number;
-    y: number;
-    durationLabel: string;
-    timeRangeLabel: string;
-  } | null>(null);
+  const [isErrorFading, setIsErrorFading] = React.useState(false);
   const monthDate = daysInMonth[15]?.date || new Date();
   const monthYear = monthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -28,59 +23,25 @@ export const MonthView: React.FC<MonthViewProps> = ({ daysInMonth, events, onEve
   const handleDragStart = (event: React.DragEvent<HTMLDivElement>, eventId: string) => {
     event.dataTransfer.setData('text/plain', eventId);
     event.dataTransfer.effectAllowed = 'move';
-    setDraggingEventId(eventId);
-    const draggedEvent = events.find((item) => item.id === eventId);
-    const durationLabel = draggedEvent
-      ? (() => {
-          const start = new Date(draggedEvent.start);
-          const end = new Date(draggedEvent.end);
-          const minutes = Math.max(Math.round((end.getTime() - start.getTime()) / 60000), 0);
-          const hours = Math.floor(minutes / 60);
-          const remainder = minutes % 60;
-          if (hours > 0 && remainder > 0) {
-            return `${hours}h ${remainder}m`;
-          }
-          if (hours > 0) {
-            return `${hours}h`;
-          }
-          return `${remainder || 0}m`;
-        })()
-      : '30m';
-    const timeRangeLabel = draggedEvent
-      ? `${new Date(draggedEvent.start).toLocaleTimeString('en-US', {
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true,
-        })} - ${new Date(draggedEvent.end).toLocaleTimeString('en-US', {
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true,
-        })}`
-      : '9:00 AM - 9:30 AM';
-    setDragGhost({
-      title: draggedEvent?.title || 'Event',
-      color: draggedEvent?.color,
-      x: event.clientX,
-      y: event.clientY,
-      durationLabel,
-      timeRangeLabel,
+    const dragPreview = event.currentTarget.cloneNode(true) as HTMLDivElement;
+    dragPreview.style.position = 'fixed';
+    dragPreview.style.top = '-1000px';
+    dragPreview.style.left = '-1000px';
+    dragPreview.style.pointerEvents = 'none';
+    dragPreview.style.width = `${event.currentTarget.offsetWidth}px`;
+    dragPreview.style.height = `${event.currentTarget.offsetHeight}px`;
+    dragPreview.style.opacity = '0.95';
+    document.body.appendChild(dragPreview);
+    event.dataTransfer.setDragImage(dragPreview, 12, 12);
+    requestAnimationFrame(() => {
+      if (dragPreview.parentNode) {
+        dragPreview.parentNode.removeChild(dragPreview);
+      }
     });
-  };
-
-  const handleDrag = (event: React.DragEvent<HTMLDivElement>) => {
-    if (!dragGhost) {
-      return;
-    }
-    if (event.clientX === 0 && event.clientY === 0) {
-      return;
-    }
-    setDragGhost((prev) =>
-      prev ? { ...prev, x: event.clientX, y: event.clientY } : prev
-    );
+    setDraggingEventId(eventId);
   };
 
   const handleDragEnd = () => {
-    setDragGhost(null);
     setDraggingEventId(null);
     setActiveDay(null);
   };
@@ -102,7 +63,6 @@ export const MonthView: React.FC<MonthViewProps> = ({ daysInMonth, events, onEve
     onEventMove(eventId, newStart);
     setActiveDay(null);
     setDraggingEventId(null);
-    setDragGhost(null);
   };
 
   const handleDragOver = (event: React.DragEvent<HTMLDivElement>, dayKey: string) => {
@@ -114,6 +74,18 @@ export const MonthView: React.FC<MonthViewProps> = ({ daysInMonth, events, onEve
   const handleDragLeave = (dayKey: string) => {
     setActiveDay((prev) => (prev === dayKey ? null : prev));
   };
+
+  React.useEffect(() => {
+    if (!errorMessage) {
+      setIsErrorFading(false);
+      return;
+    }
+    setIsErrorFading(false);
+    const fadeTimer = setTimeout(() => {
+      setIsErrorFading(true);
+    }, 3200);
+    return () => clearTimeout(fadeTimer);
+  }, [errorMessage]);
 
   const getDragTimeLabel = () => {
     if (!draggingEventId) {
@@ -132,18 +104,37 @@ export const MonthView: React.FC<MonthViewProps> = ({ daysInMonth, events, onEve
 
   return (
     <div className="flex flex-col h-full">
-      <div className="sticky top-0 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 dark:border-slate-700 p-4">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Month View</h2>
-        <p className="text-lg text-gray-600 dark:text-slate-300">{monthYear}</p>
+      <div className="sticky top-0 z-10 border-b border-white/70 dark:border-slate-700/70 bg-white/85 dark:bg-slate-900/85 backdrop-blur px-4 py-2.5">
+        <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">Month View</h2>
+        <p className="text-sm text-slate-600 dark:text-slate-300">{monthYear}</p>
+        {errorMessage && (
+          <div className="absolute right-4 top-4 z-30">
+            <div
+              className={`inline-flex max-w-[420px] items-center gap-2 rounded-md border border-red-200/70 bg-red-50/90 px-2 py-1 text-xs font-medium text-red-700 shadow-sm transition-opacity duration-700 dark:border-red-800/70 dark:bg-red-900/70 dark:text-red-200 ${
+                isErrorFading ? 'opacity-0' : 'opacity-100'
+              }`}
+            >
+              <span>{errorMessage}</span>
+              <button
+                type="button"
+                onClick={onDismissError}
+                className="rounded px-1 leading-none hover:bg-red-100 dark:hover:bg-red-800/80"
+                aria-label="Dismiss error"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 min-h-0 overflow-hidden">
         {/* Week day headers */}
-        <div className="grid grid-cols-7 gap-px bg-gray-200 dark:bg-slate-700">
+        <div className="grid grid-cols-7 gap-px bg-slate-200/70 dark:bg-slate-700/70">
           {weekDays.map((day) => (
             <div
               key={day}
-              className="bg-gray-100 dark:bg-slate-700 p-2 text-center font-semibold text-gray-700 dark:text-slate-200"
+              className="bg-slate-100/90 dark:bg-slate-700/90 p-1.5 text-center font-semibold text-slate-700 dark:text-slate-200"
             >
               {day}
             </div>
@@ -151,7 +142,7 @@ export const MonthView: React.FC<MonthViewProps> = ({ daysInMonth, events, onEve
         </div>
 
         {/* Calendar grid */}
-        <div className="grid grid-cols-7 gap-px bg-gray-200 dark:bg-slate-700">
+        <div className="grid grid-cols-7 gap-px bg-slate-200/70 dark:bg-slate-700/70">
           {daysInMonth.map((day) => {
             const dayEvents = events.filter((e) => {
               const eventDate = new Date(e.start);
@@ -164,19 +155,19 @@ export const MonthView: React.FC<MonthViewProps> = ({ daysInMonth, events, onEve
             return (
               <div
                 key={dayKey}
-                className={`min-h-24 p-2 transition-colors ${
+                className={`min-h-16 md:min-h-20 p-2 transition-colors ${
                   day.isCurrentMonth
                     ? day.isToday
-                      ? 'bg-emerald-50 dark:bg-emerald-900/20'
-                      : 'bg-white dark:bg-slate-800'
-                    : 'bg-white dark:bg-slate-800'
+                      ? 'bg-emerald-50/85 dark:bg-emerald-900/20'
+                      : 'bg-white/85 dark:bg-slate-800/75'
+                    : 'bg-slate-50/60 dark:bg-slate-800/60'
                 } ${isActive ? 'ring-2 ring-emerald-400 dark:ring-emerald-500' : ''}`}
                 onDragOver={(event) => handleDragOver(event, dayKey)}
                 onDragLeave={() => handleDragLeave(dayKey)}
                 onDrop={(event) => handleDrop(event, day)}
               >
                 {isActive && draggingEventId && (
-                  <div className="mb-1 text-[10px] text-emerald-700 bg-emerald-100 rounded px-1 inline-block">
+                  <div className="mb-1 text-[10px] font-semibold text-emerald-700 bg-emerald-100 rounded-full px-1.5 py-0.5 inline-block dark:bg-emerald-900/30 dark:text-emerald-300">
                     {day.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {getDragTimeLabel()}
                   </div>
                 )}
@@ -185,49 +176,39 @@ export const MonthView: React.FC<MonthViewProps> = ({ daysInMonth, events, onEve
                     day.isCurrentMonth
                       ? day.isToday
                         ? 'bg-emerald-600 text-white rounded-full w-6 h-6 flex items-center justify-center'
-                        : 'text-gray-900 dark:text-white'
-                      : 'text-gray-400'
+                        : 'text-slate-900 dark:text-white'
+                      : 'text-slate-400 dark:text-slate-500'
                   }`}
                 >
                   {day.dayNumber}
                 </p>
 
                 {/* Events preview */}
-                <div className="space-y-1">
+                <div className="space-y-1 overflow-hidden">
                   {dayEvents.slice(0, 2).map((event) => (
                     <div
                       key={event.id}
-                      className={`text-xs p-1 rounded truncate border-l-2 cursor-move ${getColorClass(event.color)}`}
+                      className={`text-xs p-1 rounded-md truncate border-l-2 cursor-move shadow-sm ${getColorClass(event.color)}`}
                       draggable
                       onDragStart={(dragEvent) => handleDragStart(dragEvent, event.id)}
-                      onDrag={handleDrag}
                       onDragEnd={handleDragEnd}
                       title="Drag to move"
                     >
                       {event.title}
                     </div>
                   ))}
-                  {dayEvents.length > 2 && (
-                    <p className="text-xs text-gray-600 dark:text-slate-300">+{dayEvents.length - 2} more</p>
-                  )}
                 </div>
+
+                {dayEvents.length > 2 && (
+                  <div className="absolute bottom-1 right-1 rounded-md bg-white/90 dark:bg-slate-900/90 px-1.5 py-0.5 text-[11px] font-semibold text-gray-700 dark:text-slate-200 shadow-sm">
+                    +{dayEvents.length - 2} more
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
       </div>
-      {dragGhost && (
-        <div
-          className={`fixed z-50 pointer-events-none px-2 py-1 rounded text-xs font-semibold border-l-2 shadow-lg opacity-90 drag-ghost ${getColorClass(
-            dragGhost.color
-          )}`}
-          style={{ left: dragGhost.x + 12, top: dragGhost.y + 12 }}
-        >
-          {dragGhost.title}
-          <div className="text-[10px] font-normal opacity-80">{dragGhost.durationLabel}</div>
-          <div className="text-[10px] font-normal opacity-70">{dragGhost.timeRangeLabel}</div>
-        </div>
-      )}
     </div>
   );
 };

@@ -1,97 +1,35 @@
 "use client";
 
-import Link from "next/link";
-import Footer from "@/components/Footer";
-import { usePlanner } from "@/contexts/PlannerContext";
 import { useEffect } from "react";
-
-const WORKTIME_LABELS: Record<string, string> = {
-  morning: "Morning",
-  afternoon: "Afternoon",
-  evening: "Evening",
-};
-
-const WORKSTYLE_LABELS: Record<string, string> = {
-  short: "Short Bursts",
-  classic: "Classic Pomodoro",
-  "deep-work": "Deep Work",
-  "full-immersion": "Full Immersion",
-};
-
-const ASSIGNMENT_LABELS: Record<string, string> = {
-  early: "Start Early",
-  deadline: "Deadline Sprint",
-  balanced: "Balanced",
-};
+import { useRouter } from "next/navigation";
+import Footer from "@/components/Footer";
 
 export default function QuizSubmittedPage() {
-  const { preferences, loadPreferences } = usePlanner();
+  const router = useRouter();
 
   useEffect(() => {
-    loadPreferences();
-  }, [loadPreferences]);
-
-  const workTimeLabel = preferences?.worktime ? WORKTIME_LABELS[preferences.worktime] || preferences.worktime : "Not set";
-  const workStyleLabel = preferences?.workstyle ? WORKSTYLE_LABELS[preferences.workstyle] || preferences.workstyle : "Not set";
-  const assignmentLabel = preferences?.assignmentplan
-    ? ASSIGNMENT_LABELS[preferences.assignmentplan] || preferences.assignmentplan
-    : "Not set";
-  const workDaysLabel = preferences?.workdays?.length ? preferences.workdays.join(", ") : "Not set";
+    const timeoutId = window.setTimeout(() => {
+      router.replace("/");
+    }, 2000);
+    return () => window.clearTimeout(timeoutId);
+  }, [router]);
 
   return (
     <div className="relative min-h-screen overflow-hidden flex flex-col">
-      <div className="fixed inset-0 bg-focus-light dark:bg-focus-dark bg-cover bg-center -z-20"></div>
+      <div className="fixed inset-0 bg-focus-light dark:bg-focus-dark bg-cover bg-center -z-30" />
+      <div className="pointer-events-none fixed inset-0 -z-20 bg-[radial-gradient(circle_at_20%_15%,rgba(16,185,129,0.24),transparent_40%),radial-gradient(circle_at_80%_20%,rgba(56,189,248,0.22),transparent_35%),radial-gradient(circle_at_50%_90%,rgba(99,102,241,0.18),transparent_40%)]" />
 
-      <main className="w-full flex-1">
-      <div className="max-w-2xl mx-auto p-6 pb-12">
-        <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-3xl p-8 shadow-sm border border-white/40 dark:border-slate-700/40">
-          <div className="bg-white/60 dark:bg-slate-700/60 rounded-2xl p-8 border border-emerald-200/60 dark:border-emerald-800/50 text-center">
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-900/50 mb-4">
-              <svg
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-                className="w-7 h-7 text-emerald-700 dark:text-emerald-300"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M20 6 9 17l-5-5" />
-              </svg>
-            </div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Preferences Saved</h1>
-            <p className="text-slate-700 dark:text-slate-300 mb-8">
-              You have successfully completed the preference quiz.
+      <main className="mx-auto flex w-full max-w-2xl flex-1 items-center p-6">
+        <div className="w-full rounded-3xl border border-white/45 bg-white/65 p-8 shadow-[0_30px_120px_-48px_rgba(15,23,42,0.5)] backdrop-blur-xl dark:border-slate-700/55 dark:bg-slate-900/55">
+          <div className="rounded-2xl border border-emerald-200/60 bg-white/75 p-8 text-center dark:border-emerald-700/50 dark:bg-slate-800/55">
+            <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">
+              Thank you, you can edit your Preferences in the Profile page
+            </h1>
+            <p className="mt-4 text-sm font-medium text-slate-600 dark:text-slate-300">
+              Redirecting to home...
             </p>
-
-            <div className="mb-8 rounded-2xl border border-white/60 bg-white/70 p-4 text-left dark:border-slate-600/60 dark:bg-slate-800/45">
-              <p className="text-xs font-bold uppercase tracking-[0.15em] text-slate-500 dark:text-slate-300">Your Saved Summary</p>
-              <div className="mt-3 space-y-2 text-sm">
-                <p className="text-slate-700 dark:text-slate-200"><span className="font-semibold">Work Time:</span> {workTimeLabel}</p>
-                <p className="text-slate-700 dark:text-slate-200"><span className="font-semibold">Work Days:</span> {workDaysLabel}</p>
-                <p className="text-slate-700 dark:text-slate-200"><span className="font-semibold">Break Style:</span> {workStyleLabel}</p>
-                <p className="text-slate-700 dark:text-slate-200"><span className="font-semibold">Assignment Plan:</span> {assignmentLabel}</p>
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Link
-                href="/profile"
-                className="bg-[#306844] hover:bg-[#255236] text-white font-semibold py-2.5 px-6 rounded-lg transition shadow-md hover:shadow-lg"
-              >
-                Go to Profile
-              </Link>
-              <Link
-                href="/profile/quiz"
-                className="border border-slate-300 dark:border-slate-500 text-slate-700 dark:text-slate-200 font-semibold py-2.5 px-6 rounded-lg transition hover:bg-white/70 dark:hover:bg-slate-700/70"
-              >
-                Take Quiz Again
-              </Link>
-            </div>
           </div>
         </div>
-      </div>
       </main>
 
       <div className="mt-auto">
