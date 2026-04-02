@@ -6,8 +6,18 @@ import { Task, TaskCreate } from "@/types";
 import Footer from "@/components/Footer";
 import AppDialog from "@/components/AppDialog";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 const DESCRIPTION_PREVIEW_LIMIT = 160;
+
+function getApiBaseUrl(): string {
+  if (API_BASE_URL && API_BASE_URL.trim().length > 0) {
+    return API_BASE_URL.replace(/\/$/, "");
+  }
+  if (typeof window !== "undefined") {
+    return `${window.location.protocol}//${window.location.hostname}:8000`;
+  }
+  return "http://localhost:8000";
+}
 
 type TaskCategory = "assignment" | "exam" | "project";
 
@@ -21,6 +31,28 @@ function getTaskCategoryPillClass(category: TaskCategory): string {
   if (category === "exam") return "bg-rose-100 text-rose-800 dark:bg-rose-900/25 dark:text-rose-200";
   if (category === "project") return "bg-violet-100 text-violet-800 dark:bg-violet-900/25 dark:text-violet-200";
   return "bg-sky-100 text-sky-800 dark:bg-sky-900/25 dark:text-sky-200";
+}
+
+function renderDescriptionWithLinks(text: string) {
+  const urlRegex = /(https?:\/\/[^\s]+)/gi;
+  const parts = text.split(urlRegex);
+
+  return parts.map((part, index) => {
+    if (/^https?:\/\/\S+$/i.test(part)) {
+      return (
+        <a
+          key={`${part}-${index}`}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline decoration-dotted underline-offset-2 text-[#306844] hover:text-[#255236] dark:text-emerald-300 dark:hover:text-emerald-200 break-all"
+        >
+          {part}
+        </a>
+      );
+    }
+    return <span key={`text-${index}`}>{part}</span>;
+  });
 }
 
 export default function TasksPage() {
@@ -146,7 +178,8 @@ export default function TasksPage() {
 
     try {
       setEstimatingTaskId(task.id);
-      const response = await fetch(`${API_BASE_URL}/api/tasks/${task.id}/estimate-time`, {
+      const baseUrl = getApiBaseUrl();
+      const response = await fetch(`${baseUrl}/api/tasks/${task.id}/estimate-time`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id: userId, apply_estimate: false }),
@@ -178,10 +211,15 @@ export default function TasksPage() {
         },
       });
     } catch (err) {
+      const isNetworkError = err instanceof TypeError;
       setDialog({
         isOpen: true,
         title: "Could not estimate time",
-        message: err instanceof Error ? err.message : "Unexpected error while estimating task time.",
+        message: isNetworkError
+          ? `Could not reach the backend API at ${getApiBaseUrl()}. Start the backend server or set NEXT_PUBLIC_API_URL.`
+          : err instanceof Error
+            ? err.message
+            : "Unexpected error while estimating task time.",
       });
     } finally {
       setEstimatingTaskId(null);
@@ -604,12 +642,18 @@ export default function TasksPage() {
 
                     {task.description && (
                       <div className="mb-4">
+                        {(() => {
+                          const descriptionPreview = task.description.length > DESCRIPTION_PREVIEW_LIMIT &&
+                            !expandedDescriptionTaskIds.has(task.id)
+                              ? `${task.description.slice(0, DESCRIPTION_PREVIEW_LIMIT).trimEnd()}...`
+                              : task.description;
+
+                          return (
                         <p className="text-slate-700 dark:text-slate-300 text-sm">
-                          {task.description.length > DESCRIPTION_PREVIEW_LIMIT &&
-                          !expandedDescriptionTaskIds.has(task.id)
-                            ? `${task.description.slice(0, DESCRIPTION_PREVIEW_LIMIT).trimEnd()}...`
-                            : task.description}
+                          {renderDescriptionWithLinks(descriptionPreview)}
                         </p>
+                          );
+                        })()}
                         {task.description.length > DESCRIPTION_PREVIEW_LIMIT ? (
                           <button
                             type="button"

@@ -279,12 +279,14 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
       return;
     }
 
-    const link = document.createElement('a');
-    link.href = webcalUrl;
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const opened = window.open(webcalUrl, '_blank', 'noopener,noreferrer');
+    if (!opened) {
+      setDialog({
+        isOpen: true,
+        title: 'Pop-up blocked',
+        message: 'Please allow pop-ups to open your calendar subscription in a new tab.',
+      });
+    }
   }, [eventList, userId]);
 
   const handleViewModeChange = (mode: ViewMode) => {
