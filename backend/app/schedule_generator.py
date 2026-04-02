@@ -38,6 +38,7 @@ class ScheduleGenerator:
         self.max_hours_per_day = max_hours_per_day
         self.focus_block_hours = focus_block_hours
         self.break_minutes = 15
+        self.between_block_buffer_minutes = 5  # 5-minute buffer between generated blocks to prevent overwhelm
 
     def normalized_day_set(self, days: Optional[List[str]]) -> set[str]:
         return {
@@ -86,6 +87,15 @@ class ScheduleGenerator:
                     moved = True
         return dt
 
+    def round_up_to_five(self, dt: datetime) -> datetime:
+        """Round up to nearest 5-minute increment (0, 5, 10, 15, 20, etc.)"""
+        minute = dt.minute
+        remainder = minute % 5
+        if remainder == 0 and dt.second == 0 and dt.microsecond == 0:
+            return dt
+        delta = (5 - remainder) if remainder != 0 else 5
+        return (dt + timedelta(minutes=delta)).replace(second=0, microsecond=0)
+
     def next_day_start(self, dt: datetime, pref: Preferences) -> datetime:
         dt += timedelta(days=1)
         return self.move_to_next_work_start(dt, pref)
@@ -125,7 +135,10 @@ class ScheduleGenerator:
         probe = dt
         for _ in range(14):
             if self.day_name(probe).lower() in preferred_day_set and self.is_workday(probe, prefs):
-                return self.set_time(probe,prefs.work_start)
+                preferred_start = self.set_time(probe, prefs.work_start)
+                if probe.date() == dt.date():
+                    return max(dt, preferred_start)
+                return preferred_start
             probe += timedelta(days=1)
         return dt
 
@@ -192,8 +205,18 @@ class ScheduleGenerator:
 
         sorted_tasks = sorted(pending_tasks, key=urgency_score)
 
-        current_dt = self.move_to_next_work_start(start_date, prefs)
+        current_dt = start_date
+        if not self.is_workday(current_dt, prefs):
+            current_dt = self.move_to_next_work_start(current_dt, prefs)
+        else:
+            work_start_dt = self.set_time(current_dt, prefs.work_start)
+            work_end_dt = self.set_time(current_dt, prefs.work_end)
+            if current_dt < work_start_dt:
+                current_dt = work_start_dt
+            elif current_dt >= work_end_dt:
+                current_dt = self.next_day_start(current_dt, prefs)
         current_dt = self.skip_if_busy(current_dt, busy)
+        current_dt = self.round_up_to_five(current_dt)
 
         max_hours_per_day = float(prefs.study_limit_hours)
         if max_hours_per_day <= 0:
@@ -226,6 +249,7 @@ class ScheduleGenerator:
                     "work_end": prefs.work_end.strftime("%H:%M"),
                     "study_limit_hours": prefs.study_limit_hours,
                     "workstyle": prefs.workstyle,
+                    "assignment_plan": prefs.assignment_plan,
                     "additional_info": prefs.additional_info,
                 },
                 "busy": [
@@ -260,10 +284,14 @@ class ScheduleGenerator:
             override_idx = 0
 
             while hours_remaining > 0:
+                current_dt = self.round_up_to_five(current_dt)
+                current_dt = self.skip_if_busy(current_dt, busy)
+                current_dt = self.round_up_to_five(current_dt)
 
                 if not self.is_workday(current_dt, prefs):
                     current_dt = self.move_to_next_work_start(current_dt, prefs)
                     current_dt = self.skip_if_busy(current_dt, busy)
+                    current_dt = self.round_up_to_five(current_dt)
                     hours_today = 0.0
                     continue
 
@@ -271,12 +299,13 @@ class ScheduleGenerator:
                     moved_dt = self.move_to_preferred_day(current_dt, prefs, task_preferred_days)
                     moved_dt = self.skip_if_busy(moved_dt, busy)
                     if moved_dt.date() <= task.deadline.date():
-                        current_dt = moved_dt
+                        current_dt = self.round_up_to_five(moved_dt)
                         hours_today = 0.0
 
                 if hours_today >= max_hours_per_day:
                     current_dt = self.next_day_start(current_dt, prefs)
                     current_dt = self.skip_if_busy(current_dt, busy)
+                    current_dt = self.round_up_to_five(current_dt)
                     hours_today = 0.0
                     continue
 
@@ -284,27 +313,29 @@ class ScheduleGenerator:
                 if current_dt >= day_end:
                     current_dt = self.next_day_start(current_dt, prefs)
                     current_dt = self.skip_if_busy(current_dt, busy)
+                    current_dt = self.round_up_to_five(current_dt)
                     hours_today = 0.0
                     continue
 
+                remaining_minutes = max(int(round(hours_remaining * 60)), 15)
+                available_today_minutes = max(int(round((max_hours_per_day - hours_today) * 60)), 0)
+                available_window_minutes = max(int((day_end - current_dt).total_seconds() // 60), 0)
+
                 if override_idx < len(override_list):
-                    block_hours = override_list[override_idx] / 60.0
+                    candidate_minutes = int(override_list[override_idx])
                     override_idx += 1
                 else:
-                    block_hours = self.get_block_hours_for_plan(prefs, task, hours_remaining)
+                    candidate_minutes = int(round(self.get_block_hours_for_plan(prefs, task, hours_remaining) * 60))
 
-                block_hours = min(block_hours, hours_remaining)
-                block_hours = min(block_hours, max_hours_per_day - hours_today)
+                block_minutes = min(candidate_minutes, remaining_minutes, available_today_minutes, available_window_minutes)
+                block_minutes = (block_minutes // 5) * 5  # Round down to nearest 5-minute increment
+                preferred_block_minutes = max((candidate_minutes // 5) * 5, 5)
 
-                if block_hours <= 0:
+                if block_minutes <= 0:
                     break
 
                 start_time = current_dt
-                end_time = start_time + timedelta(hours=block_hours)
-
-                if end_time > day_end:
-                    end_time = day_end
-                    block_hours = (end_time - start_time).total_seconds() / 3600.0
+                end_time = start_time + timedelta(minutes=block_minutes)
 
                 overlapping_block = None
                 for busy_block in busy:
@@ -315,6 +346,7 @@ class ScheduleGenerator:
                 if overlapping_block:
                     current_dt = overlapping_block.end
                     current_dt = self.skip_if_busy(current_dt, busy)
+                    current_dt = self.round_up_to_five(current_dt)
                     continue
 
                 block = ScheduleBlock(
@@ -323,20 +355,25 @@ class ScheduleGenerator:
                     date=start_time,
                     start_time=start_time,
                     end_time=end_time,
-                    duration_minutes=int(round(block_hours * 60)),
+                    duration_minutes=block_minutes,
                     user_id=task.user_id,
                     created_at=datetime.now(),
                 )
 
                 scheduled_blocks.append(block)
 
-                hours_remaining -= block_hours
-                hours_today += block_hours
+                consumed_hours = block_minutes / 60.0
+                hours_remaining -= consumed_hours
+                hours_today += consumed_hours
                 current_dt = end_time
 
                 if hours_remaining > 0:
-                    current_dt = current_dt + timedelta(minutes=self.break_minutes)
-                    current_dt = self.skip_if_busy(current_dt, busy)
+                    # Add a post-block buffer only when the block reached its intended size.
+                    # Shortened blocks can run back-to-back so the schedule still fits.
+                    if block_minutes >= preferred_block_minutes:
+                        current_dt = current_dt + timedelta(minutes=self.between_block_buffer_minutes)
+                        current_dt = self.skip_if_busy(current_dt, busy)
+                        current_dt = self.round_up_to_five(current_dt)
 
         return scheduled_blocks
         

@@ -2,6 +2,7 @@
 
 import { ReactNode, createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { ThemeProvider as NextThemesProvider, useTheme as useNextTheme } from 'next-themes';
+import { supabase } from '@/lib/supabaseClient';
 
 type Theme = 'light' | 'dark' | 'auto';
 type ColorTheme = 'emerald' | 'ocean' | 'rose' | 'slate' | 'amber' | 'violet';
@@ -27,21 +28,45 @@ interface ThemeContextType {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [colorTheme, setColorTheme] = useState<ColorTheme>(() => {
-    if (typeof window === 'undefined') {
-      return 'emerald';
-    }
-    const stored = localStorage.getItem(COLOR_THEME_STORAGE_KEY) as ColorTheme | null;
-    if (stored && COLOR_THEMES.includes(stored)) {
-      return stored;
-    }
-    return 'emerald';
-  });
+  const [colorTheme, setColorTheme] = useState<ColorTheme>('emerald');
+  const [themeStorageKey, setThemeStorageKey] = useState<string>(`${COLOR_THEME_STORAGE_KEY}:guest`);
+
+  useEffect(() => {
+    const applyThemeForUser = (userId: string | null) => {
+      const isGuest = !userId;
+
+      if (isGuest) {
+        // Logged-out users should always start from green defaults.
+        setThemeStorageKey(`${COLOR_THEME_STORAGE_KEY}:guest`);
+        setColorTheme('emerald');
+        return;
+      }
+
+      const key = `${COLOR_THEME_STORAGE_KEY}:${userId}`;
+      const stored = localStorage.getItem(key) as ColorTheme | null;
+      setThemeStorageKey(key);
+      setColorTheme(stored && COLOR_THEMES.includes(stored) ? stored : 'emerald');
+    };
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      applyThemeForUser(session?.user?.id ?? null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      applyThemeForUser(session?.user?.id ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', colorTheme);
-    localStorage.setItem(COLOR_THEME_STORAGE_KEY, colorTheme);
-  }, [colorTheme]);
+    if (themeStorageKey.endsWith(':guest')) {
+      localStorage.removeItem(themeStorageKey);
+      return;
+    }
+    localStorage.setItem(themeStorageKey, colorTheme);
+  }, [colorTheme, themeStorageKey]);
 
   const contextValue = useMemo(
     () => ({ colorTheme, setColorTheme }),

@@ -7,6 +7,7 @@ export interface Event {
   start: Date;
   end: Date;
   color?: 'blue' | 'red' | 'green' | 'yellow' | 'purple' | 'pink' | 'orange' | 'teal' | 'indigo' | 'cyan' | 'lime' | 'rose';
+  kind?: 'study' | 'class';
 }
 
 export interface TimeSlot {

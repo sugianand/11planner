@@ -162,8 +162,7 @@ export default function Quiz() {
 
       <main className="w-full flex-1">
         <div className="mx-auto max-w-4xl p-4 pb-12 sm:p-6 lg:p-8">
-          <div className="rounded-3xl border border-white/45 bg-white/50 p-4 shadow-[0_30px_120px_-48px_rgba(15,23,42,0.5)] backdrop-blur-xl dark:border-slate-700/50 dark:bg-slate-900/45 sm:p-7">
-            <div className="quiz-panel rounded-3xl border border-white/50 bg-white/65 p-5 shadow-sm dark:border-slate-700/55 dark:bg-slate-800/55 sm:p-7">
+          <div className="quiz-panel rounded-3xl border border-white/50 bg-white/65 p-5 shadow-[0_30px_120px_-48px_rgba(15,23,42,0.5)] backdrop-blur-xl dark:border-slate-700/55 dark:bg-slate-800/55 sm:p-7">
                 <div className="rounded-2xl border border-white/55 bg-white/75 p-5 shadow-sm dark:border-slate-700/60 dark:bg-slate-900/35 sm:p-6">
                   <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                     <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Preference Quiz</h1>
@@ -209,8 +208,9 @@ export default function Quiz() {
                 )}
 
                 <div className="mt-4 rounded-2xl border border-white/55 bg-white/75 p-5 shadow-sm dark:border-slate-700/60 dark:bg-slate-900/35 sm:p-6">
-                  {step === 1 && (
-                    <div>
+                  <div className="min-h-[320px]">
+                    {step === 1 && (
+                      <div>
                       <h2 className="mb-2 text-2xl font-black text-slate-900 dark:text-white">Preferred Work Time</h2>
                       <p className="mb-5 text-slate-600 dark:text-slate-300">When do you usually feel your focus is strongest?</p>
 
@@ -237,11 +237,11 @@ export default function Quiz() {
                           );
                         })}
                       </div>
-                    </div>
-                  )}
+                      </div>
+                    )}
 
-                  {step === 2 && (
-                    <div>
+                    {step === 2 && (
+                      <div>
                       <h2 className="mb-2 text-2xl font-black text-slate-900 dark:text-white">Preferred Work Days</h2>
                       <p className="mb-5 text-slate-600 dark:text-slate-300">Pick your usual study days for better schedule generation.</p>
 
@@ -269,11 +269,11 @@ export default function Quiz() {
                           );
                         })}
                       </div>
-                    </div>
-                  )}
+                      </div>
+                    )}
 
-                  {step === 3 && (
-                    <div>
+                    {step === 3 && (
+                      <div>
                       <h2 className="mb-2 text-2xl font-black text-slate-900 dark:text-white">Break Timings</h2>
                       <p className="mb-5 text-slate-600 dark:text-slate-300">How long can you focus before needing a break?</p>
 
@@ -300,11 +300,11 @@ export default function Quiz() {
                           );
                         })}
                       </div>
-                    </div>
-                  )}
+                      </div>
+                    )}
 
-                  {step === 4 && (
-                    <div>
+                    {step === 4 && (
+                      <div>
                       <h2 className="mb-2 text-2xl font-black text-slate-900 dark:text-white">Assignment Plan</h2>
                       <p className="mb-5 text-slate-600 dark:text-slate-300">How do you usually like to approach assignment work?</p>
 
@@ -331,11 +331,11 @@ export default function Quiz() {
                           );
                         })}
                       </div>
-                    </div>
-                  )}
+                      </div>
+                    )}
 
-                  {step === 5 && (
-                    <div>
+                    {step === 5 && (
+                      <div>
                       <h2 className="mb-2 text-2xl font-black text-slate-900 dark:text-white">Daily Study Limit</h2>
                       <p className="mb-5 text-slate-600 dark:text-slate-300">Set your preferred max hours per day for schedule generation.</p>
 
@@ -355,17 +355,37 @@ export default function Quiz() {
                             }}
                             className="h-2 flex-1 cursor-pointer appearance-none rounded-lg bg-slate-200 accent-[#306844]"
                           />
-                          <div className="w-20 rounded-lg border border-slate-200 bg-white px-2 py-1 text-right text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-white">
-                            {currentPreferences.dailyLimit}h
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="text"
+                              min={1}
+                              max={12}
+                              value={String(currentPreferences.dailyLimit)}
+                              inputMode="numeric"
+                              onChange={(e) => {
+                                const raw = e.target.value.replace(/\D/g, "").slice(0, 2);
+                                if (!/^([1-9]|1[0-2])$/.test(raw)) return;
+
+                                const value = Number.parseInt(raw, 10);
+                                setHasEdited(true);
+                                setPreferences({
+                                  ...currentPreferences,
+                                  dailyLimit: Math.min(12, Math.max(1, value)),
+                                });
+                              }}
+                              onFocus={(e) => e.target.select()}
+                              className="w-16 rounded-lg border border-slate-200 bg-white px-2 py-1 text-right text-slate-900 outline-none focus:border-[#306844] focus:ring-2 focus:ring-[#306844]/25 dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+                            />
+                            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">h</span>
                           </div>
                         </div>
 
                       </div>
-                    </div>
-                  )}
+                      </div>
+                    )}
 
-                  {step === 6 && (
-                    <div>
+                    {step === 6 && (
+                      <div>
                       <h2 className="mb-2 text-2xl font-black text-slate-900 dark:text-white">Additional Information</h2>
                       <p className="mb-5 text-slate-600 dark:text-slate-300">Share anything that can help us personalize your plan better.</p>
                       <textarea
@@ -378,8 +398,9 @@ export default function Quiz() {
                         }}
                         placeholder="Examples: part-time work, commute schedule, peak stress days, etc."
                       />
-                    </div>
-                  )}
+                      </div>
+                    )}
+                  </div>
 
                   <div className="mt-7 flex items-center justify-between border-t border-slate-200 pt-6 dark:border-slate-700/65">
                     <button
@@ -408,7 +429,6 @@ export default function Quiz() {
                     )}
                   </div>
                 </div>
-            </div>
           </div>
 
           <style jsx>{`

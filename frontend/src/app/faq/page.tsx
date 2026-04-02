@@ -3,8 +3,11 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import Footer from "@/components/Footer";
+import { usePlanner } from "@/contexts/PlannerContext";
 
 export default function FaqPage() {
+  const { userId } = usePlanner();
+  const isLoggedIn = userId !== "user_demo";
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   useEffect(() => {
@@ -67,7 +70,7 @@ export default function FaqPage() {
     {
       question: "How quickly can I get support if something breaks?",
       answer:
-        "Most support requests receive a response within one business day. To get help faster, include the page where the issue occurred, steps to reproduce, and screenshots or error text."
+        "Most support requests receive a response within a few business days. To get help faster, include the page where the issue occurred, steps to reproduce, and screenshots or error text."
     }
   ];
 
@@ -140,29 +143,22 @@ export default function FaqPage() {
           >
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">Need more help?</h2>
             <p className="text-slate-700 dark:text-slate-300 mt-2">
-              For account-specific support, contact support@11planner.com or visit
-              <Link href="/support" className="font-semibold hover:underline" style={{ color: "var(--theme-accent-strong)" }}> /support</Link>
-              .
+              For account-specific support, email support@11planner.app.
             </p>
           </section>
 
-          <div data-reveal data-reveal-once="true" className="pt-4 border-t border-slate-200/70 dark:border-slate-700/70 flex flex-wrap gap-4">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2 font-semibold"
-              style={{ color: "var(--theme-accent-strong)" }}
-            >
-              <span className="material-symbols-outlined text-base">arrow_back</span>
-              Back to home
-            </Link>
-            <Link
-              href="/support"
-              className="inline-flex items-center gap-2 text-slate-700 dark:text-slate-300 font-semibold"
-            >
-              <span className="material-symbols-outlined text-base">support_agent</span>
-              Contact support
-            </Link>
-          </div>
+          {isLoggedIn && (
+            <div data-reveal data-reveal-once="true" className="pt-4 border-t border-slate-200/70 dark:border-slate-700/70 flex flex-wrap gap-4">
+              <Link
+                href="/"
+                className="inline-flex items-center gap-2 font-semibold"
+                style={{ color: "var(--theme-accent-strong)" }}
+              >
+                <span className="material-symbols-outlined text-base">arrow_back</span>
+                Back to home
+              </Link>
+            </div>
+          )}
         </div>
       </div>
       <Footer />

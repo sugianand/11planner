@@ -295,6 +295,67 @@
       gap: 6px;
     }
 
+    .course-select-panel {
+      margin: 8px 0 12px;
+      padding: 10px;
+      border-radius: 10px;
+      background: rgba(18, 29, 46, 0.78);
+      border: 1px solid rgba(120, 145, 179, 0.28);
+      display: none;
+    }
+
+    .course-select-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .course-select-title {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #cfe3ff;
+    }
+
+    .course-select-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .course-select-action {
+      border: 1px solid rgba(132, 156, 191, 0.34);
+      background: rgba(24, 37, 58, 0.75);
+      color: #d2deef;
+      font-size: 10px;
+      font-weight: 700;
+      border-radius: 999px;
+      padding: 4px 8px;
+      cursor: pointer;
+    }
+
+    .course-select-list {
+      display: grid;
+      gap: 6px;
+      max-height: 110px;
+      overflow-y: auto;
+    }
+
+    .course-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #dce8f8;
+      padding: 4px 0;
+    }
+
+    .course-option input {
+      accent-color: #48d498;
+    }
+
     .course-chip {
       background: rgba(49, 132, 92, 0.24);
       color: #d6ffe8;
@@ -443,6 +504,8 @@
 
     <div id="loginPanel" class="panel-card">
       <div class="panel-title">Connect Account</div>
+      <button class="btn btn-secondary" id="extractBtnGuest" style="margin-bottom:12px;">Extract Courses and Tasks</button>
+      <div class="muted-note" style="margin-top:-4px; margin-bottom:12px;">You can preview extraction before logging in.</div>
       <div class="section">
         <label>11Planner Email</label>
         <input id="loginEmail" type="email" placeholder="your@email.com" autocomplete="email" />
@@ -495,6 +558,16 @@
         <div class="preview-item" style="border-bottom:1px solid #334155;">
           <div class="title">Detected Courses <span id="courseCount" class="count-badge">0</span></div>
           <div class="preview-courses" id="courseList"></div>
+        </div>
+        <div class="course-select-panel" id="courseFilterPanel">
+          <div class="course-select-header">
+            <div class="course-select-title">Select Courses To Sync</div>
+            <div class="course-select-actions">
+              <button class="course-select-action" id="selectAllCourses" type="button">All</button>
+              <button class="course-select-action" id="clearAllCourses" type="button">None</button>
+            </div>
+          </div>
+          <div class="course-select-list" id="courseSelectionList"></div>
         </div>
         <div id="previewList"></div>
       </div>

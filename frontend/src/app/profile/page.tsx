@@ -34,7 +34,14 @@ function shiftDateKey(key: string, days: number): string {
 export default function ProfilePage() {
   const { tasks, courses, preferences, loadPreferences } = usePlanner();
   const [email, setEmail] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [firstNameInput, setFirstNameInput] = useState("");
+  const [lastNameInput, setLastNameInput] = useState("");
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [isSavingName, setIsSavingName] = useState(false);
+  const [nameFeedback, setNameFeedback] = useState<string | null>(null);
+  const [nameError, setNameError] = useState<string | null>(null);
   const [privacyProfileVisible] = useState(() =>
     typeof window === "undefined"
       ? true
@@ -62,6 +69,7 @@ export default function ProfilePage() {
           return;
         }
 
+        setUserId(user.id);
         setEmail(user.email ?? null);
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
@@ -75,6 +83,8 @@ export default function ProfilePage() {
         }
 
         setProfile(profileData);
+        setFirstNameInput(profileData.firstname || "");
+        setLastNameInput(profileData.lastname || "");
       } catch (err) {
         console.debug("Profile fetch error (guest mode):", err);
       }
@@ -82,6 +92,57 @@ export default function ProfilePage() {
 
     fetchProfile();
   }, []);
+
+  const handleSaveName = async () => {
+    if (!userId) {
+      setNameError("Please sign in to edit your profile name.");
+      setNameFeedback(null);
+      return;
+    }
+
+    const first = firstNameInput.trim();
+    const last = lastNameInput.trim();
+
+    if (!first || !last) {
+      setNameError("First and last name are required.");
+      setNameFeedback(null);
+      return;
+    }
+
+    try {
+      setIsSavingName(true);
+      setNameError(null);
+      setNameFeedback(null);
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .upsert(
+          {
+            id: userId,
+            firstname: first,
+            lastname: last,
+          },
+          { onConflict: "id" }
+        )
+        .select("firstname, lastname")
+        .single();
+
+      if (error) throw error;
+
+      setProfile({
+        firstname: data.firstname || first,
+        lastname: data.lastname || last,
+      });
+      setFirstNameInput(data.firstname || first);
+      setLastNameInput(data.lastname || last);
+      setIsEditingName(false);
+      setNameFeedback("Name updated.");
+    } catch (err) {
+      setNameError(err instanceof Error ? err.message : "Failed to update name.");
+    } finally {
+      setIsSavingName(false);
+    }
+  };
 
   useEffect(() => {
     loadPreferences();
@@ -249,6 +310,76 @@ export default function ProfilePage() {
                       ? (email || "Signed out currently - login to sync profile details")
                       : "Email hidden by privacy setting"}
                   </p>
+                </div>
+              </div>
+
+              <div className="relative mt-6">
+                <div className="flex flex-wrap items-center gap-3">
+                  {!isEditingName ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFirstNameInput(profile?.firstname || "");
+                        setLastNameInput(profile?.lastname || "");
+                        setNameError(null);
+                        setNameFeedback(null);
+                        setIsEditingName(true);
+                      }}
+                      className="inline-flex items-center rounded-xl bg-[#306844] px-4 py-2 text-sm font-bold text-white transition-all duration-200 hover:bg-[#255236]"
+                    >
+                      Edit Name
+                    </button>
+                  ) : null}
+                </div>
+                {isEditingName ? (
+                  <>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                      <input
+                        type="text"
+                        value={firstNameInput}
+                        onChange={(e) => setFirstNameInput(e.target.value)}
+                        placeholder="First name"
+                        className="w-full rounded-xl border border-slate-300/80 bg-white/95 px-3 py-2.5 text-sm font-medium text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/25 dark:border-slate-600/80 dark:bg-slate-800/80 dark:text-white"
+                      />
+                      <input
+                        type="text"
+                        value={lastNameInput}
+                        onChange={(e) => setLastNameInput(e.target.value)}
+                        placeholder="Last name"
+                        className="w-full rounded-xl border border-slate-300/80 bg-white/95 px-3 py-2.5 text-sm font-medium text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/25 dark:border-slate-600/80 dark:bg-slate-800/80 dark:text-white"
+                      />
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={handleSaveName}
+                        disabled={isSavingName}
+                        className="inline-flex items-center rounded-xl bg-[#306844] px-4 py-2 text-sm font-bold text-white transition-all duration-200 hover:bg-[#255236] disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {isSavingName ? "Saving..." : "Save Name"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsEditingName(false);
+                          setNameError(null);
+                          setNameFeedback(null);
+                        }}
+                        disabled={isSavingName}
+                        className="inline-flex items-center rounded-xl border border-slate-300/80 bg-white/95 px-4 py-2 text-sm font-semibold text-slate-700 transition-all duration-200 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-600/80 dark:bg-slate-800/80 dark:text-slate-200 dark:hover:bg-slate-700"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </>
+                ) : null}
+                <div className="mt-3 flex flex-wrap items-center gap-3">
+                  {nameFeedback ? (
+                    <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">{nameFeedback}</p>
+                  ) : null}
+                  {nameError ? (
+                    <p className="text-sm font-semibold text-red-700 dark:text-red-300">{nameError}</p>
+                  ) : null}
                 </div>
               </div>
 

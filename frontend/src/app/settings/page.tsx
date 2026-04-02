@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabaseClient";
 
 type Theme = "light" | "dark" | "auto";
 type ColorTheme = "emerald" | "ocean" | "rose" | "slate" | "amber" | "violet";
+type SettingsPanel = "schedule" | "personalize" | "reminders" | "account" | "support";
 
 const colorThemeSwatches: Record<ColorTheme, string> = {
   emerald: "linear-gradient(135deg, #10b981, #059669)",
@@ -38,10 +39,16 @@ const readStoredBoolean = (key: string, fallback: boolean): boolean => {
   return value === null ? fallback : value !== "false";
 };
 
+const readStoredNumber = (key: string, fallback: number): number => {
+  if (typeof window === "undefined") return fallback;
+  const value = Number(localStorage.getItem(key));
+  return Number.isFinite(value) ? value : fallback;
+};
+
 export default function SettingsPage() {
   const { theme, setTheme, colorTheme, setColorTheme, colorThemes } = useTheme();
   const [isMounted, setIsMounted] = useState(false);
-  const [user, setUser] = useState<{ email?: string } | null>(null);
+  const [user, setUser] = useState<{ id?: string; email?: string } | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(() => readStoredBoolean("soundEnabled", true));
   const [privacyProfileVisible, setPrivacyProfileVisible] = useState(() => readStoredBoolean("privacyProfileVisible", true));
   const [privacyAnalyticsEnabled, setPrivacyAnalyticsEnabled] = useState(() => readStoredBoolean("privacyAnalyticsEnabled", false));
@@ -49,11 +56,9 @@ export default function SettingsPage() {
   const [privacyShareProgress, setPrivacyShareProgress] = useState(() => readStoredBoolean("privacyShareProgress", false));
   const [emailUpdates, setEmailUpdates] = useState(() => readStoredBoolean("emailUpdates", true));
   const [weeklyReport, setWeeklyReport] = useState(() => readStoredBoolean("weeklyReport", true));
-  const [dailyLimit, setDailyLimit] = useState(4);
+  const [dailyLimit, setDailyLimit] = useState(() => readStoredNumber("dailyLimit", 4));
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
-  const [activePanel, setActivePanel] = useState<
-    "schedule" | "personalize" | "reminders" | "account" | "support"
-  >("personalize");
+  const [activePanel, setActivePanel] = useState<SettingsPanel>("personalize");
 
   const {
     notificationsEnabled,
@@ -65,8 +70,33 @@ export default function SettingsPage() {
   } = useNotification();
 
   useEffect(() => {
+    const panelParam = new URLSearchParams(window.location.search).get("panel");
+    const validPanels: SettingsPanel[] = ["schedule", "personalize", "reminders", "account", "support"];
+    if (panelParam && validPanels.includes(panelParam as SettingsPanel)) {
+      setActivePanel(panelParam as SettingsPanel);
+    }
+
     setIsMounted(true);
-    supabase.auth.getUser().then(({ data }) => setUser(data?.user ?? null));
+    supabase.auth.getUser().then(async ({ data }) => {
+      const authUser = data?.user ?? null;
+      setUser(authUser ? { id: authUser.id, email: authUser.email ?? undefined } : null);
+
+      if (!authUser?.id) {
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("daily_study_limit")
+        .eq("id", authUser.id)
+        .maybeSingle();
+
+      if (profile?.daily_study_limit !== undefined && profile?.daily_study_limit !== null) {
+        const normalized = Math.min(12, Math.max(1, Number(profile.daily_study_limit) || 4));
+        setDailyLimit(normalized);
+        localStorage.setItem("dailyLimit", String(normalized));
+      }
+    });
   }, []);
 
   const [savedSettings, setSavedSettings] = useState({
@@ -93,6 +123,14 @@ export default function SettingsPage() {
     const normalized = Math.min(12, Math.max(1, value));
     setDailyLimit(normalized);
     localStorage.setItem("dailyLimit", String(normalized));
+
+    if (user?.id) {
+      supabase
+        .from("profiles")
+        .upsert({ id: user.id, daily_study_limit: normalized }, { onConflict: "id" })
+        .then(() => undefined)
+        .catch(() => undefined);
+    }
   };
 
   const handleEmailUpdatesChange = (value: boolean) => {

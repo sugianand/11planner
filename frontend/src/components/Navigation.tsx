@@ -200,6 +200,14 @@ export default function Navigation() {
                         <span className="material-symbols-outlined text-xl text-emerald-500 group-hover:scale-110 transition">settings</span>
                         Settings
                       </Link>
+                      <Link
+                        href="/settings?panel=reminders"
+                        onClick={() => setIsUserDropdownOpen(false)}
+                        className="flex items-center gap-3 px-5 py-3 text-slate-800 dark:text-slate-100 hover:bg-emerald-50 dark:hover:bg-slate-700/60 text-base font-medium transition group"
+                      >
+                        <span className="material-symbols-outlined text-xl text-emerald-500 group-hover:scale-110 transition">notifications</span>
+                        Notifications & Reminders
+                      </Link>
                     </div>
                     <div className="border-t border-slate-100 dark:border-slate-700">
                       <button
@@ -331,6 +339,16 @@ export default function Navigation() {
                       onClick={() => setIsMenuOpen(false)}
                     >
                       Settings
+                    </Link>
+                    <Link
+                      href="/settings?panel=reminders"
+                      className={`block font-medium py-2 px-3 rounded transition ${pathname.startsWith("/settings")
+                        ? "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20"
+                        : "text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-700/30"
+                        }`}
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Notifications & Reminders
                     </Link>
                     <button
                       onClick={() => {

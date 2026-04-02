@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { FormEvent, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
+import { usePlanner } from "@/contexts/PlannerContext";
 
 type ChatRole = "assistant" | "user";
 type WidgetView = "home" | "chat" | "news" | "news-detail" | "help-center" | "article";
@@ -386,6 +387,7 @@ function ElevenAvatar({ size = "md" }: { size?: "sm" | "md" }) {
 
 export default function SupportAssistantWidget() {
   const pathname = usePathname();
+  const { userId } = usePlanner();
   const routeHintText = routeHints.find((entry) => entry.match.test(pathname || ""))?.hint;
 
   const [isOpen, setIsOpen] = useState(false);
@@ -556,6 +558,10 @@ export default function SupportAssistantWidget() {
     setView("help-center");
     setSelectedNewsId(null);
   };
+
+  if (userId === "user_demo") {
+    return null;
+  }
 
   return (
     <div className="fixed bottom-6 right-6 z-[60] flex flex-col items-end">

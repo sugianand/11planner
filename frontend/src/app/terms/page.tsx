@@ -2,8 +2,12 @@
 
 import Link from "next/link";
 import Footer from "@/components/Footer";
+import { usePlanner } from "@/contexts/PlannerContext";
 
 export default function TermsPage() {
+  const { userId } = usePlanner();
+  const isLoggedIn = userId !== "user_demo";
+
   const highlights = [
     {
       icon: "check_circle",
@@ -114,15 +118,6 @@ export default function TermsPage() {
             </p>
           </section>
 
-          <section className="space-y-4 rounded-2xl bg-white/55 dark:bg-slate-800/45 border border-white/60 dark:border-slate-700/45 p-5">
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Third-party rights notice</h2>
-            <p className="text-slate-700 dark:text-slate-300">
-              Stranger Things and related marks are trademarks and copyrights of Netflix, Inc. 11Planner
-              is not affiliated with Netflix. All third-party trademarks and copyrights remain the property
-              of their respective owners.
-            </p>
-          </section>
-
           <section
             className="space-y-4 rounded-2xl p-5"
             style={{
@@ -132,7 +127,7 @@ export default function TermsPage() {
           >
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">Questions about terms</h2>
             <p className="text-slate-700 dark:text-slate-300">
-              Questions about these terms? Email support@11planner.com.
+              Questions about these terms? Email support@11planner.app.
             </p>
             <p className="text-slate-700 dark:text-slate-300">
               You can also visit{' '}
@@ -141,16 +136,18 @@ export default function TermsPage() {
             </p>
           </section>
 
-          <div className="pt-4 border-t border-slate-200/70 dark:border-slate-700/70">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2 font-semibold"
-              style={{ color: "var(--theme-accent-strong)" }}
-            >
-              <span className="material-symbols-outlined text-base">arrow_back</span>
-              Back to home
-            </Link>
-          </div>
+          {isLoggedIn && (
+            <div className="pt-4 border-t border-slate-200/70 dark:border-slate-700/70">
+              <Link
+                href="/"
+                className="inline-flex items-center gap-2 font-semibold"
+                style={{ color: "var(--theme-accent-strong)" }}
+              >
+                <span className="material-symbols-outlined text-base">arrow_back</span>
+                Back to home
+              </Link>
+            </div>
+          )}
         </div>
       </div>
       <Footer />

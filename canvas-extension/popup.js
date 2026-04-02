@@ -9,6 +9,88 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 let extractedTasks = [];
 let extractedCourses = [];
+let selectedCourseCodes = new Set();
+
+function getCourseKey(course) {
+    return String(course?.code || course?.contextCode || course?.id || course?.name || '').trim();
+}
+
+function getFilteredSyncData() {
+    if (!Array.isArray(extractedCourses) || extractedCourses.length === 0) {
+        return { tasks: extractedTasks, courses: extractedCourses };
+    }
+
+    const selectedCourses = extractedCourses.filter(c => selectedCourseCodes.has(getCourseKey(c)));
+    if (selectedCourses.length === 0) {
+        return { tasks: [], courses: [] };
+    }
+
+    const selectedCourseNames = new Set(selectedCourses.map(c => String(c.name || '').toLowerCase().trim()));
+    const selectedContextCodes = new Set(selectedCourses.map(c => String(c.contextCode || c.code || '').toLowerCase().trim()).filter(Boolean));
+
+    const tasks = extractedTasks.filter(t => {
+        const taskContext = String(t.contextCode || '').toLowerCase().trim();
+        if (taskContext && selectedContextCodes.has(taskContext)) return true;
+
+        const taskCourse = String(t.course || '').toLowerCase().trim();
+        if (taskCourse && selectedCourseNames.has(taskCourse)) return true;
+
+        // Keep uncategorized tasks so they are not accidentally dropped.
+        return !taskContext && (!taskCourse || taskCourse === 'general');
+    });
+
+    return { tasks, courses: selectedCourses };
+}
+
+function renderCourseSelectors(courses, onChange) {
+    const panel = document.getElementById('courseFilterPanel');
+    const list = document.getElementById('courseSelectionList');
+    const selectAllBtn = document.getElementById('selectAllCourses');
+    const clearAllBtn = document.getElementById('clearAllCourses');
+
+    if (!panel || !list) return;
+    list.innerHTML = '';
+
+    if (!Array.isArray(courses) || courses.length === 0) {
+        panel.style.display = 'none';
+        return;
+    }
+
+    panel.style.display = 'block';
+
+    courses.forEach(course => {
+        const key = getCourseKey(course);
+        const label = document.createElement('label');
+        label.className = 'course-option';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = selectedCourseCodes.has(key);
+        checkbox.addEventListener('change', () => {
+            if (checkbox.checked) selectedCourseCodes.add(key);
+            else selectedCourseCodes.delete(key);
+            onChange();
+        });
+
+        const text = document.createElement('span');
+        const schedule = course.scheduleText ? ` (${course.scheduleText})` : '';
+        text.textContent = `${course.name}${schedule}`;
+
+        label.appendChild(checkbox);
+        label.appendChild(text);
+        list.appendChild(label);
+    });
+
+    selectAllBtn.onclick = () => {
+        selectedCourseCodes = new Set(courses.map(getCourseKey));
+        onChange();
+    };
+
+    clearAllBtn.onclick = () => {
+        selectedCourseCodes = new Set();
+        onChange();
+    };
+}
 
 function isCanvasUrl(url) {
         if (!url) return false;
@@ -17,11 +99,18 @@ function isCanvasUrl(url) {
 
 function setExtractAvailability(isAvailable) {
         const extractBtn = document.getElementById('extractBtn');
+        const extractBtnGuest = document.getElementById('extractBtnGuest');
         const emptyState = document.getElementById('emptyState');
-        if (!extractBtn) return;
+        if (!extractBtn && !extractBtnGuest) return;
 
-        extractBtn.disabled = !isAvailable;
-        extractBtn.textContent = isAvailable ? 'Extract Courses and Tasks' : 'Open Canvas to Extract';
+        if (extractBtn) {
+            extractBtn.disabled = !isAvailable;
+            extractBtn.textContent = isAvailable ? 'Extract Courses and Tasks' : 'Open Canvas to Extract';
+        }
+        if (extractBtnGuest) {
+            extractBtnGuest.disabled = !isAvailable;
+            extractBtnGuest.textContent = isAvailable ? 'Extract Courses and Tasks' : 'Open Canvas to Extract';
+        }
 
         if (!isAvailable && emptyState) {
                 emptyState.style.display = 'block';
@@ -128,8 +217,12 @@ document.addEventListener('DOMContentLoaded', () => {
             showPanel(false);
             document.getElementById('status').className = 'status';
             extractedTasks = [];
+            extractedCourses = [];
+            selectedCourseCodes = new Set();
             document.getElementById('preview').style.display = 'none';
             document.getElementById('syncBtn').style.display = 'none';
+            const filterPanel = document.getElementById('courseFilterPanel');
+            if (filterPanel) filterPanel.style.display = 'none';
             const emptyState = document.getElementById('emptyState');
             if (emptyState) emptyState.style.display = 'block';
         });
@@ -147,6 +240,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         list.innerHTML = '';
         courseList.innerHTML = '';
+
+        const { tasks: filteredTasks, courses: filteredCourses } = getFilteredSyncData();
         if (tasks.length === 0) {
             preview.style.display = 'none';
             syncBtn.style.display = 'none';
@@ -156,7 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (emptyState) emptyState.style.display = 'none';
 
-        tasks.forEach(a => {
+        filteredTasks.forEach(a => {
             const item = document.createElement('div');
             item.className = 'preview-item';
             let dueStr;
@@ -177,22 +272,22 @@ document.addEventListener('DOMContentLoaded', () => {
             list.appendChild(item);
         });
 
-        courses.forEach(c => {
+        filteredCourses.forEach(c => {
             const chip = document.createElement('span');
             chip.className = 'course-chip';
             chip.textContent = c.name;
             courseList.appendChild(chip);
         });
 
+        renderCourseSelectors(courses, () => renderPreview(extractedTasks, extractedCourses));
+
         preview.style.display = 'block';
-        syncCount.textContent = tasks.length;
-        courseCount.textContent = courses.length;
+        syncCount.textContent = filteredTasks.length;
+        courseCount.textContent = filteredCourses.length;
         syncBtn.style.display = 'block';
     }
 
-    // ── Extract button ──
-    document.getElementById('extractBtn')?.addEventListener('click', async () => {
-        const btn = document.getElementById('extractBtn');
+    async function runExtract(btn) {
 
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         if (!tab?.id || !isCanvasUrl(tab.url || '')) {
@@ -210,13 +305,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
             chrome.tabs.sendMessage(tab.id, { action: 'extract' }, response => {
                 if (chrome.runtime.lastError || !response) {
-                    showStatus('Could not extract. Make sure you are on a Canvas page.', 'error');
+                    const detail = chrome.runtime.lastError?.message || 'No extraction response';
+                    showStatus(`Could not extract. ${detail}`, 'error');
                     btn.disabled = false;
                     btn.textContent = 'Extract Courses and Tasks';
                     return;
                 }
                 extractedTasks = response.assignments || [];
                 extractedCourses = response.courses || [];
+                selectedCourseCodes = new Set(extractedCourses.map(getCourseKey));
                 if (extractedTasks.length === 0) {
                     showStatus('No tasks found on this page.', 'info');
                 } else {
@@ -231,6 +328,17 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.disabled = false;
             btn.textContent = 'Extract Courses and Tasks';
         }
+    }
+
+    // ── Extract buttons (logged-in + guest) ──
+    document.getElementById('extractBtn')?.addEventListener('click', async () => {
+        const btn = document.getElementById('extractBtn');
+        await runExtract(btn);
+    });
+
+    document.getElementById('extractBtnGuest')?.addEventListener('click', async () => {
+        const btn = document.getElementById('extractBtnGuest');
+        await runExtract(btn);
     });
 
     // ── Sync button ──
@@ -239,7 +347,20 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.disabled = true;
         showStatus('Syncing to 11Planner...', 'info');
 
-        chrome.runtime.sendMessage({ action: 'sync', assignments: extractedTasks, courses: extractedCourses }, response => {
+        const { tasks, courses } = getFilteredSyncData();
+        if (tasks.length === 0) {
+            showStatus('No tasks selected to sync. Choose at least one course.', 'error');
+            btn.disabled = false;
+            return;
+        }
+
+        chrome.runtime.sendMessage({ action: 'sync', assignments: tasks, courses }, response => {
+            if (chrome.runtime.lastError || !response) {
+                const detail = chrome.runtime.lastError?.message || 'No sync response';
+                showStatus(`Sync failed: ${detail}`, 'error');
+                btn.disabled = false;
+                return;
+            }
             if (response.success) {
                 showStatus(response.message || `Synced ${response.count} tasks!`, 'success');
             } else {

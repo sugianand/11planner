@@ -5,6 +5,7 @@ import Image from "next/image";
 import FocusDashboardPanel from "@/components/FocusDashboardPanel";
 import Footer from "@/components/Footer";
 import { useTimer, defaultTimerDurations } from "@/contexts/TimerContext";
+import { usePlanner } from "@/contexts/PlannerContext";
 
 type AtmosphereCategory = "All" | "Anime" | "Nature" | "Cafe" | "City" | "Abstract";
 
@@ -310,7 +311,7 @@ const atmosphereCategories: AtmosphereCategory[] = [
 
 const backgroundCategories: FocusBackground["category"][] = atmosphereCategories;
 const FALLBACK_BACKGROUND_IMAGE = "/images/background.png";
-const DASHBOARD_PREFS_KEY = "focus-dashboard-preferences-v1";
+const DASHBOARD_PREFS_KEY_PREFIX = "focus-dashboard-preferences-v1";
 
 type DashboardPrefs = {
   backgroundId?: string;
@@ -318,13 +319,15 @@ type DashboardPrefs = {
   volume?: number;
 };
 
-const getStoredDashboardPrefs = (): DashboardPrefs | null => {
+const getDashboardPrefsKey = (userId: string): string => `${DASHBOARD_PREFS_KEY_PREFIX}:${userId}`;
+
+const getStoredDashboardPrefs = (prefsKey: string): DashboardPrefs | null => {
   if (typeof window === "undefined") {
     return null;
   }
 
   try {
-    const raw = window.localStorage.getItem(DASHBOARD_PREFS_KEY);
+    const raw = window.localStorage.getItem(prefsKey);
     if (!raw) {
       return null;
     }
@@ -690,6 +693,8 @@ const createNoiseBuffer = (
 };
 
 export default function Dashboard() {
+  const { userId } = usePlanner();
+  const dashboardPrefsKey = useMemo(() => getDashboardPrefsKey(userId), [userId]);
   const [activeTab, setActiveTab] = useState<"backgrounds" | "sounds">("backgrounds");
   const [backgroundId, setBackgroundId] = useState(() => focusBackgrounds[0]?.id ?? "");
   const [soundId, setSoundId] = useState(() => soundscapes.find((scene) => scene.id === "ambiance")?.id ?? soundscapes[0]?.id ?? "");
@@ -750,7 +755,20 @@ export default function Dashboard() {
   const playbackRequestRef = useRef(0);
 
   useEffect(() => {
-    const storedPrefs = getStoredDashboardPrefs() ?? {};
+    const defaultBackgroundId = focusBackgrounds[0]?.id ?? "";
+    const defaultSoundId = soundscapes.find((scene) => scene.id === "ambiance")?.id ?? soundscapes[0]?.id ?? "";
+
+    // Always reset first so account switches do not leak old user atmosphere choices.
+    setBackgroundId(defaultBackgroundId);
+    setSoundId(defaultSoundId);
+    setVolume(0.6);
+
+    if (userId === "user_demo") {
+      setPrefsLoaded(true);
+      return;
+    }
+
+    const storedPrefs = getStoredDashboardPrefs(dashboardPrefsKey) ?? {};
 
     if (storedPrefs.backgroundId && focusBackgrounds.some((scene) => scene.id === storedPrefs.backgroundId)) {
       setBackgroundId(storedPrefs.backgroundId);
@@ -765,10 +783,10 @@ export default function Dashboard() {
     }
 
     setPrefsLoaded(true);
-  }, []);
+  }, [userId, dashboardPrefsKey]);
 
   useEffect(() => {
-    if (!prefsLoaded || typeof window === "undefined") {
+    if (!prefsLoaded || typeof window === "undefined" || userId === "user_demo") {
       return;
     }
 
@@ -778,8 +796,8 @@ export default function Dashboard() {
       volume,
     };
 
-    window.localStorage.setItem(DASHBOARD_PREFS_KEY, JSON.stringify(payload));
-  }, [backgroundId, soundId, volume, prefsLoaded]);
+    window.localStorage.setItem(dashboardPrefsKey, JSON.stringify(payload));
+  }, [backgroundId, soundId, volume, prefsLoaded, dashboardPrefsKey, userId]);
 
   useEffect(() => {
     const body = document.body;

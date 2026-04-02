@@ -530,6 +530,70 @@ function normalizeTitle(text) {
         .trim();
 }
 
+function stripHtmlToText(html) {
+    if (!html) return '';
+    try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        return (doc.body?.textContent || '').replace(/\s+/g, ' ').trim();
+    } catch (_) {
+        return String(html).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    }
+}
+
+function inferAssignmentTypeFromApi(item) {
+    if (!item) return null;
+    const submissionTypes = Array.isArray(item.submission_types) ? item.submission_types : [];
+    const title = normalizeTitle(item.name || '');
+
+    if (submissionTypes.includes('discussion_topic') || title.includes('discussion')) return 'discussion';
+    if (submissionTypes.includes('online_quiz') || title.includes('quiz')) return 'quiz';
+    if (submissionTypes.includes('on_paper') || title.includes('exam') || title.includes('test')) return 'exam';
+    return 'assignment';
+}
+
+function parseCourseScheduleFromText(text) {
+    if (!text) return null;
+    const normalized = String(text).replace(/\s+/g, ' ').trim();
+    if (!normalized) return null;
+
+    // Examples: "MWF 9:00 AM - 10:15 AM", "Tue/Thu 2:00pm-3:15pm"
+    const meetingRegex = /\b((?:mon|monday|tue|tues|tuesday|wed|wednesday|thu|thur|thurs|thursday|fri|friday|sat|saturday|sun|sunday|mwf|tth|tu\/th|mo\/we|we\/fr)(?:\s*[,/&-]\s*(?:mon|monday|tue|tues|tuesday|wed|wednesday|thu|thur|thurs|thursday|fri|friday|sat|saturday|sun|sunday|mwf|tth|tu\/th|mo\/we|we\/fr))*)\b[^\d]{0,12}(\d{1,2}(?::\d{2})?\s*(?:a|am|p|pm)\s*[-–]\s*\d{1,2}(?::\d{2})?\s*(?:a|am|p|pm))/i;
+    const match = normalized.match(meetingRegex);
+    if (!match) return null;
+
+    const days = match[1].trim();
+    const timeRange = match[2].replace(/\s+/g, ' ').trim();
+    return {
+        days,
+        timeRange,
+        scheduleText: `${days} ${timeRange}`,
+    };
+}
+
+function buildCourseMeetingMap() {
+    const byCode = {};
+
+    // Look for course links and parse schedule-ish text nearby.
+    const courseAnchors = document.querySelectorAll('a[href*="/courses/"]');
+    courseAnchors.forEach(anchor => {
+        const href = anchor.getAttribute('href') || '';
+        const m = href.match(/\/courses\/(\d+)/);
+        if (!m) return;
+        const code = `course_${m[1]}`;
+        if (byCode[code]) return;
+
+        const container = anchor.closest('li, tr, .ic-DashboardCard, .course-list-item, .context_list_context') || anchor.parentElement;
+        const contextText = getVisibleText(container || anchor);
+        const parsed = parseCourseScheduleFromText(contextText);
+        if (parsed) {
+            byCode[code] = parsed;
+        }
+    });
+
+    return byCode;
+}
+
 function sameDateOnly(a, b) {
     if (!a || !b) return false;
     try {
@@ -598,6 +662,79 @@ async function enrichAssignmentUrls(assignments) {
 
         const resolved = await cache.get(key);
         if (resolved) item.url = resolved;
+    }
+
+    return assignments;
+}
+
+async function fetchAssignmentDetailsFromCanvasApi(courseId, title, dueDate) {
+    if (!courseId || !title) return null;
+
+    try {
+        const endpoint = `${window.location.origin}/api/v1/courses/${courseId}/assignments?search_term=${encodeURIComponent(title)}&per_page=50`;
+        const res = await fetch(endpoint, {
+            method: 'GET',
+            credentials: 'include',
+            headers: { 'Accept': 'application/json' },
+        });
+
+        if (!res.ok) return null;
+        const list = await res.json();
+        if (!Array.isArray(list) || list.length === 0) return null;
+
+        const target = normalizeTitle(title);
+        let best = list.find(a => normalizeTitle(a?.name) === target && sameDateOnly(a?.due_at, dueDate));
+        if (!best) best = list.find(a => normalizeTitle(a?.name) === target);
+        if (!best) best = list.find(a => normalizeTitle(a?.name).includes(target) || target.includes(normalizeTitle(a?.name)));
+        if (!best) return null;
+
+        const parsedDue = best.due_at ? new Date(best.due_at) : null;
+        const dueDateIso = parsedDue && !isNaN(parsedDue.getTime()) ? toLocalIsoString(parsedDue) : null;
+
+        return {
+            url: best.html_url || (best.id ? `${window.location.origin}/courses/${courseId}/assignments/${best.id}` : null),
+            description: stripHtmlToText(best.description || ''),
+            points: Number.isFinite(best.points_possible) ? best.points_possible : null,
+            type: inferAssignmentTypeFromApi(best),
+            dueDate: dueDateIso,
+        };
+    } catch (_) {
+        return null;
+    }
+}
+
+async function enrichAssignmentDetails(assignments) {
+    const cache = new Map();
+
+    for (const item of assignments) {
+        const ctx = item.contextCode || '';
+        const m = ctx.match(/course_(\d+)/i);
+        const courseId = m ? m[1] : null;
+        if (!courseId) continue;
+
+        const key = `${courseId}::${normalizeTitle(item.title)}::${item.dueDate || ''}`;
+        if (!cache.has(key)) {
+            cache.set(key, fetchAssignmentDetailsFromCanvasApi(courseId, item.title, item.dueDate));
+        }
+
+        const details = await cache.get(key);
+        if (!details) continue;
+
+        if ((!item.url || isLikelyCalendarUrl(item.url)) && details.url) {
+            item.url = details.url;
+        }
+        if ((!item.description || !item.description.trim()) && details.description) {
+            item.description = details.description;
+        }
+        if (!Number.isFinite(item.points) && Number.isFinite(details.points)) {
+            item.points = details.points;
+        }
+        if (!item.type && details.type) {
+            item.type = details.type;
+        }
+        if (!item.dueDate && details.dueDate) {
+            item.dueDate = details.dueDate;
+        }
     }
 
     return assignments;
@@ -915,6 +1052,7 @@ async function extractAssignments() {
     });
 
     await enrichAssignmentUrls(deduped);
+    await enrichAssignmentDetails(deduped);
 
     const enriched = deduped.map(a => {
         const estimatedHours = estimateHours(a);
@@ -931,12 +1069,18 @@ async function extractAssignments() {
 
 function extractCourses() {
     const courseMap = buildCourseMap();
+    const meetingMap = buildCourseMeetingMap();
     return Object.entries(courseMap).map(([contextCode, name]) => {
         const idMatch = String(contextCode).match(/^course_(\d+)$/);
+        const meeting = meetingMap[contextCode] || null;
         return {
             id: idMatch ? idMatch[1] : contextCode,
             code: contextCode,
+            contextCode,
             name,
+            days: meeting?.days || null,
+            timeRange: meeting?.timeRange || null,
+            scheduleText: meeting?.scheduleText || null,
         };
     });
 }

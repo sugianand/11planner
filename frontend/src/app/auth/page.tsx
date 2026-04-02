@@ -6,7 +6,7 @@ import Footer from "@/components/Footer";
 import Image from "next/image";
 
 type Mode = "login" | "register";
-type OAuthProvider = "google" | "github" | "discord";
+type OAuthProvider = "google";
 
 type FormState = {
   firstname: string;
@@ -28,26 +28,10 @@ const initialForm: FormState = {
   confirmPassword: "",
 };
 
-function OAuthIcon({ provider }: { provider: OAuthProvider }) {
-  if (provider === "google") {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true" className="oauth-logo google-logo">
-        <path d="M12 11v3.5h5.9c-.25 1.5-1.8 4.4-5.9 4.4-3.55 0-6.45-2.95-6.45-6.6s2.9-6.6 6.45-6.6c2.03 0 3.4.86 4.18 1.6l2.85-2.75C17.2 2.85 14.87 2 12 2 6.95 2 2.86 6.18 2.86 11.3S6.95 20.6 12 20.6c6.93 0 9.14-4.86 9.14-7.35 0-.5-.05-.87-.12-1.25H12z" />
-      </svg>
-    );
-  }
-
-  if (provider === "github") {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true" className="oauth-logo">
-        <path fill="currentColor" d="M12 2a10 10 0 0 0-3.16 19.49c.5.1.68-.22.68-.48v-1.69c-2.78.61-3.37-1.36-3.37-1.36-.46-1.19-1.11-1.5-1.11-1.5-.91-.63.07-.62.07-.62 1.01.07 1.54 1.05 1.54 1.05.9 1.57 2.37 1.12 2.95.86.1-.66.35-1.12.64-1.37-2.22-.26-4.56-1.13-4.56-5.03 0-1.11.39-2.01 1.03-2.72-.1-.26-.45-1.31.1-2.74 0 0 .84-.27 2.75 1.04A9.4 9.4 0 0 1 12 6.84c.85 0 1.7.12 2.5.35 1.9-1.31 2.74-1.04 2.74-1.04.56 1.43.21 2.48.1 2.74.65.71 1.03 1.62 1.03 2.72 0 3.91-2.35 4.77-4.59 5.02.36.32.69.93.69 1.88v2.78c0 .27.18.59.69.48A10 10 0 0 0 12 2Z" />
-      </svg>
-    );
-  }
-
+function OAuthIcon() {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="oauth-logo">
-      <path fill="currentColor" d="M20.32 4.37A17.28 17.28 0 0 0 16.2 3a12.33 12.33 0 0 0-.53 1.1c-2.45-.37-4.9-.37-7.31 0-.18-.37-.36-.74-.54-1.1a17.7 17.7 0 0 0-4.14 1.39C1.05 8.33.4 12.16.74 15.94a17.9 17.9 0 0 0 5.08 2.56c.42-.58.8-1.19 1.13-1.82-.6-.23-1.18-.5-1.73-.82.14-.1.27-.2.4-.31 3.33 1.55 6.93 1.55 10.22 0 .13.1.26.21.4.31-.55.32-1.13.59-1.73.82.34.63.72 1.24 1.13 1.82a17.8 17.8 0 0 0 5.1-2.56c.39-4.37-.67-8.16-2.42-11.57ZM8.02 13.6c-1 0-1.83-.95-1.83-2.1s.81-2.1 1.83-2.1c1.03 0 1.85.95 1.83 2.1 0 1.16-.8 2.1-1.83 2.1Zm7.96 0c-1 0-1.83-.95-1.83-2.1s.81-2.1 1.83-2.1c1.03 0 1.85.95 1.83 2.1 0 1.16-.8 2.1-1.83 2.1Z" />
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="oauth-logo google-logo">
+      <path d="M12 11v3.5h5.9c-.25 1.5-1.8 4.4-5.9 4.4-3.55 0-6.45-2.95-6.45-6.6s2.9-6.6 6.45-6.6c2.03 0 3.4.86 4.18 1.6l2.85-2.75C17.2 2.85 14.87 2 12 2 6.95 2 2.86 6.18 2.86 11.3S6.95 20.6 12 20.6c6.93 0 9.14-4.86 9.14-7.35 0-.5-.05-.87-.12-1.25H12z" />
     </svg>
   );
 }
@@ -322,28 +306,19 @@ export default function AuthPage() {
     }
   }
 
-  const providerLabel = (provider: OAuthProvider) => {
-    if (provider === "google") return "Google";
-    if (provider === "github") return "GitHub";
-    return "Discord";
-  };
-
   const oauthButtons = (context: "login" | "register") => (
     <>
       <div className="oauth-divider"><span>{context === "login" ? "or" : "or continue with"}</span></div>
       <div className="oauth-grid">
-        {(["google", "github", "discord"] as OAuthProvider[]).map((provider) => (
-          <button
-            key={provider}
-            type="button"
-            className="oauth-btn"
-            onClick={() => signInWithProvider(provider)}
-            disabled={isSubmitting || !!oauthLoadingProvider}
-          >
-            <OAuthIcon provider={provider} />
-            {oauthLoadingProvider === provider ? "Connecting..." : `${context === "login" ? "Log in with" : "Continue with"} ${providerLabel(provider)}`}
-          </button>
-        ))}
+        <button
+          type="button"
+          className="oauth-btn"
+          onClick={() => signInWithProvider("google")}
+          disabled={isSubmitting || !!oauthLoadingProvider}
+        >
+          <OAuthIcon />
+          {oauthLoadingProvider === "google" ? "Connecting..." : `${context === "login" ? "Log in with" : "Continue with"} Google`}
+        </button>
       </div>
     </>
   );
@@ -541,7 +516,7 @@ export default function AuthPage() {
                   </button>
 
                   <button type="button" className="secondary-btn" onClick={() => setShowRegisterEmailForm(false)}>
-                    Back to social options
+                    Back
                   </button>
                 </>
               )}
