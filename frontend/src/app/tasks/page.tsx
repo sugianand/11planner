@@ -7,6 +7,7 @@ import Footer from "@/components/Footer";
 import AppDialog from "@/components/AppDialog";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const DESCRIPTION_PREVIEW_LIMIT = 160;
 
 type TaskCategory = "assignment" | "exam" | "project";
 
@@ -71,6 +72,7 @@ export default function TasksPage() {
   const [pageSize, setPageSize] = useState<10 | 25 | 50>(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [estimatingTaskId, setEstimatingTaskId] = useState<string | null>(null);
+  const [expandedDescriptionTaskIds, setExpandedDescriptionTaskIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadCourses();
@@ -147,7 +149,7 @@ export default function TasksPage() {
       const response = await fetch(`${API_BASE_URL}/api/tasks/${task.id}/estimate-time`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: userId }),
+        body: JSON.stringify({ user_id: userId, apply_estimate: false }),
       });
 
       if (!response.ok) {
@@ -156,11 +158,24 @@ export default function TasksPage() {
       }
 
       const data = await response.json();
-      await loadTasks();
+      const aiEstimatedHours = Number(data?.estimated_hours);
+      if (!Number.isFinite(aiEstimatedHours) || aiEstimatedHours <= 0) {
+        throw new Error("AI returned an invalid estimate. Please try again.");
+      }
       setDialog({
         isOpen: true,
-        title: "Estimated time updated",
-        message: `AI estimate: ${data.estimated_hours} hours`,
+        title: "AI estimated time",
+        message: `AI estimate: ${aiEstimatedHours} hours`,
+        confirmText: "Update Estimated Time",
+        cancelText: "Keep Current",
+        onConfirm: async () => {
+          await updateTask(task.id, { estimated_hours: aiEstimatedHours });
+          setDialog({
+            isOpen: true,
+            title: "Estimated time updated",
+            message: `Estimated time is now ${aiEstimatedHours} hours.`,
+          });
+        },
       });
     } catch (err) {
       setDialog({
@@ -191,6 +206,18 @@ export default function TasksPage() {
   const getPriorityLabel = (priority: number) => {
     const labels: { [key: number]: string } = { 5: "Critical", 4: "High", 3: "Medium", 2: "Low", 1: "Very Low" };
     return labels[priority] || "Unknown";
+  };
+
+  const toggleDescriptionExpanded = (taskId: string) => {
+    setExpandedDescriptionTaskIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(taskId)) {
+        next.delete(taskId);
+      } else {
+        next.add(taskId);
+      }
+      return next;
+    });
   };
 
   const now = new Date();
@@ -576,7 +603,23 @@ export default function TasksPage() {
                     </div>
 
                     {task.description && (
-                      <p className="text-slate-700 dark:text-slate-300 text-sm mb-4">{task.description}</p>
+                      <div className="mb-4">
+                        <p className="text-slate-700 dark:text-slate-300 text-sm">
+                          {task.description.length > DESCRIPTION_PREVIEW_LIMIT &&
+                          !expandedDescriptionTaskIds.has(task.id)
+                            ? `${task.description.slice(0, DESCRIPTION_PREVIEW_LIMIT).trimEnd()}...`
+                            : task.description}
+                        </p>
+                        {task.description.length > DESCRIPTION_PREVIEW_LIMIT ? (
+                          <button
+                            type="button"
+                            onClick={() => toggleDescriptionExpanded(task.id)}
+                            className="mt-1 text-xs font-semibold text-[#306844] hover:text-[#255236] dark:text-emerald-300 dark:hover:text-emerald-200"
+                          >
+                            {expandedDescriptionTaskIds.has(task.id) ? "Show less" : "Show more"}
+                          </button>
+                        ) : null}
+                      </div>
                     )}
 
                     <div className="flex flex-wrap gap-6 text-sm text-slate-600 dark:text-slate-300 mb-4">

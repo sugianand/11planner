@@ -25,6 +25,7 @@ router = APIRouter(prefix="/api", tags=["tasks"])
 
 class TaskEstimateRequest(BaseModel):
     user_id: str
+    apply_estimate: bool = False
 
 
 class ScheduleGenerateRequest(BaseModel):
@@ -374,21 +375,24 @@ async def estimate_task_time(task_id: str, request: TaskEstimateRequest):
                 "estimated_hours": float(row.get("estimated_hours") or 0),
             }
         )
+        if estimated_hours is None:
+            estimated_hours = float(row.get("estimated_hours") or 1)
 
-        update_result = (
-            supabase.table("tasks")
-            .update({"estimated_hours": estimated_hours})
-            .eq("id", task_id)
-            .eq("user_id", request.user_id)
-            .execute()
-        )
-        if getattr(update_result, "error", None):
-            raise HTTPException(status_code=500, detail="Failed to save estimated time")
+        if request.apply_estimate:
+            update_result = (
+                supabase.table("tasks")
+                .update({"estimated_hours": estimated_hours})
+                .eq("id", task_id)
+                .eq("user_id", request.user_id)
+                .execute()
+            )
+            if getattr(update_result, "error", None):
+                raise HTTPException(status_code=500, detail="Failed to save estimated time")
 
         return {
             "task id": task_id,
             "estimated_hours": estimated_hours,
-            "message": "AI estimated time updated"
+            "message": "AI estimated time updated" if request.apply_estimate else "AI estimated time preview"
         }
     except HTTPException:
         raise
