@@ -183,12 +183,13 @@ export const DayView: React.FC<DayViewProps> = ({ dayData, events, onEventMove, 
               </div>
               <div
                 className={`flex-1 py-2 px-4 relative min-h-10 transition-colors ${
-                  isActive ? 'bg-emerald-50/80 dark:bg-emerald-900/20' : 'bg-white/80 dark:bg-slate-800/70'
+                  isActive ? '' : 'bg-white/80 dark:bg-slate-800/70'
                 }`}
                 onDragOver={(event) => handleDragOver(event, slotKey, slot.hour, slot.minute)}
                 onDragLeave={() => handleDragLeave(slotKey)}
                 onDrop={(event) => handleDrop(event, slot.hour, slot.minute)}
                 style={{
+                  backgroundColor: isActive ? 'var(--theme-accent-soft)' : undefined,
                   backgroundImage: `repeating-linear-gradient(
                     to bottom,
                     transparent,
@@ -200,7 +201,13 @@ export const DayView: React.FC<DayViewProps> = ({ dayData, events, onEventMove, 
                 }}
               >
                 {isActive && (
-                  <div className="absolute right-2 top-1 text-[10px] font-semibold text-emerald-700 bg-emerald-100 rounded-full px-1.5 py-0.5 dark:bg-emerald-900/30 dark:text-emerald-300">
+                  <div
+                    className="absolute right-2 top-1 text-[10px] font-semibold rounded-full px-1.5 py-0.5"
+                    style={{
+                      color: 'var(--theme-accent-strong)',
+                      backgroundColor: 'var(--theme-accent-soft)',
+                    }}
+                  >
                     {activeDropLabel ?? new Date(0, 0, 0, slot.hour, slot.minute).toLocaleTimeString('en-US', {
                       hour: 'numeric',
                       minute: '2-digit',

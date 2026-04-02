@@ -163,16 +163,28 @@ export const MonthView: React.FC<MonthViewProps> = ({ daysInMonth, events, onEve
                 className={`min-h-16 md:min-h-20 p-2 transition-colors ${
                   day.isCurrentMonth
                     ? day.isToday
-                      ? 'bg-emerald-50/85 dark:bg-emerald-900/20'
+                      ? ''
                       : 'bg-white/85 dark:bg-slate-800/75'
                     : 'bg-slate-50/60 dark:bg-slate-800/60'
-                } ${isActive ? 'ring-2 ring-emerald-400 dark:ring-emerald-500' : ''}`}
+                }`}
                 onDragOver={(event) => handleDragOver(event, dayKey)}
                 onDragLeave={() => handleDragLeave(dayKey)}
                 onDrop={(event) => handleDrop(event, day)}
+                style={{
+                  backgroundColor: day.isCurrentMonth && day.isToday ? 'var(--theme-accent-soft)' : undefined,
+                  ...(isActive
+                    ? { boxShadow: 'inset 0 0 0 2px var(--theme-accent-strong)' }
+                    : {}),
+                }}
               >
                 {isActive && draggingEventId && (
-                  <div className="mb-1 text-[10px] font-semibold text-emerald-700 bg-emerald-100 rounded-full px-1.5 py-0.5 inline-block dark:bg-emerald-900/30 dark:text-emerald-300">
+                  <div
+                    className="mb-1 text-[10px] font-semibold rounded-full px-1.5 py-0.5 inline-block"
+                    style={{
+                      color: 'var(--theme-accent-strong)',
+                      backgroundColor: 'var(--theme-accent-soft)',
+                    }}
+                  >
                     {day.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {getDragTimeLabel()}
                   </div>
                 )}
@@ -180,10 +192,11 @@ export const MonthView: React.FC<MonthViewProps> = ({ daysInMonth, events, onEve
                   className={`text-sm font-semibold mb-1 ${
                     day.isCurrentMonth
                       ? day.isToday
-                        ? 'bg-emerald-600 text-white rounded-full w-6 h-6 flex items-center justify-center'
+                        ? 'text-white rounded-full w-6 h-6 flex items-center justify-center'
                         : 'text-slate-900 dark:text-white'
                       : 'text-slate-400 dark:text-slate-500'
                   }`}
+                  style={day.isCurrentMonth && day.isToday ? { backgroundColor: 'var(--theme-accent-strong)' } : undefined}
                 >
                   {day.dayNumber}
                 </p>

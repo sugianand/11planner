@@ -225,7 +225,13 @@ export default function SchedulePage() {
 
       <div className="max-w-7xl w-full mx-auto p-6 md:p-10 flex-1">
         <div className="bg-white/65 dark:bg-slate-800/65 backdrop-blur-xl rounded-3xl p-6 md:p-8 shadow-sm border border-white/40 dark:border-slate-700/40">
-          <div className="mb-8 rounded-2xl border border-white/50 dark:border-slate-700/50 bg-gradient-to-r from-white/80 via-white/70 to-emerald-50/70 dark:from-slate-900/80 dark:via-slate-900/70 dark:to-emerald-900/20 p-5 md:p-6">
+          <div
+            className="mb-8 rounded-2xl border border-white/50 dark:border-slate-700/50 bg-gradient-to-r from-white/80 via-white/70 dark:from-slate-900/80 dark:via-slate-900/70 p-5 md:p-6"
+            style={{
+              backgroundImage:
+                "linear-gradient(to right, rgba(255,255,255,0.8), rgba(255,255,255,0.7), var(--theme-accent-soft))",
+            }}
+          >
             <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
               <div>
                 <h1 className="text-4xl font-bold text-slate-900 dark:text-white">
@@ -240,14 +246,18 @@ export default function SchedulePage() {
                 <button
                   onClick={generateSchedule}
                   disabled={loading || (pendingTasks.length === 0 && scheduleBlocks.length === 0)}
-                  className="bg-[#306844] hover:bg-[#255236] text-white font-bold py-2.5 px-6 rounded-xl transition shadow-lg shadow-green-900/10 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="text-white font-bold py-2.5 px-6 rounded-xl transition shadow-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    backgroundColor: "var(--theme-accent-strong)",
+                    boxShadow: "0 10px 24px -16px color-mix(in srgb, var(--theme-accent-strong) 70%, transparent)",
+                  }}
                   title={pendingTasks.length === 0 && scheduleBlocks.length === 0 ? "Create at least one task to generate a schedule" : ""}
                 >
                   <span className="material-symbols-outlined text-sm">auto_awesome</span>
                   {loading ? "Generating..." : "Generate Schedule"}
                 </button>
                 {successMessage && (
-                  <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                  <p className="text-sm font-medium" style={{ color: "var(--theme-accent-strong)" }}>
                     {successMessage}
                   </p>
                 )}

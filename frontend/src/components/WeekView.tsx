@@ -189,10 +189,13 @@ export const WeekView: React.FC<WeekViewProps> = ({ weekDays, events, onEventMov
               <div key={day.date.toString()} className="flex-1 border-r border-slate-200/70 dark:border-slate-700/70 last:border-r-0">
                 {/* Day header */}
                 <div className="bg-white/85 dark:bg-slate-800/80 border-b-2 border-slate-200/70 dark:border-slate-700/70 p-2 text-center h-20 flex flex-col justify-center">
-                  <p className={`font-semibold ${day.isToday ? 'text-emerald-600 dark:text-emerald-300' : 'text-slate-900 dark:text-white'}`}>
+                  <p className={`font-semibold ${day.isToday ? '' : 'text-slate-900 dark:text-white'}`} style={day.isToday ? { color: 'var(--theme-accent-strong)' } : undefined}>
                     {day.dayOfWeek}
                   </p>
-                  <p className={`text-sm ${day.isToday ? 'bg-emerald-600 text-white rounded-full w-8 h-8 flex items-center justify-center mx-auto' : 'text-slate-600 dark:text-slate-300'}`}>
+                  <p
+                    className={`text-sm ${day.isToday ? 'text-white rounded-full w-8 h-8 flex items-center justify-center mx-auto' : 'text-slate-600 dark:text-slate-300'}`}
+                    style={day.isToday ? { backgroundColor: 'var(--theme-accent-strong)' } : undefined}
+                  >
                     {day.dayNumber}
                   </p>
                 </div>
@@ -220,12 +223,13 @@ export const WeekView: React.FC<WeekViewProps> = ({ weekDays, events, onEventMov
                       <div
                         key={slotKey}
                         className={`h-10 border-b border-slate-200/60 dark:border-slate-700/70 p-1 relative transition-colors ${
-                          isActive ? 'bg-emerald-50/80 dark:bg-emerald-900/20' : 'bg-white/80 dark:bg-slate-800/70'
+                          isActive ? '' : 'bg-white/80 dark:bg-slate-800/70'
                         }`}
                         onDragOver={(event) => handleDragOver(event, slotKey, slot.hour, slot.minute)}
                         onDragLeave={() => handleDragLeave(slotKey)}
                         onDrop={(event) => handleDrop(event, day, slot.hour, slot.minute)}
                         style={{
+                          backgroundColor: isActive ? 'var(--theme-accent-soft)' : undefined,
                           backgroundImage: `repeating-linear-gradient(
                             to bottom,
                             transparent,
@@ -237,7 +241,13 @@ export const WeekView: React.FC<WeekViewProps> = ({ weekDays, events, onEventMov
                         }}
                       >
                         {isActive && (
-                          <div className="absolute right-1 top-1 text-[10px] font-semibold text-emerald-700 bg-emerald-100 rounded-full px-1.5 py-0.5 dark:bg-emerald-900/30 dark:text-emerald-300">
+                          <div
+                            className="absolute right-1 top-1 text-[10px] font-semibold rounded-full px-1.5 py-0.5"
+                            style={{
+                              color: 'var(--theme-accent-strong)',
+                              backgroundColor: 'var(--theme-accent-soft)',
+                            }}
+                          >
                             {activeDropLabel ?? new Date(0, 0, 0, slot.hour, slot.minute).toLocaleTimeString('en-US', {
                               hour: 'numeric',
                               minute: '2-digit',

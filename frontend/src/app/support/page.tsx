@@ -2,8 +2,12 @@
 
 import Link from "next/link";
 import Footer from "@/components/Footer";
+import { usePlanner } from "@/contexts/PlannerContext";
 
 export default function SupportPage() {
+  const { userId } = usePlanner();
+  const isLoggedIn = userId !== "user_demo";
+
   const supportHighlights = [
     {
       icon: "mail",
@@ -13,7 +17,7 @@ export default function SupportPage() {
     {
       icon: "schedule",
       title: "Fast Response",
-      body: "We typically respond within one business day with concrete next steps."
+      body: "We typically respond within a few business days with concrete next steps."
     },
     {
       icon: "checklist",
@@ -68,10 +72,10 @@ export default function SupportPage() {
           >
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">Contact support</h2>
             <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
-              Email: <span className="font-semibold">support@11planner.com</span>
+              Email: <span className="font-semibold">support@11planner.app</span>
             </p>
             <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
-              Typical response time: within 1 business day.
+              Typical response time: within a few business days.
             </p>
             <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
               For account deletion or privacy-related requests, please include &quot;Privacy Request&quot; in your subject line.
@@ -109,16 +113,18 @@ export default function SupportPage() {
             </p>
           </section>
 
-          <div className="pt-4 border-t border-slate-200/70 dark:border-slate-700/70">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2 font-semibold"
-              style={{ color: "var(--theme-accent-strong)" }}
-            >
-              <span className="material-symbols-outlined text-base">arrow_back</span>
-              Back to home
-            </Link>
-          </div>
+          {isLoggedIn && (
+            <div className="pt-4 border-t border-slate-200/70 dark:border-slate-700/70">
+              <Link
+                href="/"
+                className="inline-flex items-center gap-2 font-semibold"
+                style={{ color: "var(--theme-accent-strong)" }}
+              >
+                <span className="material-symbols-outlined text-base">arrow_back</span>
+                Back to home
+              </Link>
+            </div>
+          )}
         </div>
       </div>
       <Footer />

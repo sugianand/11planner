@@ -2,8 +2,12 @@
 
 import Link from "next/link";
 import Footer from "@/components/Footer";
+import { usePlanner } from "@/contexts/PlannerContext";
 
 export default function PrivacyPage() {
+  const { userId } = usePlanner();
+  const isLoggedIn = userId !== "user_demo";
+
   const highlights = [
     {
       icon: "verified_user",
@@ -69,7 +73,7 @@ export default function PrivacyPage() {
             <ul className="space-y-3 text-slate-700 dark:text-slate-300">
               <li className="rounded-xl bg-white/55 dark:bg-slate-800/45 border border-white/60 dark:border-slate-700/45 p-4">
                 <span className="font-semibold text-slate-900 dark:text-white">Account and profile data:</span> name,
-                email, university, and major (if you choose to provide it).
+                email, and optional profile preferences you choose to provide.
               </li>
               <li className="rounded-xl bg-white/55 dark:bg-slate-800/45 border border-white/60 dark:border-slate-700/45 p-4">
                 <span className="font-semibold text-slate-900 dark:text-white">Planning data:</span> courses,
@@ -143,7 +147,7 @@ export default function PrivacyPage() {
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">Questions or requests</h2>
             <p className="text-slate-700 dark:text-slate-300">
               For privacy questions, access requests, correction requests, or account deletion,
-              contact: support@11planner.com
+              contact: support@11planner.app
             </p>
             <p className="text-slate-700 dark:text-slate-300">
               You can also review our terms at{" "}
@@ -158,16 +162,18 @@ export default function PrivacyPage() {
             </p>
           </section>
 
-          <div className="pt-4 border-t border-slate-200/70 dark:border-slate-700/70">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2 font-semibold"
-              style={{ color: "var(--theme-accent-strong)" }}
-            >
-              <span className="material-symbols-outlined text-base">arrow_back</span>
-              Back to home
-            </Link>
-          </div>
+          {isLoggedIn && (
+            <div className="pt-4 border-t border-slate-200/70 dark:border-slate-700/70">
+              <Link
+                href="/"
+                className="inline-flex items-center gap-2 font-semibold"
+                style={{ color: "var(--theme-accent-strong)" }}
+              >
+                <span className="material-symbols-outlined text-base">arrow_back</span>
+                Back to home
+              </Link>
+            </div>
+          )}
         </div>
       </div>
       <Footer />

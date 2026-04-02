@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabaseClient";
 
 type Theme = "light" | "dark" | "auto";
 type ColorTheme = "emerald" | "ocean" | "rose" | "slate" | "amber" | "violet";
+type SettingsPanel = "schedule" | "personalize" | "reminders" | "account" | "support";
 
 const colorThemeSwatches: Record<ColorTheme, string> = {
   emerald: "linear-gradient(135deg, #10b981, #059669)",
@@ -57,9 +58,7 @@ export default function SettingsPage() {
   const [weeklyReport, setWeeklyReport] = useState(() => readStoredBoolean("weeklyReport", true));
   const [dailyLimit, setDailyLimit] = useState(() => readStoredNumber("dailyLimit", 4));
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
-  const [activePanel, setActivePanel] = useState<
-    "schedule" | "personalize" | "reminders" | "account" | "support"
-  >("personalize");
+  const [activePanel, setActivePanel] = useState<SettingsPanel>("personalize");
 
   const {
     notificationsEnabled,
@@ -71,6 +70,12 @@ export default function SettingsPage() {
   } = useNotification();
 
   useEffect(() => {
+    const panelParam = new URLSearchParams(window.location.search).get("panel");
+    const validPanels: SettingsPanel[] = ["schedule", "personalize", "reminders", "account", "support"];
+    if (panelParam && validPanels.includes(panelParam as SettingsPanel)) {
+      setActivePanel(panelParam as SettingsPanel);
+    }
+
     setIsMounted(true);
     supabase.auth.getUser().then(async ({ data }) => {
       const authUser = data?.user ?? null;
