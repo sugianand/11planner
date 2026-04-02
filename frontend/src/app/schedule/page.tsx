@@ -226,10 +226,10 @@ export default function SchedulePage() {
       <div className="max-w-7xl w-full mx-auto p-6 md:p-10 flex-1">
         <div className="bg-white/65 dark:bg-slate-800/65 backdrop-blur-xl rounded-3xl p-6 md:p-8 shadow-sm border border-white/40 dark:border-slate-700/40">
           <div
-            className="mb-8 rounded-2xl border border-white/50 dark:border-slate-700/50 bg-gradient-to-r from-white/80 via-white/70 dark:from-slate-900/80 dark:via-slate-900/70 p-5 md:p-6"
+            className="mb-8 rounded-2xl border border-white/50 dark:border-slate-700/50 p-5 md:p-6"
             style={{
               backgroundImage:
-                "linear-gradient(to right, rgba(255,255,255,0.8), rgba(255,255,255,0.7), var(--theme-accent-soft))",
+                "linear-gradient(to right, rgba(255,255,255,0.82), rgba(255,255,255,0.72), color-mix(in srgb, var(--theme-accent-soft) 70%, transparent))",
             }}
           >
             <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
@@ -249,7 +249,7 @@ export default function SchedulePage() {
                   className="text-white font-bold py-2.5 px-6 rounded-xl transition shadow-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
                     backgroundColor: "var(--theme-accent-strong)",
-                    boxShadow: "0 10px 24px -16px color-mix(in srgb, var(--theme-accent-strong) 70%, transparent)",
+                    boxShadow: "0 10px 30px -18px var(--theme-accent-strong)",
                   }}
                   title={pendingTasks.length === 0 && scheduleBlocks.length === 0 ? "Create at least one task to generate a schedule" : ""}
                 >
@@ -290,17 +290,15 @@ export default function SchedulePage() {
             )}
           </div>
 
-          <div className="rounded-2xl border border-slate-200/70 dark:border-slate-700/50 bg-white/70 dark:bg-slate-900/60 p-4 md:p-5 backdrop-blur-xl">
-            <div className="h-[895px]">
-              <ScheduleView
-                events={scheduleEvents}
-                onEventMove={handleEventMove}
-                colorBy={colorBy}
-                onColorByChange={setColorBy}
-                errorMessage={error}
-                onDismissError={() => setError(null)}
-              />
-            </div>
+          <div>
+            <ScheduleView
+              events={scheduleEvents}
+              onEventMove={handleEventMove}
+              colorBy={colorBy}
+              onColorByChange={setColorBy}
+              errorMessage={error}
+              onDismissError={() => setError(null)}
+            />
           </div>
         </div>
       </div>

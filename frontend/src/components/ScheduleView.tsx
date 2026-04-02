@@ -34,6 +34,16 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
     title: '',
     message: '',
   });
+  const accentSoftStyle = {
+    backgroundColor: 'var(--theme-accent-soft)',
+    borderColor: 'var(--theme-accent)',
+    color: 'var(--theme-accent-strong)',
+  } as const;
+  const accentStrongStyle = {
+    backgroundColor: 'var(--theme-accent-strong)',
+    borderColor: 'var(--theme-accent-strong)',
+    color: '#ffffff',
+  } as const;
 
   useEffect(() => {
     setEventList(events);
@@ -312,14 +322,16 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
     [onEventMove]
   );
 
+  const isMonthView = viewMode === 'monthly';
+
   return (
-    <div className="flex flex-col h-full rounded-3xl overflow-hidden border border-white/50 dark:border-slate-700/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-[0_22px_65px_-38px_rgba(15,23,42,0.55)]">
+    <div className={`flex flex-col ${isMonthView ? 'h-auto' : 'h-[895px]'} rounded-t-3xl rounded-b-none overflow-hidden border border-white/50 dark:border-slate-700/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-[0_22px_65px_-38px_rgba(15,23,42,0.55)]`}>
       {/* Header */}
       <div
-        className="border-b border-white/60 dark:border-slate-700/70 bg-gradient-to-r from-white/80 via-white/70 dark:from-slate-900/90 dark:via-slate-900/80 p-5"
+        className="border-b border-white/60 dark:border-slate-700/70 p-5"
         style={{
           backgroundImage:
-            "linear-gradient(to right, rgba(255,255,255,0.8), rgba(255,255,255,0.7), var(--theme-accent-soft))",
+            'linear-gradient(to right, color-mix(in srgb, var(--theme-accent-soft) 55%, white), rgba(255,255,255,0.72), color-mix(in srgb, var(--theme-accent-soft) 65%, transparent))',
         }}
       >
         <div className="flex items-center justify-between mb-5">
@@ -342,12 +354,8 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
             </button>
             <button
               onClick={handleExportICS}
-              className="px-4 py-2 text-sm font-semibold rounded-xl transition-colors flex items-center gap-2"
-              style={{
-                color: "var(--theme-accent-strong)",
-                backgroundColor: "var(--theme-accent-soft)",
-                border: "1px solid color-mix(in srgb, var(--theme-accent) 35%, transparent)",
-              }}
+              className="px-4 py-2 text-sm font-semibold border rounded-xl transition-colors flex items-center gap-2"
+              style={accentSoftStyle}
               title="Download backup file"
             >
               <span className="material-symbols-outlined text-sm">download</span>
@@ -369,10 +377,10 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
               onClick={() => handleViewModeChange('daily')}
               className={`px-4 py-2 rounded-xl font-semibold text-sm transition-colors ${
                 viewMode === 'daily'
-                  ? 'text-white'
+                  ? ''
                   : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-200 dark:hover:bg-slate-600'
               }`}
-              style={viewMode === 'daily' ? { backgroundColor: 'var(--theme-accent-strong)' } : undefined}
+              style={viewMode === 'daily' ? accentStrongStyle : undefined}
             >
               Day
             </button>
@@ -380,10 +388,10 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
               onClick={() => handleViewModeChange('weekly')}
               className={`px-4 py-2 rounded-xl font-semibold text-sm transition-colors ${
                 viewMode === 'weekly'
-                  ? 'text-white'
+                  ? ''
                   : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-200 dark:hover:bg-slate-600'
               }`}
-              style={viewMode === 'weekly' ? { backgroundColor: 'var(--theme-accent-strong)' } : undefined}
+              style={viewMode === 'weekly' ? accentStrongStyle : undefined}
             >
               Week
             </button>
@@ -391,10 +399,10 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
               onClick={() => handleViewModeChange('monthly')}
               className={`px-4 py-2 rounded-xl font-semibold text-sm transition-colors ${
                 viewMode === 'monthly'
-                  ? 'text-white'
+                  ? ''
                   : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-200 dark:hover:bg-slate-600'
               }`}
-              style={viewMode === 'monthly' ? { backgroundColor: 'var(--theme-accent-strong)' } : undefined}
+              style={viewMode === 'monthly' ? accentStrongStyle : undefined}
             >
               Month
             </button>
@@ -402,10 +410,10 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
               onClick={() => handleViewModeChange('yearly')}
               className={`px-4 py-2 rounded-xl font-semibold text-sm transition-colors ${
                 viewMode === 'yearly'
-                  ? 'text-white'
+                  ? ''
                   : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-200 dark:hover:bg-slate-600'
               }`}
-              style={viewMode === 'yearly' ? { backgroundColor: 'var(--theme-accent-strong)' } : undefined}
+              style={viewMode === 'yearly' ? accentStrongStyle : undefined}
             >
               Year
             </button>
@@ -445,7 +453,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-hidden bg-white/55 dark:bg-slate-900/55">
+      <div className={`${isMonthView ? 'overflow-visible' : 'flex-1 overflow-hidden'} bg-white/55 dark:bg-slate-900/55`}>
         {viewMode === 'daily' && (
           <DayView dayData={dayData} events={displayEvents} onEventMove={handleEventMove} errorMessage={errorMessage} onDismissError={onDismissError} />
         )}
