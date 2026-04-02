@@ -266,6 +266,15 @@ class TestScheduleGeneratorNewFeatures(unittest.TestCase):
         blocks = self.generator.generate_schedule(tasks, self.prefs, start_date=self.start_date)
         self.assertEqual(blocks[0].task_id, "near")
 
+    def test_deadline_outweighs_far_higher_priority(self):
+        """A very near deadline should beat a far deadline even with lower priority"""
+        tasks = [
+            self.create_task("far_high", 2, 5, 14),
+            self.create_task("near_low", 2, 1, 1),
+        ]
+        blocks = self.generator.generate_schedule(tasks, self.prefs, start_date=self.start_date)
+        self.assertEqual(blocks[0].task_id, "near_low")
+
     def test_assignment_plan_early_uses_small_blocks(self):
         """'early' assignment plan should create 1-hour blocks"""
         prefs_early = Preferences(

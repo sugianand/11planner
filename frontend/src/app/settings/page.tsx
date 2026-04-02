@@ -59,6 +59,7 @@ export default function SettingsPage() {
   const [dailyLimit, setDailyLimit] = useState(() => readStoredNumber("dailyLimit", 4));
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [activePanel, setActivePanel] = useState<SettingsPanel>("personalize");
+  const [settingsSearch, setSettingsSearch] = useState("");
 
   const {
     notificationsEnabled,
@@ -354,13 +355,42 @@ export default function SettingsPage() {
     }
   };
 
-  const navItems: Array<{ id: "schedule" | "personalize" | "reminders" | "account" | "support"; label: string; icon: string }> = [
+  const navItems: Array<{ id: SettingsPanel; label: string; icon: string; keywords: string[] }> = [
     { id: "schedule", label: "Schedule Setup", icon: "event" },
     { id: "personalize", label: "Personalize", icon: "palette" },
     { id: "reminders", label: "Reminders", icon: "notifications" },
     { id: "account", label: "Account", icon: "person" },
     { id: "support", label: "Support", icon: "support_agent" },
-  ];
+  ].map((item) => {
+    const keywordMap: Record<SettingsPanel, string[]> = {
+      schedule: ["schedule", "study", "limit", "hours", "daily"],
+      personalize: ["theme", "color", "accent", "appearance", "dark", "light"],
+      reminders: ["reminder", "notification", "email", "weekly", "report", "alerts", "sound"],
+      account: ["account", "privacy", "security", "password", "export", "delete"],
+      support: ["support", "help", "contact", "faq"],
+    };
+
+    return {
+      ...item,
+      keywords: keywordMap[item.id],
+    };
+  });
+
+  const filteredNavItems = useMemo(() => {
+    const query = settingsSearch.trim().toLowerCase();
+    if (!query) return navItems;
+    return navItems.filter((item) => {
+      const haystack = [item.label.toLowerCase(), ...item.keywords].join(" ");
+      return haystack.includes(query);
+    });
+  }, [settingsSearch, navItems]);
+
+  useEffect(() => {
+    if (filteredNavItems.length === 0) return;
+    if (!filteredNavItems.some((item) => item.id === activePanel)) {
+      setActivePanel(filteredNavItems[0].id);
+    }
+  }, [filteredNavItems, activePanel]);
 
   const sectionCardClass =
     "rounded-2xl border border-slate-200/70 dark:border-slate-700/70 bg-white/70 dark:bg-slate-800/55 backdrop-blur-md p-5 md:p-6";
@@ -389,10 +419,16 @@ export default function SettingsPage() {
             <aside className="border-r border-slate-200/70 dark:border-slate-700/70 bg-white/55 dark:bg-slate-900/45 p-4 md:p-5">
               <div className="mb-4 rounded-xl border border-slate-200/80 dark:border-slate-700/70 bg-white/75 dark:bg-slate-800/65 px-3 py-2.5 flex items-center gap-2">
                 <span className="material-symbols-outlined text-base text-slate-500 dark:text-slate-300">search</span>
-                <span className="text-sm text-slate-500 dark:text-slate-300">Search Settings</span>
+                <input
+                  type="text"
+                  value={settingsSearch}
+                  onChange={(e) => setSettingsSearch(e.target.value)}
+                  placeholder="Search settings"
+                  className="w-full bg-transparent text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-500 dark:placeholder:text-slate-400 outline-none"
+                />
               </div>
               <nav className="space-y-1.5">
-                {navItems.map((item) => (
+                {filteredNavItems.map((item) => (
                   <button
                     key={item.id}
                     onClick={() => setActivePanel(item.id)}
@@ -407,6 +443,11 @@ export default function SettingsPage() {
                     {item.label}
                   </button>
                 ))}
+                {filteredNavItems.length === 0 && (
+                  <div className="rounded-xl border border-dashed border-slate-300 dark:border-slate-600 px-3 py-3 text-xs text-slate-500 dark:text-slate-300">
+                    No matching settings found.
+                  </div>
+                )}
               </nav>
             </aside>
 
@@ -507,6 +548,13 @@ export default function SettingsPage() {
                 <section className={sectionCardClass}>
                   <div className="text-xl font-bold text-slate-900 dark:text-white mb-1">Reminders</div>
                   <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Control reminder channels and timing.</p>
+
+                  <div className="mb-4 rounded-xl border border-slate-200/70 dark:border-slate-700/70 bg-white/70 dark:bg-slate-800/55 p-3">
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">Delivery channels</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-300 mt-1">
+                      Browser + email + weekly summary can be combined for better deadline coverage.
+                    </p>
+                  </div>
 
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">

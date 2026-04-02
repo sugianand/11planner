@@ -190,20 +190,40 @@ class ScheduleGenerator:
         if not pending_tasks:
             return []
 
-        def urgency_score(task: Task):
-            days_until = (task.deadline - start_date).days
-            hours_needed = task.estimated_hours or 1
-            priority = task.priority or 2
+        def urgency_key(task: Task):
+            # Overdue work must surface first. For remaining tasks, closer deadlines
+            # dominate ordering and priority breaks ties inside similar deadlines.
             priority_value = getattr(task, "priority", None)
             if priority_value is None:
                 priority_value = getattr(task, "priority_level", 2) or 2
 
-            if days_until <= 0:
-                return -999
+            try:
+                priority_value = int(priority_value)
+            except (TypeError, ValueError):
+                priority_value = 2
 
-            return (days_until / hours_needed) - (priority_value * 0.3)
+            hours_needed = float(task.estimated_hours or 1)
+            if hours_needed <= 0:
+                hours_needed = 1.0
 
-        sorted_tasks = sorted(pending_tasks, key=urgency_score)
+            minutes_until_deadline = int((task.deadline - start_date).total_seconds() // 60)
+            is_not_overdue = minutes_until_deadline > 0
+
+            # For non-overdue tasks, tasks with larger work-to-time pressure should
+            # move earlier when deadlines are close.
+            available_hours = max(minutes_until_deadline / 60.0, 1.0)
+            pressure_score = hours_needed / available_hours
+
+            return (
+                is_not_overdue,
+                minutes_until_deadline,
+                -priority_value,
+                -pressure_score,
+                -hours_needed,
+                str(task.id),
+            )
+
+        sorted_tasks = sorted(pending_tasks, key=urgency_key)
 
         current_dt = start_date
         if not self.is_workday(current_dt, prefs):

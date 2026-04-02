@@ -274,12 +274,6 @@ export default function ProfilePage() {
     };
   }, [tasks]);
 
-  const quickActions = [
-    { href: "/tasks", label: "Add Task" },
-    { href: "/schedule", label: "Open Schedule" },
-    { href: "/dashboard", label: "Focus Dashboard" },
-  ];
-
   return (
     <div className="relative min-h-screen overflow-hidden flex flex-col">
       <div className="fixed inset-0 bg-focus-light dark:bg-focus-dark bg-cover bg-center -z-30" />
@@ -447,24 +441,12 @@ export default function ProfilePage() {
             className="card-reveal mt-5 rounded-2xl border border-white/55 bg-white/70 p-5 shadow-sm dark:border-slate-700/55 dark:bg-slate-800/55 sm:p-6"
             style={{ animationDelay: "230ms" }}
           >
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-col gap-4">
               <div>
                 <h3 className="text-lg font-black text-slate-900 dark:text-white">Weekly Snapshot</h3>
                 <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
                   You have completed <span className="font-bold text-slate-900 dark:text-white">{completedTasks}</span> out of <span className="font-bold text-slate-900 dark:text-white">{totalTasks}</span> tasks. Keep pushing and finish strong before Prototype 3.
                 </p>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                {quickActions.map((action) => (
-                  <Link
-                    key={action.href}
-                    href={action.href}
-                    className="inline-flex items-center rounded-xl border border-white/70 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-700 transition-all duration-300 hover:-translate-y-0.5 hover:border-emerald-300 hover:text-emerald-800 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 motion-reduce:transition-none dark:border-slate-600/70 dark:bg-slate-900/45 dark:text-slate-200 dark:hover:border-emerald-500/40 dark:hover:text-emerald-300"
-                  >
-                    {action.label}
-                  </Link>
-                ))}
               </div>
             </div>
 

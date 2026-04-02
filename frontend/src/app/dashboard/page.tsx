@@ -1576,6 +1576,7 @@ export default function Dashboard() {
               setVideoError(false);
               setIsBackgroundVideoReady(false);
             }}
+            onLoadedData={() => setIsBackgroundVideoReady(true)}
             onCanPlay={() => setIsBackgroundVideoReady(true)}
             onError={() => {
               setVideoError(true);
@@ -1627,7 +1628,7 @@ export default function Dashboard() {
       )}
 
       <div
-        className={`fixed bottom-8 right-8 z-50 flex items-center gap-3 transition-all duration-150 ease-out ${isUiHidden ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0 pointer-events-none"}`}
+        className={`fixed bottom-8 left-8 z-50 flex items-center gap-3 transition-all duration-150 ease-out ${isUiHidden ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0 pointer-events-none"}`}
       >
         <button
           onClick={() => setShowMiniTimer((prev) => !prev)}
@@ -1684,21 +1685,21 @@ export default function Dashboard() {
               <button
                 onClick={() => handleTimerModeChange("pomodoro")}
                 onMouseDown={(e) => e.stopPropagation()}
-                className={`px-2 py-1 text-[10px] font-semibold rounded-full transition ${timerMode === "pomodoro" ? "bg-emerald-600 text-white" : "text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700"}`}
+                className={`px-2 py-1 text-[10px] font-semibold rounded-full transition ${visibleTimerMode === "pomodoro" ? "bg-emerald-600 text-white" : "text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700"}`}
               >
                 Focus
               </button>
               <button
                 onClick={() => handleTimerModeChange("shortBreak")}
                 onMouseDown={(e) => e.stopPropagation()}
-                className={`px-2 py-1 text-[10px] font-semibold rounded-full transition ${timerMode === "shortBreak" ? "bg-emerald-600 text-white" : "text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700"}`}
+                className={`px-2 py-1 text-[10px] font-semibold rounded-full transition ${visibleTimerMode === "shortBreak" ? "bg-emerald-600 text-white" : "text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700"}`}
               >
                 Short
               </button>
               <button
                 onClick={() => handleTimerModeChange("longBreak")}
                 onMouseDown={(e) => e.stopPropagation()}
-                className={`px-2 py-1 text-[10px] font-semibold rounded-full transition ${timerMode === "longBreak" ? "bg-emerald-600 text-white" : "text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700"}`}
+                className={`px-2 py-1 text-[10px] font-semibold rounded-full transition ${visibleTimerMode === "longBreak" ? "bg-emerald-600 text-white" : "text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700"}`}
               >
                 Long
               </button>
