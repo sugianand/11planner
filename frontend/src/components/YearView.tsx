@@ -15,7 +15,7 @@ export const YearView: React.FC<YearViewProps> = ({ year, monthsData, events }) 
   const getEventsForDay = (date: Date) => {
     return events.filter((e) => {
       const eventDate = new Date(e.start);
-      return eventDate.toDateString() === date.toDateString();
+      return eventDate.toDateString() === date.toDateString() && e.kind !== 'class';
     });
   };
 
