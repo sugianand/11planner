@@ -60,6 +60,7 @@ export default function SettingsPage() {
   const [weeklyReport, setWeeklyReport] = useState(() => readStoredBoolean("weeklyReport", true));
   const [dailyLimit, setDailyLimit] = useState(() => readStoredNumber("dailyLimit", 4));
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [isClearingAccountData, setIsClearingAccountData] = useState(false);
   const [activePanel, setActivePanel] = useState<SettingsPanel>("personalize");
   const [settingsSearch, setSettingsSearch] = useState("");
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
@@ -227,25 +228,96 @@ export default function SettingsPage() {
 
   const handleClearAccountData = () => {
     setActionMessage(null);
-    const confirmed = window.confirm(
-      "Clear local account data and preferences on this device?"
-    );
-    if (!confirmed) return;
+    void (async () => {
+      const confirmed = window.confirm(
+        "Clear your account data? This will remove your courses, assignments, tasks, schedule blocks, and saved planner preferences."
+      );
+      if (!confirmed) return;
 
-    const keysToClear = [
-      "emailUpdates",
-      "weeklyReport",
-      "dailyLimit",
-      "privacyProfileVisible",
-      "privacyAnalyticsEnabled",
-      "privacyPersonalizationEnabled",
-      "privacyShareProgress",
-      "soundEnabled",
-    ];
+      if (!user?.id) {
+        setActionMessage({ type: "error", text: "Please sign in to clear account data." });
+        return;
+      }
 
-    keysToClear.forEach((key) => localStorage.removeItem(key));
-    handleResetDefaults();
-    setActionMessage({ type: "success", text: "Local account data and preferences were cleared on this device." });
+      try {
+        setIsClearingAccountData(true);
+        const keysToClear = [
+          "emailUpdates",
+          "weeklyReport",
+          "dailyLimit",
+          "privacyProfileVisible",
+          "privacyAnalyticsEnabled",
+          "privacyPersonalizationEnabled",
+          "privacyShareProgress",
+          "soundEnabled",
+          "notifications",
+          "reminderLeadHours",
+          "notifiedDeadlines",
+          "colorTheme",
+          "theme",
+        ];
+        keysToClear.forEach((key) => localStorage.removeItem(key));
+
+        const clearScheduleBlocks = await supabase
+          .from("schedule_blocks")
+          .delete()
+          .eq("user_id", user.id);
+        if (clearScheduleBlocks.error) throw clearScheduleBlocks.error;
+
+        const clearTasks = await supabase
+          .from("tasks")
+          .delete()
+          .eq("user_id", user.id);
+        if (clearTasks.error) throw clearTasks.error;
+
+        const clearAssignments = await supabase
+          .from("assignments")
+          .delete()
+          .eq("user_id", user.id);
+        if (clearAssignments.error) throw clearAssignments.error;
+
+        const clearCourses = await supabase
+          .from("courses")
+          .delete()
+          .eq("user_id", user.id);
+        if (clearCourses.error) throw clearCourses.error;
+
+        const clearProfilePreferences = await supabase
+          .from("profiles")
+          .update({
+            worktime: null,
+            workdays: null,
+            workstyle: null,
+            assignmentplan: null,
+            additional_info: null,
+            daily_study_limit: null,
+          })
+          .eq("id", user.id);
+        if (clearProfilePreferences.error) throw clearProfilePreferences.error;
+
+        handleThemeChange("light");
+        handleColorThemeChange("emerald");
+        handleDailyLimitChange(4);
+        setNotificationsEnabled(true);
+        setSoundEnabled(true);
+        handleEmailUpdatesChange(true);
+        handleWeeklyReportChange(true);
+        setReminderLeadHours(24);
+        handlePrivacyProfileVisibleChange(true);
+        handlePrivacyAnalyticsChange(false);
+        handlePrivacyPersonalizationChange(true);
+        handlePrivacyShareProgressChange(false);
+
+        setActionMessage({ type: "success", text: "Account data cleared." });
+      } catch (err) {
+        setActionMessage({
+          type: "error",
+          text: err instanceof Error ? `Failed to clear account data: ${err.message}` : "Failed to clear account data.",
+        });
+      } finally {
+        setIsClearingAccountData(false);
+      }
+    })();
   };
 
   const handleDeleteAccount = async () => {
@@ -813,9 +885,13 @@ export default function SettingsPage() {
                     </button>
                     <button
                       onClick={handleClearAccountData}
-                      className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-red-200/70 dark:border-red-800/50 bg-red-50/70 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 transition"
+                      disabled={isClearingAccountData}
+                      className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-red-200/70 dark:border-red-800/50 bg-red-50/70 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 transition disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                      <span className="flex items-center gap-2 text-red-700 dark:text-red-300"><span className="material-symbols-outlined text-base">delete</span>Clear Account Data</span>
+                      <span className="flex items-center gap-2 text-red-700 dark:text-red-300">
+                        <span className="material-symbols-outlined text-base">delete</span>
+                        {isClearingAccountData ? "Clearing Account Data..." : "Clear Account Data"}
+                      </span>
                       <span className="material-symbols-outlined text-base text-red-300">chevron_right</span>
                     </button>
                   </div>
