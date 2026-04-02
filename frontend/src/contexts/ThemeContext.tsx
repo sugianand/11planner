@@ -2,6 +2,7 @@
 
 import { ReactNode, createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { ThemeProvider as NextThemesProvider, useTheme as useNextTheme } from 'next-themes';
+import { supabase } from '@/lib/supabaseClient';
 
 type Theme = 'light' | 'dark' | 'auto';
 type ColorTheme = 'emerald' | 'ocean' | 'rose' | 'slate' | 'amber' | 'violet';
@@ -45,6 +46,18 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
     localStorage.setItem(COLOR_THEME_STORAGE_KEY, colorTheme);
   }, [colorTheme]);
+
+  useEffect(() => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') {
+        setColorTheme('emerald');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const contextValue = useMemo(
     () => ({ colorTheme, setColorTheme }),

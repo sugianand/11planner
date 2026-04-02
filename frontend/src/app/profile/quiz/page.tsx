@@ -23,7 +23,8 @@ export default function QuizPage() {
                 Welcome
               </h1>
               <p className="mt-4 text-lg font-medium text-slate-700 dark:text-slate-200">
-                Before we get started, answer a few quick questions so we can personalize your schedule.              </p>
+                Before you get started, answer a few quick questions so we can personalize your schedule.
+              </p>
               <button
                 type="button"
                 onClick={() => setShowQuiz(true)}

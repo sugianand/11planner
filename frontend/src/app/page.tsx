@@ -35,7 +35,7 @@ export default function Home() {
     {
       step: '01',
       title: 'Bring in your real semester',
-      body: 'Add syllabus and assignment data once so planning starts from reality, not guesswork.'
+      body: 'Add syllabus and assignment data once so your plan starts from reality, not guesswork.'
     },
     {
       step: '02',
@@ -161,7 +161,7 @@ export default function Home() {
               <span className="text-[#306844] dark:text-emerald-300">Finish earlier.</span>
             </h1>
             <p className="mt-6 max-w-[640px] text-lg md:text-xl leading-relaxed text-slate-700 dark:text-slate-300 font-medium">
-              11Planner converts syllabus chaos into a weekly execution map so you can stay ahead without living in last-minute mode.
+              11Planner turns syllabus chaos into a weekly execution map so you can stay ahead without living in last-minute mode.
             </p>
 
             <div className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
@@ -250,10 +250,10 @@ export default function Home() {
           <div className="mt-4 grid lg:grid-cols-[1.05fr_0.95fr] gap-6 items-start">
             <div>
               <h2 className="text-3xl md:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
-                Test a sample week before creating an account.
+                Try a sample week before creating an account.
               </h2>
               <p className="mt-3 text-slate-700 dark:text-slate-300 text-lg leading-relaxed max-w-xl">
-                Click a day to preview how 11Planner slices workload into focused blocks. If it feels right, save your own plan in one step.
+                Click a day to preview how 11Planner breaks workload into focused blocks. If it feels right, save your own plan in one step.
               </p>
 
               <div className="mt-5 flex flex-wrap gap-2">
@@ -304,7 +304,7 @@ export default function Home() {
                   </article>
                 ))}
               </div>
-              <p className="text-xs text-slate-300 mt-4">Preview mode only. Create an account to save and personalize blocks.</p>
+              <p className="text-xs text-slate-300 mt-4">Preview mode only. Create an account to save and personalize your blocks.</p>
             </div>
           </div>
         </section>
@@ -327,7 +327,7 @@ export default function Home() {
 
         <section data-reveal className="mt-12 text-center">
           <div data-reveal className="max-w-3xl mx-auto rounded-[2rem] bg-white/80 dark:bg-slate-900/80 border border-white/70 dark:border-slate-700/70 p-8 md:p-10 backdrop-blur-sm shadow-sm">
-            <p className="text-xs uppercase tracking-[0.16em] font-black text-slate-500 dark:text-slate-300">Ready to switch from reactive to intentional?</p>
+            <p className="text-xs uppercase tracking-[0.16em] font-black text-slate-500 dark:text-slate-300">Ready to switch from reactive planning to intentional planning?</p>
             <h2 className="text-3xl md:text-5xl font-black tracking-tight text-slate-900 dark:text-white mt-3">Make this your least chaotic semester yet.</h2>
             <p className="mt-4 text-slate-700 dark:text-slate-300 text-lg leading-relaxed max-w-2xl mx-auto">
               Start with one real week. Once you see your blocks, momentum becomes a system, not a mood.

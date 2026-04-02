@@ -38,6 +38,15 @@ export default function Navigation() {
   }, []);
 
   async function logout() {
+    try {
+      localStorage.setItem("colorTheme", "emerald");
+      document.documentElement.setAttribute("data-theme", "emerald");
+      if (document.body) {
+        document.body.setAttribute("data-theme", "emerald");
+      }
+    } catch {
+      // Ignore client storage failures and continue sign out.
+    }
     await supabase.auth.signOut();
     router.push("/auth");
   }
