@@ -2,6 +2,7 @@
 
 import { ReactNode, useEffect, useState } from "react";
 import { usePlanner } from "@/contexts/PlannerContext";
+import { taskAPI } from "@/lib/api";
 import Link from "next/link";
 import Timer from "@/components/Dashboard/Timer";
 import StatCard from "@/components/Dashboard/StatCard";
@@ -81,6 +82,7 @@ export default function FocusDashboardPanel({
   const [appleMood, setAppleMood] = useState<AppleMood>("lofi-beats");
   const [youtubeMood, setYoutubeMood] = useState<YouTubeMood>("lofi");
   const [privacyPersonalizationEnabled, setPrivacyPersonalizationEnabled] = useState(true);
+  const [updatingTaskIds, setUpdatingTaskIds] = useState<Set<string>>(new Set());
   const youtubeTracks: YouTubeTrack[] = [
     {
       title: "Deep Focus Lofi",
@@ -455,7 +457,7 @@ export default function FocusDashboardPanel({
   const dueTodayTasks = tasks.filter((task) => {
     const deadline = new Date(task.deadline);
     deadline.setHours(0, 0, 0, 0);
-    return deadline.getTime() === today.getTime() && !task.completed;
+    return deadline.getTime() === today.getTime();
   });
 
   const formatHours = (hours: number) => {
@@ -832,15 +834,19 @@ export default function FocusDashboardPanel({
 
             {musicProvider === 'youtube' ? (
               <div className="mt-3 flex flex-wrap gap-2">
-                {/* YouTube Music login and navigation - opens in same tab */}
+                {/* YouTube Music login - opens in new tab */}
                 <a
                   href="https://accounts.google.com/signin"
+                  target="_blank"
+                  rel="noreferrer"
                   className="inline-flex items-center rounded-full border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
                 >
                   Connect YouTube
                 </a>
                 <a
                   href="https://music.youtube.com/"
+                  target="_blank"
+                  rel="noreferrer"
                   className="inline-flex items-center rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700"
                 >
                   Open YouTube Music
@@ -910,7 +916,22 @@ export default function FocusDashboardPanel({
                           <input
                             type="checkbox"
                             checked={item.completed}
-                            readOnly
+                            disabled={updatingTaskIds.has(item.taskId)}
+                            onChange={async () => {
+                              setUpdatingTaskIds(prev => new Set(prev).add(item.taskId));
+                              try {
+                                await taskAPI.update(item.taskId, { completed: !item.completed });
+                                await loadTasks();
+                              } catch (error) {
+                                console.error("Failed to update task:", error);
+                              } finally {
+                                setUpdatingTaskIds(prev => {
+                                  const newSet = new Set(prev);
+                                  newSet.delete(item.taskId);
+                                  return newSet;
+                                });
+                              }
+                            }}
                             className="mt-0.5 rounded border-slate-300 text-emerald-600 cursor-pointer"
                           />
                           <div className="flex-1 min-w-0">
@@ -940,7 +961,22 @@ export default function FocusDashboardPanel({
                           <input
                             type="checkbox"
                             checked={task.completed}
-                            readOnly
+                            disabled={updatingTaskIds.has(task.id)}
+                            onChange={async () => {
+                              setUpdatingTaskIds(prev => new Set(prev).add(task.id));
+                              try {
+                                await taskAPI.update(task.id, { completed: !task.completed });
+                                await loadTasks();
+                              } catch (error) {
+                                console.error("Failed to update task:", error);
+                              } finally {
+                                setUpdatingTaskIds(prev => {
+                                  const newSet = new Set(prev);
+                                  newSet.delete(task.id);
+                                  return newSet;
+                                });
+                              }
+                            }}
                             className="mt-0.5 rounded border-amber-300 text-amber-600 cursor-pointer"
                           />
                           <div className="flex-1 min-w-0">

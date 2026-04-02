@@ -1,16 +1,14 @@
 import json
 
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException, Body
 from app.models import (
     CourseBase, CourseCreate, Course, 
     AssignmentBase, AssignmentCreate, Assignment,
     TaskBase, TaskCreate, Task
 )
 from app.schedule_generator import BusyBlock, Preferences, ScheduleGenerator
-from app.ai_task_estimator import estimate_task_hours
 from typing import List
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import date, datetime, time, timedelta
 import os
 from uuid import uuid4
 try:
@@ -21,15 +19,6 @@ except Exception:
 from supabase import Client, create_client
 
 router = APIRouter(prefix="/api", tags=["tasks"])
-
-
-class TaskEstimateRequest(BaseModel):
-    user_id: str
-    apply_estimate: bool = False
-
-
-class ScheduleGenerateRequest(BaseModel):
-    study_limit_hours: float | None = None
 
 # Supabase client is used for all data operations
 _supabase_client: Client | None = None
@@ -124,21 +113,6 @@ def focus_hours_from_workstyle(workstyle: str | None) -> float:
     return 2.0
 
 
-def parse_study_limit(value: object, fallback: float = 4.0) -> float:
-    try:
-        numeric = float(value)
-    except (TypeError, ValueError):
-        return fallback
-    return max(1.0, min(12.0, numeric))
-
-
-def to_storage_iso(dt: datetime) -> str:
-    if dt.tzinfo is None:
-        local_tz = datetime.now().astimezone().tzinfo
-        dt = dt.replace(tzinfo=local_tz)
-    return dt.astimezone(timezone.utc).isoformat()
-
-
 def map_schedule_block_row(row: dict) -> dict:
     starts_at = parse_dt(row["starts_at"])
     ends_at = parse_dt(row["ends_at"])
@@ -179,38 +153,6 @@ def parse_course_weekday(day: str) -> int | None:
     return mapping.get(normalized)
 
 
-def parse_course_weekdays(days_value: object) -> set[int]:
-    if isinstance(days_value, list):
-        raw_tokens = [str(item) for item in days_value]
-    elif isinstance(days_value, str):
-        raw_tokens = [days_value]
-    else:
-        raw_tokens = []
-
-    expanded_tokens: list[str] = []
-    for token in raw_tokens:
-        normalized = token.strip().lower()
-        if not normalized:
-            continue
-        if normalized in {"mwf", "m/w/f"}:
-            expanded_tokens.extend(["mon", "wed", "fri"])
-            continue
-        if normalized in {"tth", "tu/th", "t/th", "tr"}:
-            expanded_tokens.extend(["tue", "thu"])
-            continue
-        split_tokens = normalized.replace(",", " ").replace("/", " ").split()
-        if split_tokens:
-            expanded_tokens.extend(split_tokens)
-        else:
-            expanded_tokens.append(normalized)
-
-    return {
-        weekday
-        for weekday in (parse_course_weekday(token) for token in expanded_tokens)
-        if weekday is not None
-    }
-
-
 def parse_clock(value: str | None) -> time | None:
     if not value:
         return None
@@ -231,12 +173,13 @@ def build_course_busy_blocks(course_rows: list[dict], window_start: datetime, wi
     busy_blocks: list[BusyBlock] = []
     start_day: date = window_start.date()
     end_day: date = window_end.date()
-    
-    # Add 15-minute buffer before and after classes for transition time
-    buffer = timedelta(minutes=15)
 
     for row in course_rows:
-        weekday_numbers = parse_course_weekdays(row.get("course_days"))
+        weekday_numbers = {
+            day_num
+            for day_num in (parse_course_weekday(day) for day in (row.get("course_days") or []))
+            if day_num is not None
+        }
         start_t = parse_clock(row.get("start_time"))
         end_t = parse_clock(row.get("end_time"))
         if not weekday_numbers or start_t is None or end_t is None:
@@ -245,8 +188,8 @@ def build_course_busy_blocks(course_rows: list[dict], window_start: datetime, wi
         cursor = start_day
         while cursor <= end_day:
             if cursor.weekday() in weekday_numbers:
-                start_dt = datetime.combine(cursor, start_t) - buffer
-                end_dt = datetime.combine(cursor, end_t) + buffer
+                start_dt = datetime.combine(cursor, start_t)
+                end_dt = datetime.combine(cursor, end_t)
                 if end_dt <= start_dt:
                     end_dt += timedelta(days=1)
                 if end_dt > window_start and start_dt < window_end:
@@ -282,7 +225,6 @@ def ai__optimizer(context: dict) -> dict:
             "Important rules:\n"
             "- Use task deadline, estimated_hours, priority, and description\n"
             "- Respect the user's preferred workdays, work window, and daily study limit\n"
-            "- Use the user's assignment plan preference when deciding block sizes and spacing\n"
             "- Spread large tasks across multiple days when that makes sense\n"
             "- Prefer earlier scheduling for urgent/high priority tasks\n"
             "- Keep block lengths realistic, such as 30, 45, 60, 90, or 120 minutes\n"
@@ -348,61 +290,50 @@ def ai__optimizer(context: dict) -> dict:
 
 
 # ========== TASK ENDPOINTS ==========
-# Tasks are handled via the schedule generation endpoints below
-@router.post("/tasks/{task_id}/estimate-time")
-async def estimate_task_time(task_id: str, request: TaskEstimateRequest):
+
+@router.put("/tasks/{task_id}")
+async def update_task(task_id: str, task_update: dict = Body(...)):
+    """
+    Update a task (e.g., mark as completed).
+    """
     try:
         supabase = get_supabase()
-        task_result = (
+        
+        # Build update data - convert 'completed' boolean to 'status' field
+        update_data = {}
+        if "completed" in task_update:
+            # Convert boolean to status string: True -> "completed", False -> "todo"
+            update_data["status"] = "completed" if task_update["completed"] else "todo"
+        
+        if not update_data:
+            raise HTTPException(status_code=400, detail="No valid fields to update")
+        
+        # Update the task in Supabase
+        result = (
             supabase.table("tasks")
-            .select("id, user_id, task_title, deadline_at, estimated_hours, priority_level, description")
+            .update(update_data)
             .eq("id", task_id)
-            .eq("user_id", request.user_id)
-            .limit(1)
             .execute()
         )
-        rows = task_result.data or []
-        if not rows:
+        
+        if getattr(result, "error", None):
+            raise HTTPException(status_code=500, detail="Failed to update task")
+        
+        if not result.data:
             raise HTTPException(status_code=404, detail="Task not found")
-
-        row = rows[0]
-        estimated_hours = estimate_task_hours(
-            {
-                "title": row.get("task_title") or "Untitled task",
-                "description": row.get("description") or "",
-                "deadline": row.get("deadline_at"),
-                "priority": int(row.get("priority_level") or 2),
-                "estimated_hours": float(row.get("estimated_hours") or 0),
-            }
-        )
-        if estimated_hours is None:
-            estimated_hours = float(row.get("estimated_hours") or 1)
-
-        if request.apply_estimate:
-            update_result = (
-                supabase.table("tasks")
-                .update({"estimated_hours": estimated_hours})
-                .eq("id", task_id)
-                .eq("user_id", request.user_id)
-                .execute()
-            )
-            if getattr(update_result, "error", None):
-                raise HTTPException(status_code=500, detail="Failed to save estimated time")
-
-        return {
-            "task id": task_id,
-            "estimated_hours": estimated_hours,
-            "message": "AI estimated time updated" if request.apply_estimate else "AI estimated time preview"
-        }
+        
+        return {"message": "Task updated successfully", "task_id": task_id}
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to estimate task time: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to update task: {str(e)}")
 
 # ========== SCHEDULE GENERATION ENDPOINTS ==========
 
+# Do not create duplicate endpoints here
+
 @router.post("/schedule/generate/{user_id}")
-async def generate_schedule(user_id: str, payload: ScheduleGenerateRequest | None = None):
+async def generate_schedule(user_id: str):
     """
     Generate optimal schedule for all pending tasks.
     Uses smart algorithm that considers:
@@ -431,17 +362,13 @@ async def generate_schedule(user_id: str, payload: ScheduleGenerateRequest | Non
         # Fetch user preferences/profile
         profile_result = (
             supabase.table("profiles")
-            .select("worktime, workdays, workstyle, additional_info, assignmentplan, daily_study_limit")
+            .select("worktime, workdays, workstyle, additional_info, assignmentplan")
             .eq("id", user_id)
             .limit(1)
             .execute()
         )
         profile_row = (profile_result.data or [{}])[0]
         work_start, work_end = work_window_from_profile(profile_row.get("worktime"))
-        profile_study_limit = parse_study_limit(profile_row.get("daily_study_limit"), 4.0)
-        requested_study_limit = payload.study_limit_hours if payload else None
-        study_limit_hours = parse_study_limit(requested_study_limit, profile_study_limit)
-
         prefs = Preferences(
             workdays=profile_row.get("workdays") or [
                 "Monday",
@@ -452,7 +379,7 @@ async def generate_schedule(user_id: str, payload: ScheduleGenerateRequest | Non
             ],
             work_start=work_start,
             work_end=work_end,
-            study_limit_hours=study_limit_hours,
+            study_limit_hours=4,
             workstyle=profile_row.get("workstyle"),
             additional_info=profile_row.get("additional_info"),
             assignment_plan=profile_row.get("assignmentplan"),
@@ -536,8 +463,8 @@ async def generate_schedule(user_id: str, payload: ScheduleGenerateRequest | Non
         insert_payload = [
             {
                 "user_id": user_id,
-                "starts_at": to_storage_iso(block.start_time),
-                "ends_at": to_storage_iso(block.end_time),
+                "starts_at": block.start_time.isoformat(),
+                "ends_at": block.end_time.isoformat(),
                 "block_type": "study",
                 "title": task_title_by_id.get(block.task_id, "Study Session"),
                 "course_id": next((t.course_id for t in task_objects if t.id == block.task_id), None),

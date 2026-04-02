@@ -163,32 +163,32 @@ export default function Quiz() {
       <main className="w-full flex-1">
         <div className="mx-auto max-w-4xl p-4 pb-12 sm:p-6 lg:p-8">
           <div className="quiz-panel rounded-3xl border border-white/50 bg-white/65 p-5 shadow-[0_30px_120px_-48px_rgba(15,23,42,0.5)] backdrop-blur-xl dark:border-slate-700/55 dark:bg-slate-800/55 sm:p-7">
-                <div className="rounded-2xl border border-white/55 bg-white/75 p-5 shadow-sm dark:border-slate-700/60 dark:bg-slate-900/35 sm:p-6">
-                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                    <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Preference Quiz</h1>
-                    <span className="rounded-full border border-emerald-200/80 bg-emerald-50/80 px-3 py-1 text-xs font-bold uppercase tracking-wider text-emerald-700 dark:border-emerald-500/35 dark:bg-emerald-500/10 dark:text-emerald-300">
-                      Step {step} of {TOTAL_STEPS}
-                    </span>
-                  </div>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Preference Quiz</h1>
+              <span className="rounded-full border border-emerald-200/80 bg-emerald-50/80 px-3 py-1 text-xs font-bold uppercase tracking-wider text-emerald-700 dark:border-emerald-500/35 dark:bg-emerald-500/10 dark:text-emerald-300\">
+                Step {step} of {TOTAL_STEPS}
+              </span>
+            </div>
 
-                  <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-                    {STEP_LABELS.map((label, index) => {
-                      const stepNumber = index + 1;
+            <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+              {STEP_LABELS.map((label, index) => {
+                const stepNumber = index + 1;
                       const isCurrent = step === stepNumber;
                       const isDone = step > stepNumber;
                       return (
-                        <div
+                        <button
                           key={label}
-                          className={`rounded-xl border px-2 py-2 text-center text-[11px] font-semibold transition ${
+                          onClick={() => setStep(stepNumber)}
+                          className={`rounded-xl border px-2 py-2 text-center text-[11px] font-semibold transition cursor-pointer hover:shadow-sm ${
                             isCurrent
                               ? "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-300"
                               : isDone
-                              ? "border-slate-200 bg-white/80 text-slate-700 dark:border-slate-600 dark:bg-slate-800/60 dark:text-slate-200"
-                              : "border-slate-200/70 bg-white/55 text-slate-400 dark:border-slate-700 dark:bg-slate-900/25 dark:text-slate-400"
+                              ? "border-slate-200 bg-white/80 text-slate-700 hover:border-emerald-200 hover:bg-white dark:border-slate-600 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:border-emerald-500/40"
+                              : "border-slate-200/70 bg-white/55 text-slate-400 hover:border-slate-300 hover:bg-white/70 dark:border-slate-700 dark:bg-slate-900/25 dark:text-slate-400 dark:hover:border-slate-600"
                           }`}
                         >
                           {label}
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
@@ -207,7 +207,7 @@ export default function Quiz() {
                   </div>
                 )}
 
-                <div className="mt-4 rounded-2xl border border-white/55 bg-white/75 p-5 shadow-sm dark:border-slate-700/60 dark:bg-slate-900/35 sm:p-6">
+                <div className="mt-6">
                   <div className="min-h-[320px]">
                     {step === 1 && (
                       <div>
@@ -429,6 +429,7 @@ export default function Quiz() {
                     )}
                   </div>
                 </div>
+            </div>
           </div>
 
           <style jsx>{`

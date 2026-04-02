@@ -94,7 +94,8 @@ function renderCourseSelectors(courses, onChange) {
 
 function isCanvasUrl(url) {
         if (!url) return false;
-        return /https?:\/\/[^/]*instructure\.com\//i.test(url);
+        // Support instructure.com AND institutional Canvas domains (canvas.wayne.edu, etc)
+        return /https?:\/\/([^/]*instructure\.com|.*canvas.*)\//.test(url);
 }
 
 function setExtractAvailability(isAvailable) {
