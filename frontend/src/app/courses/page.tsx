@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { usePlanner } from "@/contexts/PlannerContext";
 import { CourseCreate, Course } from "@/types";
 import Footer from "@/components/Footer";
@@ -50,6 +50,10 @@ export default function CoursesPage() {
   const [showForm, setShowForm] = useState(false);
   const [showDaysDropdown, setShowDaysDropdown] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"name_asc" | "name_desc" | "time_asc" | "time_desc">("name_asc");
+  const [typeFilter, setTypeFilter] = useState<"all" | "online" | "in_person" | "lab">("all");
+  const cardSyllabusInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const [dialog, setDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -170,6 +174,76 @@ export default function CoursesPage() {
   const inPersonCourses = courses.filter((course) => !course.isOnline).length;
   const labCourses = courses.filter((course) => course.hasLab).length;
 
+  const formatTimeDisplay = (value?: string | null): string => {
+    const normalized = toTimeInputValue(value);
+    if (!normalized) return "Time not set";
+    const [hourRaw, minuteRaw] = normalized.split(":");
+    const hour = Number.parseInt(hourRaw, 10);
+    const minute = Number.parseInt(minuteRaw, 10);
+    if (!Number.isFinite(hour) || !Number.isFinite(minute)) return "Time not set";
+
+    const date = new Date();
+    date.setHours(hour, minute, 0, 0);
+    return date.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
+
+  const getCourseStartMinutes = (course: Course): number => {
+    const normalized = toTimeInputValue(course.startTime);
+    if (!normalized) return Number.MAX_SAFE_INTEGER;
+    const [hourRaw, minuteRaw] = normalized.split(":");
+    const hour = Number.parseInt(hourRaw, 10);
+    const minute = Number.parseInt(minuteRaw, 10);
+    if (!Number.isFinite(hour) || !Number.isFinite(minute)) return Number.MAX_SAFE_INTEGER;
+    return hour * 60 + minute;
+  };
+
+  const filteredCourses = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+
+    const filtered = courses.filter((course) => {
+      const name = (course.name || "").toLowerCase();
+      const code = (course.code || "").toLowerCase();
+      const professor = (course.professor || "").toLowerCase();
+      const description = (course.description || "").toLowerCase();
+      const day = (course.courseDate || "").toLowerCase();
+
+      const matchesSearch =
+        q.length === 0 ||
+        name.includes(q) ||
+        code.includes(q) ||
+        professor.includes(q) ||
+        description.includes(q) ||
+        day.includes(q);
+
+      const matchesType =
+        typeFilter === "all" ||
+        (typeFilter === "online" && !!course.isOnline) ||
+        (typeFilter === "in_person" && !course.isOnline) ||
+        (typeFilter === "lab" && !!course.hasLab);
+
+      return matchesSearch && matchesType;
+    });
+
+    return filtered.sort((a, b) => {
+      if (sortBy === "name_desc") {
+        return (b.name || "").localeCompare(a.name || "");
+      }
+      if (sortBy === "time_asc") {
+        const diff = getCourseStartMinutes(a) - getCourseStartMinutes(b);
+        return diff !== 0 ? diff : (a.name || "").localeCompare(b.name || "");
+      }
+      if (sortBy === "time_desc") {
+        const diff = getCourseStartMinutes(b) - getCourseStartMinutes(a);
+        return diff !== 0 ? diff : (a.name || "").localeCompare(b.name || "");
+      }
+      return (a.name || "").localeCompare(b.name || "");
+    });
+  }, [courses, searchQuery, typeFilter, sortBy]);
+
   const toggleDay = (day: string, checked: boolean) => {
     const nextDays = checked
       ? [...new Set([...selectedDays, day])]
@@ -272,6 +346,58 @@ export default function CoursesPage() {
 
     await uploadAndParseSyllabus(file, "lab");
     inputEl.value = "";
+  };
+
+  const handleUploadSyllabusForCourse = async (course: Course, file: File) => {
+    const formDataToSend = new FormData();
+    formDataToSend.append("file", file);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/syllabus/parse`, {
+        method: "POST",
+        body: formDataToSend,
+      });
+
+      const data = await response.json().catch(() => ({ success: false, error: "Invalid server response" }));
+
+      if (!response.ok || !data.success || !data.parsed) {
+        setDialog({
+          isOpen: true,
+          title: "Syllabus upload failed",
+          message: data.error || "Could not parse this syllabus for the selected course.",
+        });
+        return;
+      }
+
+      const parsed = data.parsed;
+      await updateCourse(course.id, {
+        name: parsed.name || course.name,
+        code: parsed.code || course.code,
+        professor: parsed.professor || course.professor,
+        description: parsed.description || course.description,
+        courseDate: parsed.courseDate || course.courseDate,
+        startTime: toTimeInputValue(parsed.startTime) || toTimeInputValue(course.startTime),
+        endTime: toTimeInputValue(parsed.endTime) || toTimeInputValue(course.endTime),
+        isOnline: typeof parsed.isOnline === "boolean" ? parsed.isOnline : course.isOnline,
+        hasLab: typeof parsed.hasLab === "boolean" ? parsed.hasLab : course.hasLab,
+        labDay: parsed.labDay || course.labDay,
+        labStartTime: toTimeInputValue(parsed.labStartTime) || toTimeInputValue(course.labStartTime),
+        labEndTime: toTimeInputValue(parsed.labEndTime) || toTimeInputValue(course.labEndTime),
+        labIsOnline: typeof parsed.labIsOnline === "boolean" ? parsed.labIsOnline : course.labIsOnline,
+      });
+
+      setDialog({
+        isOpen: true,
+        title: "Course updated",
+        message: `Syllabus parsed and applied to ${course.name}.`,
+      });
+    } catch {
+      setDialog({
+        isOpen: true,
+        title: "Upload error",
+        message: "Could not reach the backend. Make sure the backend server is running and try again.",
+      });
+    }
   };
 
   return (
@@ -648,20 +774,61 @@ export default function CoursesPage() {
             </div>
           )}
 
+          <div className="mb-6 rounded-2xl border border-slate-200/70 dark:border-slate-700/50 bg-white/70 dark:bg-slate-900/60 p-4 md:p-5 backdrop-blur-xl">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by name, code, professor, or day"
+                className="md:col-span-2 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800"
+              />
+
+              <select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800"
+              >
+                <option value="all">All Types</option>
+                <option value="online">Online</option>
+                <option value="in_person">In-Person</option>
+                <option value="lab">Has Lab</option>
+              </select>
+            </div>
+
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <p className="text-sm text-slate-600 dark:text-slate-300">
+                Showing {filteredCourses.length} of {courses.length} courses
+              </p>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800"
+              >
+                <option value="name_asc">Name (A-Z)</option>
+                <option value="name_desc">Name (Z-A)</option>
+                <option value="time_asc">Time (earliest)</option>
+                <option value="time_desc">Time (latest)</option>
+              </select>
+            </div>
+          </div>
+
           {/* Courses Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
             {loading && courses.length === 0 ? (
               <div className="col-span-full text-center py-12">
                 <p className="text-slate-600 text-lg">Loading courses...</p>
               </div>
-            ) : courses.length === 0 ? (
+            ) : filteredCourses.length === 0 ? (
               <div className="col-span-full bg-white/75 dark:bg-slate-900/75 rounded-2xl p-8 text-center border border-slate-200/80 dark:border-slate-700/40">
                 <p className="text-slate-600 dark:text-slate-300 text-lg">
-                  No courses added yet. Create one to get started!
+                  {courses.length === 0
+                    ? "No courses added yet. Create one to get started!"
+                    : "No courses match your current search/filter."}
                 </p>
               </div>
             ) : (
-              courses.map((course) => (
+              filteredCourses.map((course) => (
                 <div
                   key={course.id}
                   className="bg-white/60 dark:bg-slate-800/55 backdrop-blur-md rounded-2xl shadow-sm p-6 border border-white/50 dark:border-slate-700/45 hover:bg-white/80 dark:hover:bg-slate-800/75 transition group relative overflow-hidden"
@@ -692,7 +859,9 @@ export default function CoursesPage() {
                   ) : (
                     <div className="flex items-center gap-2 mb-3 text-slate-700 dark:text-slate-300">
                       <span className="material-symbols-outlined text-sm opacity-60">schedule</span>
-                      <p className="text-sm font-medium">{course.courseDate} • {course.startTime} - {course.endTime}</p>
+                      <p className="text-sm font-medium">
+                        {course.courseDate} • {formatTimeDisplay(course.startTime)} - {formatTimeDisplay(course.endTime)}
+                      </p>
                     </div>
                   )}
                   {course.description && (
@@ -707,12 +876,32 @@ export default function CoursesPage() {
                         <p className="text-xs text-emerald-800 dark:text-emerald-200">Online/Asynchronous</p>
                       ) : (
                         <p className="text-xs text-emerald-800 dark:text-emerald-200">
-                          {course.labDay} • {course.labStartTime} - {course.labEndTime}
+                          {course.labDay} • {formatTimeDisplay(course.labStartTime)} - {formatTimeDisplay(course.labEndTime)}
                         </p>
                       )}
                     </div>
                   )}
-                  <div className="flex gap-2 mt-4 pt-4 border-t border-slate-200/50 dark:border-slate-700/50">
+                  <div className="flex gap-2 mt-4 pt-4 border-t border-slate-200/50 dark:border-slate-700/50 flex-wrap">
+                    <button
+                      onClick={() => cardSyllabusInputRefs.current[course.id]?.click()}
+                      className="w-full text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium py-1.5 px-3 rounded-lg transition hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+                    >
+                      Upload Syllabus
+                    </button>
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      className="hidden"
+                      ref={(el) => {
+                        cardSyllabusInputRefs.current[course.id] = el;
+                      }}
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        await handleUploadSyllabusForCourse(course, file);
+                        e.currentTarget.value = "";
+                      }}
+                    />
                     <button
                       onClick={() => handleEdit(course)}
                       className="flex-1 text-slate-600 dark:text-slate-400 hover:text-[#002966] dark:hover:text-blue-300 font-medium py-1.5 px-3 rounded-lg transition hover:bg-blue-50 dark:hover:bg-blue-900/20"

@@ -49,7 +49,7 @@ export default function AuthPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const goToNextPage = (): void => {
-    window.location.href = "/profile";
+    window.location.href = "/dashboard";
   };
 
   const goToQuizOnboarding = (): void => {

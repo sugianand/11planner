@@ -101,7 +101,7 @@ export default function AuthCallbackPage() {
         throw new Error(profileError.message);
       }
 
-      return sendToOnboarding ? "/profile/quiz?onboarding=1" : "/profile";
+      return sendToOnboarding ? "/profile/quiz?onboarding=1" : "/dashboard";
     }
 
     async function handleOAuthCallback() {
@@ -129,7 +129,7 @@ export default function AuthCallbackPage() {
           return;
         }
 
-        router.replace("/profile");
+        router.replace("/dashboard");
         return;
       }
 
