@@ -7,6 +7,8 @@ import { useNotification } from "@/contexts/NotificationContext";
 import Footer from "@/components/Footer";
 import { supabase } from "@/lib/supabaseClient";
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 type Theme = "light" | "dark" | "auto";
 type ColorTheme = "emerald" | "ocean" | "rose" | "slate" | "amber" | "violet";
 type SettingsPanel = "schedule" | "personalize" | "reminders" | "account" | "support";
@@ -60,6 +62,7 @@ export default function SettingsPage() {
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [activePanel, setActivePanel] = useState<SettingsPanel>("personalize");
   const [settingsSearch, setSettingsSearch] = useState("");
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   const {
     notificationsEnabled,
@@ -230,6 +233,48 @@ export default function SettingsPage() {
     keysToClear.forEach((key) => localStorage.removeItem(key));
     handleResetDefaults();
     alert("Local account data cleared.");
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!user?.id) {
+      alert("Please sign in to delete your account.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Delete your account permanently? This will remove your tasks, schedule, courses, and profile data."
+    );
+    if (!confirmed) return;
+
+    try {
+      setIsDeletingAccount(true);
+      const response = await fetch(`${API_BASE_URL}/api/account/${user.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const message = await response.text();
+        throw new Error(message || "Failed to delete account");
+      }
+
+      await supabase.auth.signOut();
+      localStorage.removeItem("emailUpdates");
+      localStorage.removeItem("weeklyReport");
+      localStorage.removeItem("dailyLimit");
+      localStorage.removeItem("privacyProfileVisible");
+      localStorage.removeItem("privacyAnalyticsEnabled");
+      localStorage.removeItem("privacyPersonalizationEnabled");
+      localStorage.removeItem("privacyShareProgress");
+      localStorage.removeItem("soundEnabled");
+
+      alert("Account deleted successfully.");
+      window.location.href = "/auth";
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not delete account.";
+      alert(message);
+    } finally {
+      setIsDeletingAccount(false);
+    }
   };
 
   const hasChanges = useMemo(() => {
@@ -744,8 +789,14 @@ export default function SettingsPage() {
                     </button>
                   </div>
 
-                  <button className="w-full text-left mt-4 px-4 py-3 rounded-xl border border-red-300 dark:border-red-700 bg-red-50/80 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 transition">
-                    <p className="font-medium text-red-700 dark:text-red-300">Delete Account</p>
+                  <button
+                    onClick={handleDeleteAccount}
+                    disabled={isDeletingAccount}
+                    className="w-full text-left mt-4 px-4 py-3 rounded-xl border border-red-300 dark:border-red-700 bg-red-50/80 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    <p className="font-medium text-red-700 dark:text-red-300">
+                      {isDeletingAccount ? "Deleting Account..." : "Delete Account"}
+                    </p>
                     <p className="text-xs text-red-400 dark:text-red-300">Permanently remove your account and data</p>
                   </button>
                 </section>

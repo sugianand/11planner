@@ -15,7 +15,7 @@ export const YearView: React.FC<YearViewProps> = ({ year, monthsData, events }) 
   const getEventsForDay = (date: Date) => {
     return events.filter((e) => {
       const eventDate = new Date(e.start);
-      return eventDate.toDateString() === date.toDateString();
+      return eventDate.toDateString() === date.toDateString() && e.kind !== 'class';
     });
   };
 
@@ -63,14 +63,32 @@ export const YearView: React.FC<YearViewProps> = ({ year, monthsData, events }) 
                         className={`aspect-square flex items-center justify-center text-xs relative ${
                           day.isCurrentMonth
                             ? day.isToday
-                              ? 'bg-emerald-600 text-white rounded-full font-bold'
+                              ? 'text-white rounded-full font-bold'
                               : 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-md'
                             : 'bg-slate-50 dark:bg-slate-900 text-slate-300 dark:text-slate-500 rounded-md'
                         }`}
+                        style={day.isCurrentMonth && day.isToday ? { backgroundColor: 'var(--theme-accent-strong)' } : undefined}
                       >
                         {day.dayNumber}
                         {hasEvents && day.isCurrentMonth && !day.isToday && (
-                          <div className="absolute bottom-0.5 w-1 h-1 bg-emerald-500 rounded-full"></div>
+                          <>
+                            <div
+                              className="absolute bottom-0.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full"
+                              style={{ backgroundColor: 'var(--theme-accent-strong)' }}
+                            ></div>
+                            {dayEvents.length > 1 && (
+                              <div
+                                className="absolute -top-1 -right-1 min-w-[14px] h-[14px] rounded-full px-1 text-[9px] leading-[14px] text-center font-semibold"
+                                style={{
+                                  color: 'var(--theme-accent-strong)',
+                                  backgroundColor: 'var(--theme-accent-soft)',
+                                }}
+                                title={`${dayEvents.length} tasks`}
+                              >
+                                {dayEvents.length > 9 ? '9+' : dayEvents.length}
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                     );

@@ -535,3 +535,40 @@ async def get_schedule_stats(user_id: str):
         "total_hours_scheduled": round(total_hours_scheduled, 2),
         "schedule_coverage": f"{round((total_hours_scheduled / pending_hours * 100), 1)}%" if pending_hours > 0 else "0%"
     }
+
+
+@router.delete("/account/{user_id}")
+async def delete_account(user_id: str):
+    """Delete user-owned planner data and attempt auth user deletion when service role permits."""
+    if not user_id:
+        raise HTTPException(status_code=400, detail="user_id is required")
+
+    try:
+        supabase = get_supabase()
+
+        # Remove user-owned relational data first.
+        for table_name in ("schedule_blocks", "tasks", "assignments", "courses"):
+            supabase.table(table_name).delete().eq("user_id", user_id).execute()
+
+        # Profile uses auth user id as primary key.
+        supabase.table("profiles").delete().eq("id", user_id).execute()
+
+        auth_user_deleted = False
+        auth_delete_error = None
+        try:
+            admin_api = getattr(getattr(supabase, "auth", None), "admin", None)
+            if admin_api and hasattr(admin_api, "delete_user"):
+                admin_api.delete_user(user_id)
+                auth_user_deleted = True
+        except Exception as auth_err:
+            auth_delete_error = str(auth_err)
+
+        return {
+            "message": "Account data deleted",
+            "auth_user_deleted": auth_user_deleted,
+            "auth_delete_error": auth_delete_error,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete account: {str(e)}")

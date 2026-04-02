@@ -57,6 +57,7 @@ export default function Quiz() {
     additionalInfo: "",
   });
   const [hasEdited, setHasEdited] = useState(false);
+  const [dailyLimitInput, setDailyLimitInput] = useState("4");
 
   useEffect(() => {
     loadPreferences();
@@ -149,9 +150,11 @@ export default function Quiz() {
       }
     }
 
-    setIsSaving(false);
     await loadPreferences();
-    router.replace("/profile/quiz/submitted");
+    setErrorMessage("Preferences saved. Redirecting to dashboard...");
+    setTimeout(() => {
+      router.replace("/dashboard");
+    }, 900);
   }
 
   return (
@@ -178,14 +181,15 @@ export default function Quiz() {
                       return (
                         <button
                           key={label}
+                          type="button"
                           onClick={() => setStep(stepNumber)}
-                          className={`rounded-xl border px-2 py-2 text-center text-[11px] font-semibold transition cursor-pointer hover:shadow-sm ${
+                          className={`rounded-xl border px-2 py-2 text-center text-[11px] font-semibold transition ${
                             isCurrent
                               ? "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-300"
                               : isDone
-                              ? "border-slate-200 bg-white/80 text-slate-700 hover:border-emerald-200 hover:bg-white dark:border-slate-600 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:border-emerald-500/40"
-                              : "border-slate-200/70 bg-white/55 text-slate-400 hover:border-slate-300 hover:bg-white/70 dark:border-slate-700 dark:bg-slate-900/25 dark:text-slate-400 dark:hover:border-slate-600"
-                          }`}
+                              ? "border-slate-200 bg-white/80 text-slate-700 dark:border-slate-600 dark:bg-slate-800/60 dark:text-slate-200"
+                              : "border-slate-200/70 bg-white/55 text-slate-400 dark:border-slate-700 dark:bg-slate-900/25 dark:text-slate-400"
+                          } hover:-translate-y-0.5 hover:shadow-sm`}
                         >
                           {label}
                         </button>
@@ -225,7 +229,7 @@ export default function Quiz() {
                                 setHasEdited(true);
                                 setPreferences({ ...currentPreferences, worktime: option.value });
                               }}
-                              className={`rounded-2xl border p-4 text-left transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 ${
+                              className={`min-h-[116px] rounded-2xl border p-4 text-left transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 ${
                                 isSelected
                                   ? "border-emerald-300 bg-emerald-50/85 shadow-sm dark:border-emerald-500/45 dark:bg-emerald-500/10"
                                   : "border-slate-200/80 bg-white/90 hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md dark:border-slate-700/75 dark:bg-slate-800/65 dark:hover:border-emerald-500/35"
@@ -288,7 +292,7 @@ export default function Quiz() {
                                 setHasEdited(true);
                                 setPreferences({ ...currentPreferences, workstyle: option.value });
                               }}
-                              className={`rounded-2xl border p-4 text-left transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 ${
+                              className={`min-h-[116px] rounded-2xl border p-4 text-left transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 ${
                                 isSelected
                                   ? "border-emerald-300 bg-emerald-50/85 shadow-sm dark:border-emerald-500/45 dark:bg-emerald-500/10"
                                   : "border-slate-200/80 bg-white/90 hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md dark:border-slate-700/75 dark:bg-slate-800/65 dark:hover:border-emerald-500/35"
@@ -347,10 +351,12 @@ export default function Quiz() {
                             max="12"
                             value={currentPreferences.dailyLimit}
                             onChange={(e) => {
+                              const normalized = Math.min(12, Math.max(1, parseInt(e.target.value) || 1));
                               setHasEdited(true);
+                              setDailyLimitInput(String(normalized));
                               setPreferences({
                                 ...currentPreferences,
-                                dailyLimit: Math.min(12, Math.max(1, parseInt(e.target.value) || 1)),
+                                dailyLimit: normalized,
                               });
                             }}
                             className="h-2 flex-1 cursor-pointer appearance-none rounded-lg bg-slate-200 accent-[#306844]"
@@ -360,17 +366,32 @@ export default function Quiz() {
                               type="text"
                               min={1}
                               max={12}
-                              value={String(currentPreferences.dailyLimit)}
+                              value={hasEdited ? dailyLimitInput : String(currentPreferences.dailyLimit)}
                               inputMode="numeric"
                               onChange={(e) => {
                                 const raw = e.target.value.replace(/\D/g, "").slice(0, 2);
-                                if (!/^([1-9]|1[0-2])$/.test(raw)) return;
+                                setDailyLimitInput(raw);
+                                if (raw.length === 0) return;
 
                                 const value = Number.parseInt(raw, 10);
+                                if (!Number.isFinite(value)) return;
                                 setHasEdited(true);
                                 setPreferences({
                                   ...currentPreferences,
                                   dailyLimit: Math.min(12, Math.max(1, value)),
+                                });
+                              }}
+                              onBlur={() => {
+                                const parsed = Number.parseInt(dailyLimitInput, 10);
+                                const normalized = Number.isFinite(parsed)
+                                  ? Math.min(12, Math.max(1, parsed))
+                                  : Math.min(12, Math.max(1, currentPreferences.dailyLimit || 4));
+
+                                setDailyLimitInput(String(normalized));
+                                setHasEdited(true);
+                                setPreferences({
+                                  ...currentPreferences,
+                                  dailyLimit: normalized,
                                 });
                               }}
                               onFocus={(e) => e.target.select()}
@@ -424,7 +445,7 @@ export default function Quiz() {
                         disabled={isSaving}
                         className="rounded-xl bg-[#306844] px-6 py-2.5 font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#255236] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
                       >
-                        {isSaving ? "Saving..." : "Submit"}
+                        {isSaving ? "Saving... Redirecting to dashboard" : "Submit"}
                       </button>
                     )}
                   </div>

@@ -108,7 +108,7 @@ export const MonthView: React.FC<MonthViewProps> = ({ daysInMonth, events, onEve
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-auto">
       <div className="sticky top-0 z-10 border-b border-white/70 dark:border-slate-700/70 bg-white/85 dark:bg-slate-900/85 backdrop-blur px-4 py-2.5">
         <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">Month View</h2>
         <p className="text-sm text-slate-600 dark:text-slate-300">{monthYear}</p>
@@ -133,7 +133,7 @@ export const MonthView: React.FC<MonthViewProps> = ({ daysInMonth, events, onEve
         )}
       </div>
 
-      <div className="flex-1 min-h-0 overflow-hidden">
+      <div className="overflow-visible">
         {/* Week day headers */}
         <div className="grid grid-cols-7 gap-px bg-slate-200/70 dark:bg-slate-700/70">
           {weekDays.map((day) => (
@@ -160,7 +160,7 @@ export const MonthView: React.FC<MonthViewProps> = ({ daysInMonth, events, onEve
             return (
               <div
                 key={dayKey}
-                className={`min-h-16 md:min-h-20 p-2 transition-colors ${
+                className={`relative min-h-16 md:min-h-20 p-2 transition-colors ${
                   day.isCurrentMonth
                     ? day.isToday
                       ? ''
@@ -202,7 +202,7 @@ export const MonthView: React.FC<MonthViewProps> = ({ daysInMonth, events, onEve
                 </p>
 
                 {/* Events preview */}
-                <div className="space-y-1 overflow-hidden">
+                <div className="space-y-1 overflow-hidden pb-3">
                   {dayEvents.slice(0, 2).map((event) => (
                     <div
                       key={event.id}
@@ -218,8 +218,14 @@ export const MonthView: React.FC<MonthViewProps> = ({ daysInMonth, events, onEve
                 </div>
 
                 {dayEvents.length > 2 && (
-                  <div className="absolute bottom-1 right-1 rounded-md bg-white/90 dark:bg-slate-900/90 px-1.5 py-0.5 text-[11px] font-semibold text-gray-700 dark:text-slate-200 shadow-sm">
-                    +{dayEvents.length - 2} more
+                  <div
+                    className="absolute bottom-1 right-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold shadow-sm"
+                    style={{
+                      color: 'var(--theme-accent-strong)',
+                      backgroundColor: 'var(--theme-accent-soft)',
+                    }}
+                  >
+                    +{dayEvents.length - 2} more tasks
                   </div>
                 )}
               </div>
