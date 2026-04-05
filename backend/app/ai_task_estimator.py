@@ -1,6 +1,7 @@
 import json
 import os
 import re
+from datetime import datetime
 from typing import Any
 
 try:
@@ -13,21 +14,6 @@ def _round_to_quarter(hours: float) -> float:
     return max(0.25, round(hours * 4) / 4)
 
 
-def _fallback_hours(task_info: dict[str, Any]) -> float:
-    """
-    Deterministic fallback when OpenAI is unavailable or fails.
-    Never returns null.
-    """
-    current_estimate = task_info.get("estimated_hours")
-    try:
-        value = float(current_estimate)
-        if value > 0:
-            return _round_to_quarter(min(value, 24))
-    except (TypeError, ValueError):
-        pass
-    return 1.0
-
-
 
 
 def estimate_task_hours(task_info: dict[str, Any]) -> float:
@@ -35,7 +21,7 @@ def estimate_task_hours(task_info: dict[str, Any]) -> float:
     Estimate task duration in hours. Uses OpenAI for estimation 
     """
     if OpenAI is None or not os.getenv("OPENAI_API_KEY"):
-        return _fallback_hours(task_info)
+        return None
 
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     prompt = (
@@ -71,4 +57,4 @@ def estimate_task_hours(task_info: dict[str, Any]) -> float:
                 return _round_to_quarter(min(value, 24))
         except Exception:
             pass
-        return _fallback_hours(task_info)
+        return None

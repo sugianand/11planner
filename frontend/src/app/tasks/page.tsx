@@ -395,7 +395,11 @@ export default function TasksPage() {
                   }}
                   disabled={courses.length === 0}
                   title={courses.length === 0 ? "Add a course first to create tasks" : "Create a new task"}
-                  className="bg-[#306844] hover:bg-[#255236] text-white font-bold py-2.5 px-6 rounded-xl transition shadow-lg shadow-green-900/10 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="text-white font-bold py-2.5 px-6 rounded-xl transition shadow-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    backgroundColor: "var(--theme-accent-strong)",
+                    boxShadow: "0 10px 30px -18px var(--theme-accent-strong)",
+                  }}
                 >
                   <span className="material-symbols-outlined text-sm">add</span>
                   New Task
@@ -416,7 +420,14 @@ export default function TasksPage() {
             <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-lg p-8 text-center border border-slate-200 dark:border-slate-700/40 mb-6">
               <p className="text-slate-600 dark:text-slate-300 text-lg font-semibold mb-2">No courses added yet.</p>
               <p className="text-slate-600 dark:text-slate-300 mb-4">Please add a course first before creating tasks.</p>
-              <a href="/courses" className="inline-flex items-center gap-2 bg-[#306844] hover:bg-[#255236] text-white font-semibold py-2.5 px-6 rounded-xl transition shadow-md">
+              <a
+                href="/courses"
+                className="inline-flex items-center gap-2 text-white font-semibold py-2.5 px-6 rounded-xl transition shadow-md"
+                style={{
+                  backgroundColor: "var(--theme-accent-strong)",
+                  boxShadow: "0 10px 30px -18px var(--theme-accent-strong)",
+                }}
+              >
                 <span className="material-symbols-outlined text-sm">school</span>
                 Go to Courses
               </a>
@@ -488,7 +499,11 @@ export default function TasksPage() {
                 </div>
                 <div className="flex gap-3">
                   <button type="submit" disabled={loading}
-                    className="bg-[#306844] hover:bg-[#255236] text-white font-bold py-2.5 px-6 rounded-xl transition shadow-md disabled:opacity-50">
+                    className="text-white font-bold py-2.5 px-6 rounded-xl transition shadow-md disabled:opacity-50"
+                    style={{
+                      backgroundColor: "var(--theme-accent-strong)",
+                      boxShadow: "0 10px 30px -18px var(--theme-accent-strong)",
+                    }}>
                     {loading ? "Saving..." : editingId ? "Update Task" : "Create Task"}
                   </button>
                   <button type="button" onClick={() => { setShowForm(false); setEditingId(null); }}
@@ -508,9 +523,10 @@ export default function TasksPage() {
                   onClick={() => setActiveTab("pending")}
                   className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
                     activeTab === "pending"
-                      ? "bg-[#306844] text-white"
+                      ? "text-white"
                       : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600"
                   }`}
+                  style={activeTab === "pending" ? { backgroundColor: "var(--theme-accent-strong)" } : undefined}
                 >
                   Pending ({pendingTasks})
                 </button>
@@ -518,9 +534,10 @@ export default function TasksPage() {
                   onClick={() => setActiveTab("completed")}
                   className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
                     activeTab === "completed"
-                      ? "bg-[#306844] text-white"
+                      ? "text-white"
                       : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600"
                   }`}
+                  style={activeTab === "completed" ? { backgroundColor: "var(--theme-accent-strong)" } : undefined}
                 >
                   Completed ({completedTasks})
                 </button>
@@ -700,7 +717,8 @@ export default function TasksPage() {
                       <button onClick={() => updateTask(task.id, { completed: !task.completed })}
                         className={`font-bold py-1.5 px-4 rounded-lg transition shadow-sm ${task.completed
                           ? "bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-300"
-                          : "bg-[#306844] text-white hover:bg-[#255236]"}`}>
+                          : "text-white"}`}
+                        style={!task.completed ? { backgroundColor: "var(--theme-accent-strong)" } : undefined}>
                         {task.completed ? "Undo" : "Complete"}
                       </button>
                     </div>

@@ -189,7 +189,10 @@ export const WeekView: React.FC<WeekViewProps> = ({ weekDays, events, onEventMov
               <div key={day.date.toString()} className="flex-1 border-r border-slate-200/70 dark:border-slate-700/70 last:border-r-0">
                 {/* Day header */}
                 <div className="bg-white/85 dark:bg-slate-800/80 border-b-2 border-slate-200/70 dark:border-slate-700/70 p-2 text-center h-20 flex flex-col justify-center">
-                  <p className={`font-semibold ${day.isToday ? '' : 'text-slate-900 dark:text-white'}`} style={day.isToday ? { color: 'var(--theme-accent-strong)' } : undefined}>
+                  <p
+                    className={`font-semibold ${day.isToday ? '' : 'text-slate-900 dark:text-white'}`}
+                    style={day.isToday ? { color: 'var(--theme-accent-strong)' } : undefined}
+                  >
                     {day.dayOfWeek}
                   </p>
                   <p
@@ -229,7 +232,9 @@ export const WeekView: React.FC<WeekViewProps> = ({ weekDays, events, onEventMov
                         onDragLeave={() => handleDragLeave(slotKey)}
                         onDrop={(event) => handleDrop(event, day, slot.hour, slot.minute)}
                         style={{
-                          backgroundColor: isActive ? 'var(--theme-accent-soft)' : undefined,
+                          ...(isActive
+                            ? { backgroundColor: 'var(--theme-accent-soft)' }
+                            : {}),
                           backgroundImage: `repeating-linear-gradient(
                             to bottom,
                             transparent,

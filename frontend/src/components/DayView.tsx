@@ -189,7 +189,9 @@ export const DayView: React.FC<DayViewProps> = ({ dayData, events, onEventMove, 
                 onDragLeave={() => handleDragLeave(slotKey)}
                 onDrop={(event) => handleDrop(event, slot.hour, slot.minute)}
                 style={{
-                  backgroundColor: isActive ? 'var(--theme-accent-soft)' : undefined,
+                  ...(isActive
+                    ? { backgroundColor: 'var(--theme-accent-soft)' }
+                    : {}),
                   backgroundImage: `repeating-linear-gradient(
                     to bottom,
                     transparent,

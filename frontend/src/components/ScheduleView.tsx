@@ -5,6 +5,7 @@ import { ViewMode, Event, DayData } from '@/types/schedule';
 import { getDaysInMonth, getWeekDays, getDayData, getMonthsInYear } from '@/utils/dateUtils';
 import { exportEventsToICS } from '@/utils/icsUtils';
 import { usePlanner } from '@/contexts/PlannerContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { DayView } from './DayView';
 import { WeekView } from './WeekView';
 import { MonthView } from './MonthView';
@@ -22,6 +23,7 @@ interface ScheduleViewProps {
 
 export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEventMove, colorBy = "priority", onColorByChange, errorMessage = null, onDismissError }) => {
   const { userId, courses, loadCourses } = usePlanner();
+  const { effectiveTheme } = useTheme();
   const [viewMode, setViewMode] = useState<ViewMode>('monthly');
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [weekDays, setWeekDays] = useState<DayData[]>(getWeekDays(currentDate));
@@ -279,14 +281,12 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
       return;
     }
 
-    const opened = window.open(webcalUrl, '_blank', 'noopener,noreferrer');
-    if (!opened) {
-      setDialog({
-        isOpen: true,
-        title: 'Pop-up blocked',
-        message: 'Please allow pop-ups to open your calendar subscription in a new tab.',
-      });
-    }
+    const link = document.createElement('a');
+    link.href = webcalUrl;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }, [eventList, userId]);
 
   const handleViewModeChange = (mode: ViewMode) => {
@@ -333,7 +333,9 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
         className="border-b border-white/60 dark:border-slate-700/70 p-5"
         style={{
           backgroundImage:
-            'linear-gradient(to right, color-mix(in srgb, var(--theme-accent-soft) 55%, white), rgba(255,255,255,0.72), color-mix(in srgb, var(--theme-accent-soft) 65%, transparent))',
+            effectiveTheme === 'dark'
+              ? 'linear-gradient(to right, color-mix(in srgb, var(--theme-accent-soft) 25%, rgba(15,23,42,0.82)), rgba(15,23,42,0.74), rgba(15,23,42,0.66))'
+              : 'linear-gradient(to right, color-mix(in srgb, var(--theme-accent-soft) 60%, white), rgba(255,255,255,0.72), color-mix(in srgb, var(--theme-accent-soft) 45%, transparent))',
         }}
       >
         <div className="flex items-center justify-between mb-5">
@@ -345,10 +347,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
             <button
               onClick={handleSubscribe}
               className="px-4 py-2 text-sm font-semibold text-white border rounded-xl hover:brightness-105 transition flex items-center gap-2 shadow-sm"
-              style={{
-                backgroundImage: "linear-gradient(to right, var(--theme-accent), var(--theme-accent-strong))",
-                borderColor: "color-mix(in srgb, var(--theme-accent-strong) 40%, transparent)",
-              }}
+              style={accentStrongStyle}
               title="Add this calendar directly to macOS Calendar or Outlook"
             >
               <span className="material-symbols-outlined text-sm">sync</span>

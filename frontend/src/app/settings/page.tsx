@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useNotification } from "@/contexts/NotificationContext";
 import Footer from "@/components/Footer";
@@ -48,7 +49,8 @@ const readStoredNumber = (key: string, fallback: number): number => {
 };
 
 export default function SettingsPage() {
-  const { theme, setTheme, colorTheme, setColorTheme, colorThemes } = useTheme();
+  const searchParams = useSearchParams();
+  const { theme, setTheme, colorTheme, setColorTheme, colorThemes, effectiveTheme } = useTheme();
   const [isMounted, setIsMounted] = useState(false);
   const [user, setUser] = useState<{ id?: string; email?: string } | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(() => readStoredBoolean("soundEnabled", true));
@@ -78,12 +80,6 @@ export default function SettingsPage() {
   } = useNotification();
 
   useEffect(() => {
-    const panelParam = new URLSearchParams(window.location.search).get("panel");
-    const validPanels: SettingsPanel[] = ["schedule", "personalize", "reminders", "account", "support"];
-    if (panelParam && validPanels.includes(panelParam as SettingsPanel)) {
-      setActivePanel(panelParam as SettingsPanel);
-    }
-
     setIsMounted(true);
     supabase.auth.getUser().then(async ({ data }) => {
       const authUser = data?.user ?? null;
@@ -106,6 +102,14 @@ export default function SettingsPage() {
       }
     });
   }, []);
+
+  useEffect(() => {
+    const panelParam = searchParams.get("panel");
+    const validPanels: SettingsPanel[] = ["schedule", "personalize", "reminders", "account", "support"];
+    if (panelParam && validPanels.includes(panelParam as SettingsPanel)) {
+      setActivePanel(panelParam as SettingsPanel);
+    }
+  }, [searchParams]);
 
   const [savedSettings, setSavedSettings] = useState({
     theme: theme as Theme,
@@ -133,11 +137,9 @@ export default function SettingsPage() {
     localStorage.setItem("dailyLimit", String(normalized));
 
     if (user?.id) {
-      supabase
+      void supabase
         .from("profiles")
-        .upsert({ id: user.id, daily_study_limit: normalized }, { onConflict: "id" })
-        .then(() => undefined)
-        .catch(() => undefined);
+        .upsert({ id: user.id, daily_study_limit: normalized }, { onConflict: "id" });
     }
   };
 
@@ -486,26 +488,41 @@ export default function SettingsPage() {
     }
   };
 
-  const navItems: Array<{ id: SettingsPanel; label: string; icon: string; keywords: string[] }> = [
-    { id: "schedule", label: "Schedule Setup", icon: "event" },
-    { id: "personalize", label: "Personalize", icon: "palette" },
-    { id: "reminders", label: "Reminders", icon: "notifications" },
-    { id: "account", label: "Account", icon: "person" },
-    { id: "support", label: "Support", icon: "support_agent" },
-  ].map((item) => {
-    const keywordMap: Record<SettingsPanel, string[]> = {
-      schedule: ["schedule", "study", "limit", "hours", "daily"],
-      personalize: ["theme", "color", "accent", "appearance", "dark", "light"],
-      reminders: ["reminder", "notification", "email", "weekly", "report", "alerts", "sound"],
-      account: ["account", "privacy", "security", "password", "export", "delete"],
-      support: ["support", "help", "contact", "faq"],
-    };
-
-    return {
-      ...item,
-      keywords: keywordMap[item.id],
-    };
-  });
+  const navItems: Array<{ id: SettingsPanel; label: string; icon: string; keywords: string[] }> = useMemo(
+    () => [
+      {
+        id: "schedule",
+        label: "Schedule Setup",
+        icon: "event",
+        keywords: ["schedule", "study", "limit", "hours", "daily"],
+      },
+      {
+        id: "personalize",
+        label: "Personalize",
+        icon: "palette",
+        keywords: ["theme", "color", "accent", "appearance", "dark", "light"],
+      },
+      {
+        id: "reminders",
+        label: "Reminders",
+        icon: "notifications",
+        keywords: ["reminder", "notification", "email", "weekly", "report", "alerts", "sound"],
+      },
+      {
+        id: "account",
+        label: "Account",
+        icon: "person",
+        keywords: ["account", "privacy", "security", "password", "export", "delete"],
+      },
+      {
+        id: "support",
+        label: "Support",
+        icon: "support_agent",
+        keywords: ["support", "help", "contact", "faq"],
+      },
+    ],
+    []
+  );
 
   const filteredNavItems = useMemo(() => {
     const query = settingsSearch.trim().toLowerCase();
@@ -534,10 +551,12 @@ export default function SettingsPage() {
       <div className="p-4 md:p-6">
         <div className="max-w-6xl mx-auto rounded-3xl border border-slate-200/70 dark:border-slate-700/60 bg-white/85 dark:bg-slate-900/80 backdrop-blur-xl shadow-[0_30px_70px_-35px_rgba(15,23,42,0.6)] overflow-hidden">
           <div
-            className="px-5 md:px-8 py-5 border-b border-slate-200/70 dark:border-slate-700/70 dark:from-slate-800/80 dark:via-slate-900/75 dark:to-slate-800/80"
+            className="px-5 md:px-8 py-5 border-b border-slate-200/70 dark:border-slate-700/70"
             style={{
               backgroundImage:
-                "linear-gradient(to right, var(--theme-accent-soft), rgba(255,255,255,0.72), rgba(125,211,252,0.32))",
+                effectiveTheme === "dark"
+                  ? "linear-gradient(to right, color-mix(in srgb, var(--theme-accent-soft) 25%, rgba(15,23,42,0.84)), rgba(15,23,42,0.76), rgba(15,23,42,0.66))"
+                  : "linear-gradient(to right, color-mix(in srgb, var(--theme-accent-soft) 58%, white), rgba(255,255,255,0.72), color-mix(in srgb, var(--theme-accent-soft) 40%, transparent))",
             }}
           >
             <div className="flex items-center gap-3">
@@ -587,9 +606,18 @@ export default function SettingsPage() {
                 <div
                   className={`rounded-xl border px-4 py-3 text-sm font-medium ${
                     actionMessage.type === "success"
-                      ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800/60 dark:bg-emerald-900/25 dark:text-emerald-200"
+                      ? ""
                       : "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-800/60 dark:bg-rose-900/25 dark:text-rose-200"
                   }`}
+                  style={
+                    actionMessage.type === "success"
+                      ? {
+                          borderColor: "var(--theme-accent)",
+                          backgroundColor: "var(--theme-accent-soft)",
+                          color: "var(--theme-accent-strong)",
+                        }
+                      : undefined
+                  }
                 >
                   {actionMessage.text}
                 </div>

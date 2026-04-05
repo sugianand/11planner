@@ -166,12 +166,14 @@ export const MonthView: React.FC<MonthViewProps> = ({ daysInMonth, events, onEve
                       ? ''
                       : 'bg-white/85 dark:bg-slate-800/75'
                     : 'bg-slate-50/60 dark:bg-slate-800/60'
-                }`}
+                } ${isActive ? 'ring-2' : ''}`}
                 onDragOver={(event) => handleDragOver(event, dayKey)}
                 onDragLeave={() => handleDragLeave(dayKey)}
                 onDrop={(event) => handleDrop(event, day)}
                 style={{
-                  backgroundColor: day.isCurrentMonth && day.isToday ? 'var(--theme-accent-soft)' : undefined,
+                  ...(day.isCurrentMonth && day.isToday
+                    ? { backgroundColor: 'var(--theme-accent-soft)' }
+                    : {}),
                   ...(isActive
                     ? { boxShadow: 'inset 0 0 0 2px var(--theme-accent-strong)' }
                     : {}),
@@ -202,7 +204,7 @@ export const MonthView: React.FC<MonthViewProps> = ({ daysInMonth, events, onEve
                 </p>
 
                 {/* Events preview */}
-                <div className="space-y-1 overflow-hidden pb-3">
+                <div className="space-y-1 overflow-hidden">
                   {dayEvents.slice(0, 2).map((event) => (
                     <div
                       key={event.id}
@@ -218,14 +220,8 @@ export const MonthView: React.FC<MonthViewProps> = ({ daysInMonth, events, onEve
                 </div>
 
                 {dayEvents.length > 2 && (
-                  <div
-                    className="absolute bottom-1 right-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold shadow-sm"
-                    style={{
-                      color: 'var(--theme-accent-strong)',
-                      backgroundColor: 'var(--theme-accent-soft)',
-                    }}
-                  >
-                    +{dayEvents.length - 2} more tasks
+                  <div className="absolute bottom-1 right-1 rounded-md bg-white/90 dark:bg-slate-900/90 px-1.5 py-0.5 text-[11px] font-semibold text-gray-700 dark:text-slate-200 shadow-sm">
+                    +{dayEvents.length - 2} more
                   </div>
                 )}
               </div>

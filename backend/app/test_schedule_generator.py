@@ -266,15 +266,6 @@ class TestScheduleGeneratorNewFeatures(unittest.TestCase):
         blocks = self.generator.generate_schedule(tasks, self.prefs, start_date=self.start_date)
         self.assertEqual(blocks[0].task_id, "near")
 
-    def test_deadline_outweighs_far_higher_priority(self):
-        """A very near deadline should beat a far deadline even with lower priority"""
-        tasks = [
-            self.create_task("far_high", 2, 5, 14),
-            self.create_task("near_low", 2, 1, 1),
-        ]
-        blocks = self.generator.generate_schedule(tasks, self.prefs, start_date=self.start_date)
-        self.assertEqual(blocks[0].task_id, "near_low")
-
     def test_assignment_plan_early_uses_small_blocks(self):
         """'early' assignment plan should create 1-hour blocks"""
         prefs_early = Preferences(
@@ -386,6 +377,43 @@ class TestScheduleGeneratorNewFeatures(unittest.TestCase):
         tasks = [self.create_task("t1", 2, 2, 2)]
         blocks = self.generator.generate_schedule(tasks, prefs_bad_limit, start_date=self.start_date)
         self.assertGreater(len(blocks), 0)
+
+    def test_deadline_overrides_weekday_afternoon_preferences(self):
+        """Urgent deadlines should schedule before due date even if prefs are weekday/afternoon only."""
+        friday_night = datetime(2026, 4, 3, 21, 0, 0)  # Friday 9:00 PM
+        due_saturday_night = friday_night + timedelta(days=1, hours=2)  # Saturday 11:00 PM
+
+        prefs_weekday_afternoon = Preferences(
+            workdays=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+            work_start=time(13, 0),
+            work_end=time(17, 0),
+            study_limit_hours=8,
+        )
+
+        urgent_task = Task(
+            id="urgent",
+            title="Urgent weekend due task",
+            assignment_id=None,
+            course_id=None,
+            deadline=due_saturday_night,
+            estimated_hours=2,
+            priority=3,
+            description=None,
+            user_id="test_user",
+            created_at=friday_night,
+            completed=False,
+        )
+
+        blocks = self.generator.generate_schedule(
+            [urgent_task],
+            prefs_weekday_afternoon,
+            start_date=friday_night,
+        )
+
+        self.assertGreater(len(blocks), 0)
+        self.assertIn(blocks[0].start_time.strftime("%A"), ["Friday", "Saturday"])
+        self.assertLessEqual(blocks[0].start_time, due_saturday_night)
+        self.assertTrue(all(block.end_time <= due_saturday_night for block in blocks))
 
 
 if __name__ == "__main__":

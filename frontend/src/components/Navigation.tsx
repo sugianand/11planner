@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTheme } from "@/contexts/ThemeContext";
 
 export default function Navigation() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -13,6 +14,7 @@ export default function Navigation() {
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   const [userInitials, setUserInitials] = useState("");
   const router = useRouter();
+  const { setTheme, setColorTheme } = useTheme();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -40,10 +42,15 @@ export default function Navigation() {
   async function logout() {
     try {
       localStorage.setItem("colorTheme", "emerald");
+      localStorage.removeItem("theme");
       document.documentElement.setAttribute("data-theme", "emerald");
+      document.documentElement.removeAttribute("class");
       if (document.body) {
         document.body.setAttribute("data-theme", "emerald");
+        document.body.removeAttribute("class");
       }
+      setTheme("light");
+      setColorTheme("emerald");
     } catch {
       // Ignore client storage failures and continue sign out.
     }

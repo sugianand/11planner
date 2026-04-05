@@ -71,24 +71,7 @@ export const YearView: React.FC<YearViewProps> = ({ year, monthsData, events }) 
                       >
                         {day.dayNumber}
                         {hasEvents && day.isCurrentMonth && !day.isToday && (
-                          <>
-                            <div
-                              className="absolute bottom-0.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full"
-                              style={{ backgroundColor: 'var(--theme-accent-strong)' }}
-                            ></div>
-                            {dayEvents.length > 1 && (
-                              <div
-                                className="absolute -top-1 -right-1 min-w-[14px] h-[14px] rounded-full px-1 text-[9px] leading-[14px] text-center font-semibold"
-                                style={{
-                                  color: 'var(--theme-accent-strong)',
-                                  backgroundColor: 'var(--theme-accent-soft)',
-                                }}
-                                title={`${dayEvents.length} tasks`}
-                              >
-                                {dayEvents.length > 9 ? '9+' : dayEvents.length}
-                              </div>
-                            )}
-                          </>
+                          <div className="absolute bottom-0.5 w-1 h-1 rounded-full" style={{ backgroundColor: 'var(--theme-accent-strong)' }}></div>
                         )}
                       </div>
                     );

@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { ReactNode, createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
 import { ThemeProvider as NextThemesProvider, useTheme as useNextTheme } from 'next-themes';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -27,8 +27,56 @@ interface ThemeContextType {
   colorThemes: ColorTheme[];
 }
 
+function ThemeAuthSync({
+  setColorThemeState,
+}: {
+  setColorThemeState: (theme: ColorTheme) => void;
+}) {
+  const { setTheme: setNextTheme } = useNextTheme();
+
+  useEffect(() => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_OUT') {
+        setColorThemeState('emerald');
+        setNextTheme('light');
+        return;
+      }
+
+      if (!session?.user?.id) {
+        return;
+      }
+
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('theme_preference, color_theme_preference')
+          .eq('id', session.user.id)
+          .maybeSingle();
+
+        const profileColorTheme = profile?.color_theme_preference as ColorTheme | null;
+        if (profileColorTheme && COLOR_THEMES.includes(profileColorTheme)) {
+          setColorThemeState(profileColorTheme);
+        }
+
+        if (profile?.theme_preference) {
+          const themeToSet = profile.theme_preference === 'auto' ? 'system' : profile.theme_preference;
+          setNextTheme(themeToSet);
+        }
+      } catch {
+        // Keep current local theme if profile fetch fails.
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [setColorThemeState, setNextTheme]);
+
+  return null;
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [colorTheme, setColorTheme] = useState<ColorTheme>(() => {
+  const [colorTheme, setColorThemeState] = useState<ColorTheme>(() => {
     if (typeof window === 'undefined') {
       return 'emerald';
     }
@@ -47,32 +95,42 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(COLOR_THEME_STORAGE_KEY, colorTheme);
   }, [colorTheme]);
 
-  useEffect(() => {
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_OUT') {
-        setColorTheme('emerald');
-      }
-    });
+  const setColorTheme = useCallback((newColorTheme: ColorTheme) => {
+    setColorThemeState(newColorTheme);
 
-    return () => subscription.unsubscribe();
+    void (async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user?.id) {
+          await supabase
+            .from('profiles')
+            .upsert({ id: user.id, color_theme_preference: newColorTheme }, { onConflict: 'id' });
+        }
+      } catch {
+        // Preference still persists locally.
+      }
+    })();
   }, []);
 
   const contextValue = useMemo(
     () => ({ colorTheme, setColorTheme }),
-    [colorTheme]
+    [colorTheme, setColorTheme]
   );
 
   return (
     <NextThemesProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-      <ColorThemeContext.Provider value={contextValue}>{children}</ColorThemeContext.Provider>
+      <ColorThemeContext.Provider value={contextValue}>
+        <ThemeAuthSync setColorThemeState={setColorThemeState} />
+        {children}
+      </ColorThemeContext.Provider>
     </NextThemesProvider>
   );
 }
 
 export function useTheme(): ThemeContextType {
-  const { theme, setTheme, resolvedTheme } = useNextTheme();
+  const { theme, setTheme: setNextTheme, resolvedTheme } = useNextTheme();
   const colorThemeContext = useContext(ColorThemeContext);
 
   if (!colorThemeContext) {
@@ -86,10 +144,25 @@ export function useTheme(): ThemeContextType {
   const updateTheme = (newTheme: Theme) => {
     // When app asks for 'auto', we tell next-themes 'system'
     if (newTheme === 'auto') {
-      setTheme('system');
+      setNextTheme('system');
     } else {
-      setTheme(newTheme);
+      setNextTheme(newTheme);
     }
+
+    void (async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user?.id) {
+          await supabase
+            .from('profiles')
+            .upsert({ id: user.id, theme_preference: newTheme }, { onConflict: 'id' });
+        }
+      } catch {
+        // Theme still persists locally via next-themes.
+      }
+    })();
   };
 
   return {

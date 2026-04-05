@@ -449,7 +449,11 @@ export default function CoursesPage() {
                         labEndTime: "",
                       });
                     }}
-                    className="bg-[#306844] hover:bg-[#255236] text-white font-bold py-2.5 px-6 rounded-xl transition shadow-lg shadow-green-900/10 flex items-center gap-2"
+                    className="text-white font-bold py-2.5 px-6 rounded-xl transition shadow-lg flex items-center gap-2"
+                    style={{
+                      backgroundColor: "var(--theme-accent-strong)",
+                      boxShadow: "0 10px 30px -18px var(--theme-accent-strong)",
+                    }}
                   >
                     <span className="material-symbols-outlined text-sm">add</span>
                     New Course
@@ -755,7 +759,11 @@ export default function CoursesPage() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="bg-[#306844] hover:bg-[#255236] text-white font-bold py-2.5 px-6 rounded-xl transition shadow-md disabled:opacity-50"
+                    className="text-white font-bold py-2.5 px-6 rounded-xl transition shadow-md disabled:opacity-50"
+                    style={{
+                      backgroundColor: "var(--theme-accent-strong)",
+                      boxShadow: "0 10px 30px -18px var(--theme-accent-strong)",
+                    }}
                   >
                     {loading ? "Saving..." : editingId ? "Update Course" : "Create Course"}
                   </button>

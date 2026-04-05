@@ -101,6 +101,62 @@ class ScheduleGenerator:
         return self.move_to_next_work_start(dt, pref)
     #move to next day and set to work start time, used when current day time ends and you want to go to the next day 
 
+    def relaxed_deadline_prefs(self, pref: Preferences) -> Preferences:
+        """
+        Deadline-first fallback profile:
+        - ignores preferred workdays
+        - widens time window so urgent work can be placed before due time
+        """
+        return Preferences(
+            workdays=[
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday",
+                "Saturday",
+                "Sunday",
+            ],
+            work_start=time(6, 0),
+            work_end=time(23, 0),
+            study_limit_hours=pref.study_limit_hours,
+            workstyle=pref.workstyle,
+            additional_info=pref.additional_info,
+            assignment_plan=pref.assignment_plan,
+        )
+
+    def estimated_capacity_hours_before_deadline(
+        self,
+        start_dt: datetime,
+        deadline: datetime,
+        pref: Preferences,
+        max_hours_per_day: float,
+    ) -> float:
+        """
+        Roughly estimate how many hours can still be scheduled before deadline
+        while honoring current preference windows.
+        """
+        if deadline <= start_dt:
+            return 0.0
+
+        total_hours = 0.0
+        cursor_day = datetime.combine(start_dt.date(), time.min)
+        deadline_day = datetime.combine(deadline.date(), time.min)
+
+        while cursor_day <= deadline_day:
+            day_probe = cursor_day
+            if self.is_workday(day_probe, pref):
+                window_start = self.set_time(day_probe, pref.work_start)
+                window_end = self.set_time(day_probe, pref.work_end)
+                effective_start = max(window_start, start_dt)
+                effective_end = min(window_end, deadline)
+                if effective_end > effective_start:
+                    window_hours = (effective_end - effective_start).total_seconds() / 3600
+                    total_hours += min(window_hours, max_hours_per_day)
+            cursor_day += timedelta(days=1)
+
+        return max(total_hours, 0.0)
+
     def get_block_hours_for_plan(self, prefs: Preferences, task: Task, hours_remaining: float) -> float:
         """
         Determine block size based on assignment plan preference.
@@ -190,51 +246,22 @@ class ScheduleGenerator:
         if not pending_tasks:
             return []
 
-        def urgency_key(task: Task):
-            # Overdue work must surface first. For remaining tasks, closer deadlines
-            # dominate ordering and priority breaks ties inside similar deadlines.
+        def urgency_score(task: Task):
+            days_until = (task.deadline - start_date).days
+            hours_needed = task.estimated_hours or 1
+            priority = task.priority or 2
             priority_value = getattr(task, "priority", None)
             if priority_value is None:
                 priority_value = getattr(task, "priority_level", 2) or 2
 
-            try:
-                priority_value = int(priority_value)
-            except (TypeError, ValueError):
-                priority_value = 2
+            if days_until <= 0:
+                return -999
 
-            hours_needed = float(task.estimated_hours or 1)
-            if hours_needed <= 0:
-                hours_needed = 1.0
+            return (days_until / hours_needed) - (priority_value * 0.3)
 
-            minutes_until_deadline = int((task.deadline - start_date).total_seconds() // 60)
-            is_not_overdue = minutes_until_deadline > 0
-
-            # For non-overdue tasks, tasks with larger work-to-time pressure should
-            # move earlier when deadlines are close.
-            available_hours = max(minutes_until_deadline / 60.0, 1.0)
-            pressure_score = hours_needed / available_hours
-
-            return (
-                is_not_overdue,
-                minutes_until_deadline,
-                -priority_value,
-                -pressure_score,
-                -hours_needed,
-                str(task.id),
-            )
-
-        sorted_tasks = sorted(pending_tasks, key=urgency_key)
+        sorted_tasks = sorted(pending_tasks, key=urgency_score)
 
         current_dt = start_date
-        if not self.is_workday(current_dt, prefs):
-            current_dt = self.move_to_next_work_start(current_dt, prefs)
-        else:
-            work_start_dt = self.set_time(current_dt, prefs.work_start)
-            work_end_dt = self.set_time(current_dt, prefs.work_end)
-            if current_dt < work_start_dt:
-                current_dt = work_start_dt
-            elif current_dt >= work_end_dt:
-                current_dt = self.next_day_start(current_dt, prefs)
         current_dt = self.skip_if_busy(current_dt, busy)
         current_dt = self.round_up_to_five(current_dt)
 
@@ -289,15 +316,25 @@ class ScheduleGenerator:
             sorted_tasks = self.apply_ai_task_order(sorted_tasks, ai_task_order)
 
         for task in sorted_tasks:
+            deadline_cutoff: Optional[datetime] = task.deadline if task.deadline > current_dt else None
+            strict_capacity_hours = self.estimated_capacity_hours_before_deadline(
+                current_dt,
+                task.deadline,
+                prefs,
+                max_hours_per_day,
+            )
+            deadline_override_mode = strict_capacity_hours + 1e-6 < float(task.estimated_hours or 1)
+            runtime_prefs = self.relaxed_deadline_prefs(prefs) if deadline_override_mode else prefs
+
             task_preferred_days = preferred_days_map.get(str(task.id), [])
             task_preferred_day_set = self.normalized_day_set(task_preferred_days)
-            if task_preferred_days:
-                candidate_dt = self.move_to_preferred_day(current_dt, prefs, task_preferred_days)
+            if task_preferred_days and not deadline_override_mode:
+                candidate_dt = self.move_to_preferred_day(current_dt, runtime_prefs, task_preferred_days)
                 candidate_dt = self.skip_if_busy(candidate_dt, busy)
 
                 if candidate_dt.date() <= task.deadline.date():
                     current_dt = candidate_dt
-                    hours_today = 0.0 if current_dt.time() == prefs.work_start else hours_today
+                    hours_today = 0.0 if current_dt.time() == runtime_prefs.work_start else hours_today
             hours_remaining = float(task.estimated_hours or 1)
 
             override_list = block_minutes_override.get(str(task.id), [])
@@ -308,38 +345,49 @@ class ScheduleGenerator:
                 current_dt = self.skip_if_busy(current_dt, busy)
                 current_dt = self.round_up_to_five(current_dt)
 
-                if not self.is_workday(current_dt, prefs):
-                    current_dt = self.move_to_next_work_start(current_dt, prefs)
+                if deadline_cutoff and current_dt >= deadline_cutoff:
+                    break
+
+                if not self.is_workday(current_dt, runtime_prefs):
+                    current_dt = self.move_to_next_work_start(current_dt, runtime_prefs)
                     current_dt = self.skip_if_busy(current_dt, busy)
                     current_dt = self.round_up_to_five(current_dt)
                     hours_today = 0.0
                     continue
 
-                if task_preferred_day_set and self.day_name(current_dt).lower() not in task_preferred_day_set:
-                    moved_dt = self.move_to_preferred_day(current_dt, prefs, task_preferred_days)
+                if (
+                    task_preferred_day_set
+                    and not deadline_override_mode
+                    and self.day_name(current_dt).lower() not in task_preferred_day_set
+                ):
+                    moved_dt = self.move_to_preferred_day(current_dt, runtime_prefs, task_preferred_days)
                     moved_dt = self.skip_if_busy(moved_dt, busy)
                     if moved_dt.date() <= task.deadline.date():
                         current_dt = self.round_up_to_five(moved_dt)
                         hours_today = 0.0
 
                 if hours_today >= max_hours_per_day:
-                    current_dt = self.next_day_start(current_dt, prefs)
+                    current_dt = self.next_day_start(current_dt, runtime_prefs)
                     current_dt = self.skip_if_busy(current_dt, busy)
                     current_dt = self.round_up_to_five(current_dt)
                     hours_today = 0.0
                     continue
 
-                day_end = self.work_window_end(current_dt, prefs)
+                day_end = self.work_window_end(current_dt, runtime_prefs)
                 if current_dt >= day_end:
-                    current_dt = self.next_day_start(current_dt, prefs)
+                    current_dt = self.next_day_start(current_dt, runtime_prefs)
                     current_dt = self.skip_if_busy(current_dt, busy)
                     current_dt = self.round_up_to_five(current_dt)
                     hours_today = 0.0
                     continue
+
+                effective_window_end = min(day_end, deadline_cutoff) if deadline_cutoff else day_end
+                if current_dt >= effective_window_end:
+                    break
 
                 remaining_minutes = max(int(round(hours_remaining * 60)), 15)
                 available_today_minutes = max(int(round((max_hours_per_day - hours_today) * 60)), 0)
-                available_window_minutes = max(int((day_end - current_dt).total_seconds() // 60), 0)
+                available_window_minutes = max(int((effective_window_end - current_dt).total_seconds() // 60), 0)
 
                 if override_idx < len(override_list):
                     candidate_minutes = int(override_list[override_idx])

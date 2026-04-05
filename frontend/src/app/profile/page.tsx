@@ -284,16 +284,25 @@ export default function ProfilePage() {
         <section className="rounded-3xl border border-white/45 bg-white/50 p-5 shadow-[0_30px_120px_-50px_rgba(15,23,42,0.5)] backdrop-blur-xl transition-all duration-500 dark:border-slate-700/55 dark:bg-slate-900/45 sm:p-8">
           <div className="grid gap-5 lg:grid-cols-[1.35fr_0.95fr]">
             <div
-              className="card-reveal relative overflow-hidden rounded-3xl border border-white/50 bg-gradient-to-br from-white/80 via-white/60 to-emerald-50/70 p-6 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_40px_-28px_rgba(15,23,42,0.35)] motion-reduce:transition-none dark:border-slate-700/55 dark:from-slate-900/70 dark:via-slate-900/55 dark:to-emerald-950/20 sm:p-8"
+              className="card-reveal relative overflow-hidden rounded-3xl border border-white/50 bg-white/70 p-6 shadow-sm transition-all duration-300 hover:shadow-md motion-reduce:transition-none dark:border-slate-700/55 dark:bg-slate-800/55 sm:p-8"
               style={{ animationDelay: "70ms" }}
             >
-              <div className="pointer-events-none absolute -right-12 -top-14 h-44 w-44 rounded-full bg-gradient-to-b from-emerald-300/35 to-teal-300/5 blur-2xl dark:from-emerald-400/20 dark:to-transparent" />
               <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:gap-6">
-                <div className="flex h-24 w-24 items-center justify-center rounded-2xl border border-white/70 bg-gradient-to-br from-[#306844] to-[#3d8658] text-4xl font-black tracking-wide text-white shadow-[0_14px_35px_-16px_rgba(17,24,39,0.7)]">
+                <div
+                  className="flex h-24 w-24 items-center justify-center rounded-2xl border border-white/70 text-4xl font-black tracking-wide text-white shadow-[0_14px_35px_-16px_rgba(17,24,39,0.7)]"
+                  style={{ backgroundColor: "var(--theme-accent-strong)" }}
+                >
                   {initials}
                 </div>
                 <div className="space-y-1">
-                  <p className="inline-flex w-fit items-center rounded-full border border-emerald-200/80 bg-emerald-50/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
+                  <p
+                    className="inline-flex w-fit items-center rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em]"
+                    style={{
+                      borderColor: "var(--theme-accent)",
+                      backgroundColor: "var(--theme-accent-soft)",
+                      color: "var(--theme-accent-strong)",
+                    }}
+                  >
                     Focus Profile
                   </p>
                   <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white sm:text-4xl">
@@ -319,7 +328,8 @@ export default function ProfilePage() {
                         setNameFeedback(null);
                         setIsEditingName(true);
                       }}
-                      className="inline-flex items-center rounded-xl bg-[#306844] px-4 py-2 text-sm font-bold text-white transition-all duration-200 hover:bg-[#255236]"
+                      className="inline-flex items-center rounded-xl px-4 py-2 text-sm font-bold text-white transition-all duration-200"
+                      style={{ backgroundColor: "var(--theme-accent-strong)" }}
                     >
                       Edit Name
                     </button>
@@ -333,14 +343,20 @@ export default function ProfilePage() {
                         value={firstNameInput}
                         onChange={(e) => setFirstNameInput(e.target.value)}
                         placeholder="First name"
-                        className="w-full rounded-xl border border-slate-300/80 bg-white/95 px-3 py-2.5 text-sm font-medium text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/25 dark:border-slate-600/80 dark:bg-slate-800/80 dark:text-white"
+                        className="w-full rounded-xl border border-slate-300/80 bg-white/95 px-3 py-2.5 text-sm font-medium text-slate-900 outline-none transition focus:ring-2 dark:border-slate-600/80 dark:bg-slate-800/80 dark:text-white"
+                        style={{
+                          borderColor: "color-mix(in srgb, var(--theme-accent) 35%, rgba(148,163,184,0.8))",
+                        }}
                       />
                       <input
                         type="text"
                         value={lastNameInput}
                         onChange={(e) => setLastNameInput(e.target.value)}
                         placeholder="Last name"
-                        className="w-full rounded-xl border border-slate-300/80 bg-white/95 px-3 py-2.5 text-sm font-medium text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/25 dark:border-slate-600/80 dark:bg-slate-800/80 dark:text-white"
+                        className="w-full rounded-xl border border-slate-300/80 bg-white/95 px-3 py-2.5 text-sm font-medium text-slate-900 outline-none transition focus:ring-2 dark:border-slate-600/80 dark:bg-slate-800/80 dark:text-white"
+                        style={{
+                          borderColor: "color-mix(in srgb, var(--theme-accent) 35%, rgba(148,163,184,0.8))",
+                        }}
                       />
                     </div>
                     <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -348,7 +364,8 @@ export default function ProfilePage() {
                         type="button"
                         onClick={handleSaveName}
                         disabled={isSavingName}
-                        className="inline-flex items-center rounded-xl bg-[#306844] px-4 py-2 text-sm font-bold text-white transition-all duration-200 hover:bg-[#255236] disabled:cursor-not-allowed disabled:opacity-60"
+                        className="inline-flex items-center rounded-xl px-4 py-2 text-sm font-bold text-white transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60"
+                        style={{ backgroundColor: "var(--theme-accent-strong)" }}
                       >
                         {isSavingName ? "Saving..." : "Save Name"}
                       </button>
@@ -369,7 +386,7 @@ export default function ProfilePage() {
                 ) : null}
                 <div className="mt-3 flex flex-wrap items-center gap-3">
                   {nameFeedback ? (
-                    <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">{nameFeedback}</p>
+                    <p className="text-sm font-semibold" style={{ color: "var(--theme-accent-strong)" }}>{nameFeedback}</p>
                   ) : null}
                   {nameError ? (
                     <p className="text-sm font-semibold text-red-700 dark:text-red-300">{nameError}</p>
@@ -378,15 +395,15 @@ export default function ProfilePage() {
               </div>
 
               <div className="relative mt-7 grid gap-3 sm:grid-cols-3">
-                <div className="rounded-2xl border border-white/60 bg-white/70 p-4 shadow-sm transition-all duration-300 hover:border-emerald-200/80 hover:shadow-md dark:border-slate-700/65 dark:bg-slate-800/55">
+                <div className="rounded-2xl border border-white/60 bg-white/70 p-4 shadow-sm transition-all duration-300 hover:shadow-md dark:border-slate-700/65 dark:bg-slate-800/55" style={{ borderColor: 'color-mix(in srgb, var(--theme-accent) 25%, rgba(255,255,255,0.6))' }}>
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">Total Tasks</p>
                   <p className="mt-2 text-3xl font-black text-slate-900 dark:text-white">{totalTasks}</p>
                 </div>
-                <div className="rounded-2xl border border-white/60 bg-white/70 p-4 shadow-sm transition-all duration-300 hover:border-emerald-200/80 hover:shadow-md dark:border-slate-700/65 dark:bg-slate-800/55">
+                <div className="rounded-2xl border border-white/60 bg-white/70 p-4 shadow-sm transition-all duration-300 hover:shadow-md dark:border-slate-700/65 dark:bg-slate-800/55" style={{ borderColor: 'color-mix(in srgb, var(--theme-accent) 25%, rgba(255,255,255,0.6))' }}>
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">Completed</p>
                   <p className="mt-2 text-3xl font-black text-slate-900 dark:text-white">{completedTasks}</p>
                 </div>
-                <div className="rounded-2xl border border-white/60 bg-white/70 p-4 shadow-sm transition-all duration-300 hover:border-emerald-200/80 hover:shadow-md dark:border-slate-700/65 dark:bg-slate-800/55">
+                <div className="rounded-2xl border border-white/60 bg-white/70 p-4 shadow-sm transition-all duration-300 hover:shadow-md dark:border-slate-700/65 dark:bg-slate-800/55" style={{ borderColor: 'color-mix(in srgb, var(--theme-accent) 25%, rgba(255,255,255,0.6))' }}>
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">Courses</p>
                   <p className="mt-2 text-3xl font-black text-slate-900 dark:text-white">{courses.length}</p>
                 </div>
@@ -400,13 +417,16 @@ export default function ProfilePage() {
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">Current Momentum</p>
               <div className="mt-3 flex items-end gap-2">
                 <h2 className="text-4xl font-black leading-none text-slate-900 dark:text-white">{animatedCompletionRate}%</h2>
-                <span className="pb-1 text-sm font-semibold text-emerald-700 dark:text-emerald-300">{focusTier}</span>
+                <span className="pb-1 text-sm font-semibold" style={{ color: "var(--theme-accent-strong)" }}>{focusTier}</span>
               </div>
 
               <div className="mt-5 h-3 w-full overflow-hidden rounded-full bg-slate-200/85 dark:bg-slate-700/60">
                 <div
-                  className="h-3 rounded-full bg-gradient-to-r from-[#306844] via-[#2f7f54] to-[#5ac693] transition-all duration-700 ease-out"
-                  style={{ width: `${completionRate}%` }}
+                  className="h-3 rounded-full transition-all duration-700 ease-out"
+                  style={{
+                    width: `${completionRate}%`,
+                    backgroundColor: "var(--theme-accent-strong)",
+                  }}
                 />
               </div>
 
@@ -421,15 +441,22 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              <div className="mt-6 rounded-2xl border border-emerald-200/70 bg-emerald-50/70 p-4 dark:border-emerald-500/25 dark:bg-emerald-500/10">
-                <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-200">
+              <div
+                className="mt-6 rounded-2xl border p-4"
+                style={{
+                  borderColor: "var(--theme-accent)",
+                  backgroundColor: "var(--theme-accent-soft)",
+                }}
+              >
+                <p className="text-sm font-semibold" style={{ color: "var(--theme-accent-strong)" }}>
                   {hasTakenQuiz
                     ? "Your preference profile is saved. Retake any time to recalibrate your planner behavior."
                     : "Take your preference quiz to personalize your schedule generation and task rhythm."}
                 </p>
                 <Link
                   href="/profile/quiz"
-                  className="mt-4 inline-flex items-center rounded-xl bg-[#306844] px-5 py-2.5 text-sm font-bold text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#255236] hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+                  className="mt-4 inline-flex items-center rounded-xl px-5 py-2.5 text-sm font-bold text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                  style={{ backgroundColor: "var(--theme-accent-strong)" }}
                 >
                   {hasTakenQuiz ? "Retake Preference Quiz" : "Start Preference Quiz"}
                 </Link>
@@ -465,8 +492,8 @@ export default function ProfilePage() {
                           <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-300">{day.count}</span>
                           <div className="relative flex h-full w-full items-end">
                             <div
-                              className="w-full rounded-t-lg bg-gradient-to-t from-[#306844] to-[#5ac693] transition-all duration-700 ease-out motion-reduce:transition-none"
-                              style={{ height: barHeight }}
+                              className="w-full rounded-t-lg transition-all duration-700 ease-out motion-reduce:transition-none"
+                              style={{ height: barHeight, backgroundColor: "var(--theme-accent-strong)" }}
                             />
                           </div>
                           <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">{day.shortLabel}</span>
@@ -486,9 +513,12 @@ export default function ProfilePage() {
                   <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-300">Best Streak</p>
                   <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{bestStreak} day{bestStreak === 1 ? "" : "s"}</p>
                 </div>
-                <div className="rounded-2xl border border-emerald-200/70 bg-emerald-50/75 p-4 dark:border-emerald-500/25 dark:bg-emerald-500/10">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">Next Goal</p>
-                  <p className="mt-1 text-sm font-semibold text-emerald-900 dark:text-emerald-100">
+                <div
+                  className="rounded-2xl border p-4"
+                  style={{ borderColor: "var(--theme-accent)", backgroundColor: "var(--theme-accent-soft)" }}
+                >
+                  <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--theme-accent-strong)" }}>Next Goal</p>
+                  <p className="mt-1 text-sm font-semibold" style={{ color: "var(--theme-accent-strong)" }}>
                     Complete {Math.max(1, Math.ceil((60 * totalTasks) / 100) - completedTasks)} more task{Math.max(1, Math.ceil((60 * totalTasks) / 100) - completedTasks) === 1 ? "" : "s"} to reach 60% momentum.
                   </p>
                 </div>
