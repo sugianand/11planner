@@ -15,19 +15,6 @@ type ChatMessage = {
   text: string;
 };
 
-type ChatThread = {
-  id: string;
-  title: string;
-  updatedAt: number;
-  messages: ChatMessage[];
-};
-
-type BottomAction = {
-  label: string;
-  action: "home" | "chat" | "news" | "help";
-  icon: string;
-};
-
 type HelpArticle = {
   id: string;
   category: string;
@@ -46,20 +33,22 @@ type SupportChatApiResponse = {
 };
 
 const SUPPORT_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const SUPPORT_EMAIL = "11planner.support@gmail.com";
 
 const routeHints: Array<{ match: RegExp; hint: string }> = [
-  { match: /^\/dashboard/, hint: "Use Focus Mode in Dashboard to lock into deep work blocks." },
-  { match: /^\/tasks/, hint: "Tag tasks as assignment, exam, or project to stay organized." },
-  { match: /^\/courses/, hint: "Upload class and lab syllabi separately for better extraction." },
-  { match: /^\/schedule/, hint: "Use Week view first to catch overload early." },
-  { match: /^\/settings/, hint: "Tune reminders and accent theme in Settings." },
-];
-
-const bottomActions: BottomAction[] = [
-  { label: "Home", action: "home", icon: "home" },
-  { label: "Chat", action: "chat", icon: "chat_bubble" },
-  { label: "News", action: "news", icon: "campaign" },
-  { label: "Help", action: "help", icon: "help" },
+  { match: /^\/dashboard/, hint: "Use the Dashboard to pick a Focus Atmosphere background, choose Spotify or YouTube Music, run the timer, and track Total Tasks, Total Hours, Productivity Score, Overdue, and Today's Checklist." },
+  { match: /^\/tasks/, hint: "Use Pending and Completed tabs, plus the task filters and sorts, to manage assignments, exams, and projects." },
+  { match: /^\/courses/, hint: "Upload syllabi when needed, then use Search, All Types, Online, In-Person, Has Lab, and the name/time sort options to narrow courses." },
+  { match: /^\/schedule/, hint: "Use Day, Week, Month, or Year views, then Subscribe (Live), Export, Today, and drag blocks to manage your schedule." },
+  { match: /^\/profile\/quiz/, hint: "The Preference Quiz has 6 steps (Work Time, Work Days, Break Style, Assignments, Productivity, Extra Notes); complete required choices, set Daily Study Limit, then Submit to save and return to Dashboard." },
+  { match: /^\/profile/, hint: "Profile shows your identity card, momentum stats, Weekly Snapshot, streaks, and a Start Preference Quiz or Retake Preference Quiz button." },
+  { match: /^\/about/, hint: "The About page explains what 11Planner is, its core mission to reduce deadline panic, the 30-minute focus block model, and the team behind the project." },
+  { match: /^\/faq/, hint: "The FAQ page covers setup, syllabus uploads, schedule editing, recovery when you fall behind, privacy, setup time, calendar use, and support." },
+  { match: /^\/privacy/, hint: "The Privacy page explains what data 11Planner collects, how it is used, what is shared, and how to request deletion or support help." },
+  { match: /^\/terms/, hint: "The Terms page explains acceptable use, content ownership, availability, account actions, and the limits of scheduling guidance." },
+  { match: /^\/logo-story/, hint: "The Logo Story page explains the inspiration behind the logo and the student-centered brand story." },
+  { match: /^\/demo/, hint: "The Demo page plays a product tour video that showcases the main features of 11Planner." },
+  { match: /^\/settings/, hint: "Settings has Schedule Setup, Personalize, Reminders, Account, and Support panels with Search settings, plus controls like Daily Study Limit, Theme Mode, Accent Theme, notification options, privacy toggles, password reset, export PDF, clear data, delete account, and Reset This Section." },
 ];
 
 const quickQuestions = [
@@ -412,7 +401,6 @@ function ElevenAvatar({ size = "md" }: { size?: "sm" | "md" }) {
 export default function SupportAssistantWidget() {
   const pathname = usePathname();
   const { userId } = usePlanner();
-  const routeHintText = routeHints.find((entry) => entry.match.test(pathname || ""))?.hint;
 
   const [isOpen, setIsOpen] = useState(false);
   const [view, setView] = useState<WidgetView>("chat");
@@ -422,11 +410,16 @@ export default function SupportAssistantWidget() {
   const [searchValue, setSearchValue] = useState("");
   const [inputValue, setInputValue] = useState("");
   const [isThinking, setIsThinking] = useState(false);
-  const [isThreadListOpen, setIsThreadListOpen] = useState(false);
-  const [threads, setThreads] = useState<ChatThread[]>([]);
-  const [activeThreadId, setActiveThreadId] = useState<string>("");
+  const [isNewChatConfirmOpen, setIsNewChatConfirmOpen] = useState(false);
+  const [isCloseFlowOpen, setIsCloseFlowOpen] = useState(false);
+  const [closeFlowStep, setCloseFlowStep] = useState<"prompt" | "escalate">("prompt");
+  const [escalationNotes, setEscalationNotes] = useState("");
+  const [didCreateSupportEmail, setDidCreateSupportEmail] = useState(false);
+  const chatMessageMaxLength = 250;
+  const escalationNotesMaxLength = 500;
 
   const listRef = useRef<HTMLDivElement | null>(null);
+  const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const makeUniqueId = (prefix: string) => {
     const randomPart =
       typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -436,141 +429,139 @@ export default function SupportAssistantWidget() {
   };
 
   const nextMessageId = (prefix: string) => makeUniqueId(prefix);
-  const nextThreadId = () => makeUniqueId("thread");
-
   const createInitialMessages = (): ChatMessage[] => [
     {
       id: nextMessageId("assistant"),
       role: "assistant",
       text: "Hi, I am your 11Planner guide. Ask me where to find features or what to do next.",
     },
-    {
-      id: nextMessageId("assistant"),
-      role: "assistant",
-      text: routeHintText || "Need help navigating? I can point you to the right page in seconds.",
-    },
   ];
 
-  const createThread = (id: string): ChatThread => ({
-    id,
-    title: "New chat",
-    updatedAt: Date.now(),
-    messages: createInitialMessages(),
-  });
-
-  const normalizeLoadedThreads = (loadedThreads: ChatThread[]): ChatThread[] => {
-    const usedThreadIds = new Set<string>();
-
-    return loadedThreads.map((thread) => {
-      const safeThreadId =
-        thread.id && !usedThreadIds.has(thread.id) ? thread.id : nextThreadId();
-      usedThreadIds.add(safeThreadId);
-
-      const usedMessageIds = new Set<string>();
-      const safeMessages = (thread.messages || []).map((message) => {
-        const safeMessageId =
-          message.id && !usedMessageIds.has(message.id)
-            ? message.id
-            : nextMessageId(message.role || "message");
-        usedMessageIds.add(safeMessageId);
-        return { ...message, id: safeMessageId };
-      });
-
-      return {
-        ...thread,
-        id: safeThreadId,
-        messages: safeMessages,
-      };
-    });
-  };
-
-  const storageKey = userId ? `support-assistant-threads:${userId}` : "support-assistant-threads:guest";
-
-  useEffect(() => {
-    if (threads.length > 0) {
-      return;
+  const storageKey = userId ? `support-assistant-chat:${userId}` : "support-assistant-chat:guest";
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    if (typeof window === "undefined") {
+      return createInitialMessages();
     }
 
     try {
       const raw = localStorage.getItem(storageKey);
       if (raw) {
-        const parsed = JSON.parse(raw) as { threads: ChatThread[]; activeThreadId: string };
-        if (Array.isArray(parsed.threads) && parsed.threads.length > 0) {
-          const safeThreads = normalizeLoadedThreads(parsed.threads);
-          setThreads(safeThreads);
-          setActiveThreadId(parsed.activeThreadId || safeThreads[0].id);
-          return;
+        const parsed = JSON.parse(raw) as { messages: ChatMessage[] };
+        if (Array.isArray(parsed.messages) && parsed.messages.length > 0) {
+          const usedMessageIds = new Set<string>();
+          const restoredMessages = parsed.messages.map((message) => {
+            const safeMessageId =
+              message.id && !usedMessageIds.has(message.id)
+                ? message.id
+                : nextMessageId(message.role || "message");
+            usedMessageIds.add(safeMessageId);
+            return { ...message, id: safeMessageId };
+          });
+
+          // Send a single welcome message.
+          if (!restoredMessages.some((message) => message.role === "user")) {
+            return createInitialMessages();
+          }
+
+          return restoredMessages;
         }
       }
-    } catch (_) {
-      // fall back to default thread
+    } catch {
+      // fall back to default messages
     }
 
-    const id = nextThreadId();
-    const first = createThread(id);
-    setThreads([first]);
-    setActiveThreadId(first.id);
-  }, [threads.length, storageKey]);
+    return createInitialMessages();
+  });
 
   useEffect(() => {
-    if (threads.length === 0) return;
-    localStorage.setItem(storageKey, JSON.stringify({ threads, activeThreadId }));
-  }, [threads, activeThreadId, storageKey]);
+    if (messages.length === 0) return;
+    localStorage.setItem(storageKey, JSON.stringify({ messages }));
+  }, [messages, storageKey]);
 
-  const persistThreads = (nextThreads: ChatThread[], nextActiveThreadId: string) => {
-    setThreads(nextThreads);
-    setActiveThreadId(nextActiveThreadId);
-  };
-
-  const activeThread = useMemo(
-    () => threads.find((thread) => thread.id === activeThreadId) || threads[0] || null,
-    [threads, activeThreadId]
-  );
-
-  const messages = activeThread?.messages || [];
-
-  const updateActiveThreadMessages = (updater: (prevMessages: ChatMessage[]) => ChatMessage[]) => {
-    const targetId = activeThreadId || activeThread?.id;
-    if (!targetId) return;
-
-    setActiveThreadId(targetId);
-    setThreads((prevThreads) =>
-      prevThreads
-        .map((thread) => {
-          if (thread.id !== targetId) return thread;
-
-          const nextMessages = updater(thread.messages);
-          const firstUserMessage = nextMessages.find((message) => message.role === "user");
-          const nextTitle = firstUserMessage
-            ? firstUserMessage.text.slice(0, 42)
-            : thread.title;
-
-          return {
-            ...thread,
-            messages: nextMessages,
-            title: nextTitle || "New chat",
-            updatedAt: Date.now(),
-          };
-        })
-        .sort((a, b) => b.updatedAt - a.updatedAt)
-    );
+  const updateMessages = (updater: (prevMessages: ChatMessage[]) => ChatMessage[]) => {
+    setMessages((prevMessages) => updater(prevMessages));
   };
 
   const startNewChat = () => {
-    const id = nextThreadId();
-    const newThread = createThread(id);
-    persistThreads([newThread, ...threads], id);
-    setIsThreadListOpen(false);
+    setMessages(createInitialMessages());
     setInputValue("");
     setIsThinking(false);
+    setIsNewChatConfirmOpen(false);
+    setIsCloseFlowOpen(false);
+    setCloseFlowStep("prompt");
+    setEscalationNotes("");
+    setDidCreateSupportEmail(false);
   };
 
-  const formatThreadTimestamp = (ts: number) => {
-    try {
-      return new Date(ts).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-    } catch (_) {
-      return "";
-    }
+  const handleStartNewChatPrompt = () => {
+    setIsNewChatConfirmOpen((prev) => !prev);
+    setIsCloseFlowOpen(false);
+    setCloseFlowStep("prompt");
+  };
+
+  const handleConfirmStartNewChat = () => {
+    startNewChat();
+  };
+
+  const handleCloseChatPrompt = () => {
+    setIsCloseFlowOpen((prev) => !prev);
+    setCloseFlowStep("prompt");
+    setIsNewChatConfirmOpen(false);
+    setDidCreateSupportEmail(false);
+  };
+
+  const handleSatisfiedClose = () => {
+    setIsCloseFlowOpen(false);
+    setCloseFlowStep("prompt");
+    setIsOpen(false);
+    startNewChat();
+  };
+
+  const handleEscalation = () => {
+    setCloseFlowStep("escalate");
+    setEscalationNotes("");
+    setDidCreateSupportEmail(false);
+  };
+
+  const handleEndAndStartNewAfterEscalation = () => {
+    startNewChat();
+  };
+
+  const handleCreateSupportEmail = () => {
+    const transcript = messages
+      .map((message, index) => {
+        const speaker = message.role === "user" ? "User" : "Assistant";
+        return `${index + 1}. ${speaker}: ${message.text}`;
+      })
+      .join("\n\n");
+
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const metadataLines = [
+      `User ID: ${userId || "guest"}`,
+      `Timezone: ${timezone || "unknown"}`,
+      `Message count: ${messages.length}`,
+    ].join("\n");
+
+    const subject = encodeURIComponent("11Planner Support Request from Chat Assistant");
+    const body = encodeURIComponent(
+      [
+        "Hi 11Planner Support Team,",
+        "",
+        "I need help with an issue from the in-app chatbot.",
+        "",
+        "Session metadata:",
+        metadataLines,
+        "",
+        "Additional comments:",
+        escalationNotes.trim() || "No additional comments provided.",
+        "",
+        "Chat transcript:",
+        transcript || "No messages captured.",
+      ].join("\n")
+    );
+
+    window.location.href = `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`;
+    setDidCreateSupportEmail(true);
   };
 
   const scrollChatToBottom = () => {
@@ -579,6 +570,23 @@ export default function SupportAssistantWidget() {
       listRef.current.scrollTop = listRef.current.scrollHeight;
     });
   };
+
+  const adjustComposerHeight = () => {
+    const composer = composerRef.current;
+    if (!composer) return;
+    composer.style.height = "auto";
+    const nextHeight = Math.min(composer.scrollHeight, 120);
+    composer.style.height = `${nextHeight}px`;
+  };
+
+  useEffect(() => {
+    if (view !== "chat") return;
+    scrollChatToBottom();
+  }, [messages.length, isThinking, view]);
+
+  useEffect(() => {
+    adjustComposerHeight();
+  }, [inputValue]);
 
   const filteredArticles = useMemo(() => {
     const normalized = searchValue.trim().toLowerCase();
@@ -618,16 +626,10 @@ export default function SupportAssistantWidget() {
     return newsItems.find((item) => item.id === selectedNewsId) || null;
   }, [selectedNewsId]);
 
-  const compactHeaderTitle =
-    view === "chat"
-      ? "Chat"
-      : view === "news" || view === "news-detail"
-        ? "News"
-        : view === "help-center"
-          ? "Help Center"
-          : view === "article"
-            ? "Help Article"
-            : "Home";
+  const hasUserSentMessage = useMemo(
+    () => messages.some((message) => message.role === "user"),
+    [messages]
+  );
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -640,7 +642,7 @@ export default function SupportAssistantWidget() {
       text: trimmed,
     };
 
-    updateActiveThreadMessages((prev) => [...prev, userMessage]);
+    updateMessages((prev) => [...prev, userMessage]);
     setInputValue("");
     setIsThinking(true);
     scrollChatToBottom();
@@ -653,7 +655,7 @@ export default function SupportAssistantWidget() {
         [...messages, userMessage]
       );
       replyText = apiResponse.reply || replyText;
-    } catch (_) {
+    } catch {
       // fall back to the local assistant reply
     }
 
@@ -663,7 +665,7 @@ export default function SupportAssistantWidget() {
       text: replyText,
     };
 
-    updateActiveThreadMessages((prev) => [...prev, assistantMessage]);
+    updateMessages((prev) => [...prev, assistantMessage]);
     setIsThinking(false);
     scrollChatToBottom();
   };
@@ -672,7 +674,7 @@ export default function SupportAssistantWidget() {
     if (isThinking) return;
 
     const userMessage: ChatMessage = { id: nextMessageId("user"), role: "user", text: question };
-    updateActiveThreadMessages((prev) => [...prev, userMessage]);
+    updateMessages((prev) => [...prev, userMessage]);
     setIsThinking(true);
     scrollChatToBottom();
 
@@ -681,7 +683,7 @@ export default function SupportAssistantWidget() {
     try {
       const apiResponse = await sendSupportChatMessage(question, pathname || "", history);
       replyText = apiResponse.reply || replyText;
-    } catch (_) {
+    } catch {
       // fall back to the local assistant reply
     }
 
@@ -691,7 +693,7 @@ export default function SupportAssistantWidget() {
       text: replyText,
     };
 
-    updateActiveThreadMessages((prev) => [...prev, assistantMessage]);
+    updateMessages((prev) => [...prev, assistantMessage]);
     setIsThinking(false);
     scrollChatToBottom();
   };
@@ -725,24 +727,6 @@ export default function SupportAssistantWidget() {
     setView("home");
   };
 
-  const handleBottomAction = (action: BottomAction["action"]) => {
-    if (action === "home") {
-      closeToHome();
-      return;
-    }
-    if (action === "chat") {
-      setView("chat");
-      return;
-    }
-    if (action === "news") {
-      setView("news");
-      setSelectedArticleId(null);
-      return;
-    }
-    setView("help-center");
-    setSelectedNewsId(null);
-  };
-
   if (userId === "user_demo") {
     return null;
   }
@@ -750,32 +734,25 @@ export default function SupportAssistantWidget() {
   return (
     <div className="fixed bottom-6 right-6 z-[60] flex flex-col items-end">
       {isOpen && (
-        <section className={`font-[var(--font-manrope)] rounded-[28px] border border-slate-200/90 dark:border-slate-700/80 bg-slate-100/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-[0_32px_75px_-30px_rgba(15,23,42,0.9)] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 transition-all duration-300 ease-out ${view === "article" || view === "news-detail" ? "w-[min(96vw,760px)] h-[min(86vh,760px)]" : "w-[min(92vw,420px)] h-[min(80vh,680px)]"}`}>
+        <section className={`font-[var(--font-manrope)] rounded-[28px] border border-slate-200/90 dark:border-slate-700/80 bg-white dark:bg-slate-900 shadow-[0_32px_75px_-30px_rgba(15,23,42,0.9)] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 transition-all duration-300 ease-out ${view === "article" || view === "news-detail" ? "w-[min(96vw,760px)] h-[min(86vh,760px)]" : "w-[min(92vw,420px)] h-[min(80vh,680px)]"}`}>
           <header
-            className={`relative px-5 text-white ${view === "home" ? "pt-4 pb-4" : "pt-3 pb-2"}`}
-            style={{
-              backgroundImage:
-                "linear-gradient(165deg, var(--theme-accent-strong), var(--theme-accent) 68%, var(--theme-accent))",
-            }}
+            className={`relative px-5 border-b border-slate-200/85 dark:border-slate-700/80 bg-white dark:bg-slate-900 text-slate-900 dark:text-white ${view === "home" ? "pt-4 pb-4" : "pt-3 pb-2"}`}
           >
-            <div className="absolute -right-14 top-16 h-44 w-44 rounded-full bg-cyan-300/55 blur-3xl" />
-            <div className="absolute left-7 top-2 h-24 w-24 rounded-full bg-white/10 blur-xl" />
-
             <div className="relative z-10">
               <div className="flex items-center justify-between gap-3 mb-3">
                 <div className="flex items-center gap-2.5">
-                  <div className="h-8 w-8 rounded-lg bg-white/20 border border-white/30 flex items-center justify-center">
+                  <div className="h-8 w-8 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center">
                     <span className="material-symbols-outlined text-[18px]">school</span>
                   </div>
                   <h2 className="text-[24px] font-extrabold leading-none tracking-tight">11Planner</h2>
                 </div>
               </div>
 
-              <p className="text-[18px] leading-none font-semibold">Chat Support Assistant</p>
+              <p className="text-[18px] leading-none font-semibold text-slate-700 dark:text-slate-200">Chat Support Assistant</p>
             </div>
           </header>
 
-          <div className="flex-1 overflow-y-auto px-4 pt-3 pb-3 space-y-3.5">
+          <div className={view === "chat" ? "flex-1 min-h-0 px-4 pt-3 pb-3" : "flex-1 overflow-y-auto px-4 pt-3 pb-3 space-y-3.5"}>
             {view === "home" && (
               <>
                 <TopCard
@@ -847,8 +824,8 @@ export default function SupportAssistantWidget() {
               </>
             )}
 
-            {(
-              <div className="flex-1 min-h-0 flex flex-col">
+            {view === "chat" && (
+              <div className="flex-1 min-h-0 h-full flex flex-col">
                 <div className="flex items-center justify-between pb-3 border-b border-slate-200/80 dark:border-slate-700/80">
                   <div className="flex items-center gap-2.5">
                     <ElevenAvatar size="sm" />
@@ -857,21 +834,10 @@ export default function SupportAssistantWidget() {
                       <p className="text-[12px] text-slate-500 dark:text-slate-300">11Planner AI Assistant</p>
                     </div>
                   </div>
-                </div>
-
-                <div className="pt-3 pb-1 flex items-center justify-between gap-2">
                   <button
                     type="button"
-                    onClick={() => setIsThreadListOpen((prev) => !prev)}
-                    className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/70 text-slate-700 dark:text-slate-200"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">chat</span>
-                    Chats ({threads.length})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={startNewChat}
-                    className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-white"
+                    onClick={handleStartNewChatPrompt}
+                    className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-white whitespace-nowrap"
                     style={{ backgroundColor: "var(--theme-accent-strong)" }}
                   >
                     <span className="material-symbols-outlined text-[16px]">add</span>
@@ -879,42 +845,31 @@ export default function SupportAssistantWidget() {
                   </button>
                 </div>
 
-                {isThreadListOpen && (
-                  <div className="mt-2 mb-2 rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-white/90 dark:bg-slate-900/75 max-h-52 overflow-y-auto">
-                    {threads.map((thread) => {
-                      const isActive = activeThread?.id === thread.id;
-                      return (
-                        <button
-                          key={thread.id}
-                          type="button"
-                          onClick={() => {
-                            setActiveThreadId(thread.id);
-                            setIsThreadListOpen(false);
-                          }}
-                          className={`w-full text-left px-3 py-2.5 border-b border-slate-200/70 dark:border-slate-700/70 last:border-b-0 ${
-                            isActive ? "bg-slate-100 dark:bg-slate-800" : "hover:bg-slate-50 dark:hover:bg-slate-800/70"
-                          }`}
-                        >
-                          <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{thread.title}</p>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-300">{formatThreadTimestamp(thread.updatedAt)}</p>
-                        </button>
-                      );
-                    })}
+                {isNewChatConfirmOpen && (
+                  <div className="mb-2 rounded-xl border border-slate-200/85 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-900/80 p-3 space-y-2">
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">Start a new chat?</p>
+                    <p className="text-xs text-slate-600 dark:text-slate-300">This will end your current chat and clear this conversation.</p>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={handleConfirmStartNewChat}
+                        className="rounded-full px-3 py-1.5 text-xs font-semibold text-white"
+                        style={{ backgroundColor: "var(--theme-accent-strong)" }}
+                      >
+                        Yes, start new chat
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsNewChatConfirmOpen(false)}
+                        className="rounded-full px-3 py-1.5 text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200"
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   </div>
                 )}
 
-                <div className="pt-2 pb-2 flex justify-center">
-                  <button
-                    onClick={() => handleQuickQuestion("How do I get started with 11Planner?")}
-                    className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-white text-sm font-semibold"
-                    style={{ backgroundColor: "var(--theme-accent-strong)" }}
-                  >
-                    Send us a message
-                    <span className="material-symbols-outlined text-[16px]">send</span>
-                  </button>
-                </div>
-
-                <div ref={listRef} className="space-y-2 pr-1 pt-1">
+                <div ref={listRef} className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1 pt-1 pb-2">
                   {messages.map((message) => (
                     <div key={message.id} className={`flex gap-2 ${message.role === "assistant" ? "justify-start" : "justify-end"}`}>
                       {message.role === "assistant" && <ElevenAvatar size="sm" />}
@@ -943,34 +898,118 @@ export default function SupportAssistantWidget() {
                   )}
                 </div>
 
-                <div className="pt-3 flex flex-wrap gap-2 pr-1">
-                  {quickQuestions.map((question) => (
-                    <button
-                      key={question}
-                      onClick={() => handleQuickQuestion(question)}
-                      className="rounded-full px-3 py-1.5 text-left text-[12px] border border-indigo-100 dark:border-indigo-700/50 bg-indigo-50/90 dark:bg-indigo-900/25 text-indigo-700 dark:text-indigo-200"
-                    >
-                      {question}
-                    </button>
-                  ))}
-                </div>
+                <div className="sticky bottom-0 z-10 mt-auto pt-3 space-y-2 border-t border-slate-200/80 dark:border-slate-700/80 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm">
+                  {!hasUserSentMessage && (
+                    <div className="flex flex-wrap gap-2 pr-1">
+                      {quickQuestions.map((question) => (
+                        <button
+                          key={question}
+                          onClick={() => handleQuickQuestion(question)}
+                          className="rounded-full px-3 py-1.5 text-left text-[12px] border border-slate-200 dark:border-slate-700/80 bg-slate-100 dark:bg-slate-800/70 text-slate-700 dark:text-slate-200"
+                        >
+                          {question}
+                        </button>
+                      ))}
+                    </div>
+                  )}
 
-                <form onSubmit={handleSubmit} className="flex items-center gap-2 mt-3">
-                  <input
-                    value={inputValue}
-                    onChange={(event) => setInputValue(event.target.value)}
-                    placeholder="Write a message..."
-                    className="flex-1 h-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm text-slate-900 dark:text-slate-100 outline-none"
-                  />
                   <button
-                    type="submit"
-                    className="h-10 px-4 rounded-xl text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
-                    style={{ backgroundColor: "var(--theme-accent-strong)" }}
-                    disabled={isThinking}
+                    type="button"
+                    onClick={handleCloseChatPrompt}
+                    className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/70 text-slate-700 dark:text-slate-200"
                   >
-                    {isThinking ? "Thinking..." : "Send"}
+                    <span className="material-symbols-outlined text-[16px]">close</span>
+                    Close chat
                   </button>
-                </form>
+
+                  {isCloseFlowOpen && (
+                    <div className="rounded-xl border border-slate-200/85 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-900/80 p-3 space-y-2">
+                      {closeFlowStep === "prompt" ? (
+                        <>
+                          <p className="text-sm font-semibold text-slate-900 dark:text-white">Are you satisfied with this chat?</p>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={handleSatisfiedClose}
+                              className="rounded-full px-3 py-1.5 text-xs font-semibold text-white"
+                              style={{ backgroundColor: "var(--theme-accent-strong)" }}
+                            >
+                              Yes, close and end chat
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleEscalation}
+                              className="rounded-full px-3 py-1.5 text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200"
+                            >
+                              I need human support
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-sm font-semibold text-slate-900 dark:text-white">Escalate to support</p>
+                          <p className="text-xs text-slate-600 dark:text-slate-300">
+                            Add any extra context below, then create an email draft with this chat transcript.
+                          </p>
+                          <textarea
+                            value={escalationNotes}
+                            onChange={(event) => setEscalationNotes(event.target.value)}
+                            rows={3}
+                            placeholder="Describe your issue or what you want support to know..."
+                            maxLength={escalationNotesMaxLength}
+                            className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 outline-none"
+                          />
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={handleCreateSupportEmail}
+                              className="rounded-full px-3 py-1.5 text-xs font-semibold text-white"
+                              style={{ backgroundColor: "var(--theme-accent-strong)" }}
+                            >
+                              Create support email
+                            </button>
+                            {didCreateSupportEmail && (
+                              <button
+                                type="button"
+                                onClick={handleEndAndStartNewAfterEscalation}
+                                className="rounded-full px-3 py-1.5 text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200"
+                              >
+                                End and start new chat
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => setCloseFlowStep("prompt")}
+                              className="rounded-full px-3 py-1.5 text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200"
+                            >
+                              Back
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  <form onSubmit={handleSubmit} className="flex items-center gap-2">
+                      <textarea
+                        ref={composerRef}
+                      value={inputValue}
+                        onChange={(event) => setInputValue(event.target.value)}
+                      placeholder="Write a message..."
+                      maxLength={chatMessageMaxLength}
+                        rows={1}
+                        className="flex-1 min-h-10 max-h-28 resize-none overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm leading-5 text-slate-900 dark:text-slate-100 outline-none"
+                    />
+                    <button
+                      type="submit"
+                      className="h-10 px-4 rounded-xl text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+                      style={{ backgroundColor: "var(--theme-accent-strong)" }}
+                      disabled={isThinking}
+                    >
+                      {isThinking ? "Thinking..." : "Send"}
+                    </button>
+                  </form>
+                </div>
               </div>
             )}
 
@@ -1217,8 +1256,21 @@ export default function SupportAssistantWidget() {
             borderColor: isOpen ? "#1e293b" : "#0284c7",
           }}
         />
-        <span className="relative z-10 material-symbols-outlined text-[23px] text-white leading-none">
-          forum
+        <span className="relative z-10 h-6 w-6">
+          <span
+            className={`absolute inset-0 material-symbols-outlined text-[23px] text-white leading-none transition-all duration-250 ease-out ${
+              isOpen ? "opacity-0 scale-75 rotate-45" : "opacity-100 scale-100 rotate-0"
+            }`}
+          >
+            forum
+          </span>
+          <span
+            className={`absolute inset-0 material-symbols-outlined text-[23px] text-white leading-none transition-all duration-250 ease-out ${
+              isOpen ? "opacity-100 scale-100 rotate-0" : "opacity-0 scale-75 -rotate-45"
+            }`}
+          >
+            close
+          </span>
         </span>
       </button>
     </div>
