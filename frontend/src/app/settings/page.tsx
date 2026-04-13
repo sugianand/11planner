@@ -137,9 +137,15 @@ function SettingsPageContent() {
     localStorage.setItem("dailyLimit", String(normalized));
 
     if (user?.id) {
-      void supabase
-        .from("profiles")
-        .upsert({ id: user.id, daily_study_limit: normalized }, { onConflict: "id" });
+      void (async () => {
+        try {
+          await supabase
+            .from("profiles")
+            .upsert({ id: user.id, daily_study_limit: normalized }, { onConflict: "id" });
+        } catch {
+          // Ignore background persistence errors and keep local state updated.
+        }
+      })();
     }
   };
 
@@ -488,6 +494,7 @@ function SettingsPageContent() {
     }
   };
 
+<<<<<<< HEAD
   const navItems: Array<{ id: SettingsPanel; label: string; icon: string; keywords: string[] }> = useMemo(
     () => [
       {
@@ -522,6 +529,30 @@ function SettingsPageContent() {
       },
     ],
     []
+=======
+  const navItemsBase: Array<{ id: SettingsPanel; label: string; icon: string }> = [
+    { id: "schedule", label: "Schedule Setup", icon: "event" },
+    { id: "personalize", label: "Personalize", icon: "palette" },
+    { id: "reminders", label: "Reminders", icon: "notifications" },
+    { id: "account", label: "Account", icon: "person" },
+    { id: "support", label: "Support", icon: "support_agent" },
+  ];
+  const keywordMap: Record<SettingsPanel, string[]> = {
+    schedule: ["schedule", "study", "limit", "hours", "daily"],
+    personalize: ["theme", "color", "accent", "appearance", "dark", "light"],
+    reminders: ["reminder", "notification", "email", "weekly", "report", "alerts", "sound"],
+    account: ["account", "privacy", "security", "password", "export", "delete"],
+    support: ["support", "help", "contact", "faq"],
+  };
+
+  const navItems: Array<{ id: SettingsPanel; label: string; icon: string; keywords: string[] }> = navItemsBase.map(
+    (item) => {
+      return {
+      ...item,
+      keywords: keywordMap[item.id],
+      };
+    }
+>>>>>>> cfdc4ef (added bug fix)
   );
 
   const filteredNavItems = useMemo(() => {
