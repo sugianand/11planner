@@ -424,7 +424,7 @@ async def generate_schedule(user_id: str, payload: ScheduleGenerateRequest | Non
         if not task_rows:
             return {"message": "No pending tasks to schedule", "blocks": [], "stats": {"valid": True}}
 
-        # Fetch user preferences/profile
+        # Fetch user preferences/profile (including daily study limit)
         profile_result = (
             supabase.table("profiles")
             .select("worktime, workdays, workstyle, additional_info, assignmentplan, daily_study_limit")
@@ -491,17 +491,44 @@ async def generate_schedule(user_id: str, payload: ScheduleGenerateRequest | Non
             if row.get("starts_at") and row.get("ends_at")
         ]
 
-        # Fetch courses and build busy blocks for course times
+        # Fetch courses (including lab fields) and build busy blocks
         courses_result = (
             supabase.table("courses")
-            .select("course_name, course_days, start_time, end_time")
+            .select("course_name, course_days, start_time, end_time, has_lab, lab_day, lab_start_time, lab_end_time")
             .eq("user_id", user_id)
             .execute()
         )
         now = datetime.now()
         max_deadline = max((task.deadline for task in task_objects), default=now)
         planning_end = max(max_deadline, now + timedelta(days=14))
+
+        # Add class time busy blocks
         busy.extend(build_course_busy_blocks(courses_result.data or [], now, planning_end))
+
+        # Add lab time busy blocks
+        for row in (courses_result.data or []):
+            if not row.get("has_lab"):
+                continue
+            lab_day_str = row.get("lab_day")
+            lab_start = parse_clock(row.get("lab_start_time"))
+            lab_end = parse_clock(row.get("lab_end_time"))
+            lab_weekday = parse_course_weekday(lab_day_str) if lab_day_str else None
+            if lab_weekday is None or lab_start is None or lab_end is None:
+                continue
+            cursor = now.date()
+            while cursor <= planning_end.date():
+                if cursor.weekday() == lab_weekday:
+                    lab_start_dt = datetime.combine(cursor, lab_start)
+                    lab_end_dt = datetime.combine(cursor, lab_end)
+                    if lab_end_dt <= lab_start_dt:
+                        lab_end_dt += timedelta(days=1)
+                    if lab_end_dt > now and lab_start_dt < planning_end:
+                        busy.append(BusyBlock(
+                            start=lab_start_dt,
+                            end=lab_end_dt,
+                            title=f"{row.get('course_name', 'Lab')} - Lab",
+                        ))
+                cursor += timedelta(days=1)
 
         # Generate schedule
         generator = ScheduleGenerator(
