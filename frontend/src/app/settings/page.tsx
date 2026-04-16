@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useNotification } from "@/contexts/NotificationContext";
@@ -48,7 +48,7 @@ const readStoredNumber = (key: string, fallback: number): number => {
   return Number.isFinite(value) ? value : fallback;
 };
 
-export default function SettingsPage() {
+function SettingsPageContent() {
   const searchParams = useSearchParams();
   const { theme, setTheme, colorTheme, setColorTheme, colorThemes, effectiveTheme } = useTheme();
   const [isMounted, setIsMounted] = useState(false);
@@ -964,5 +964,13 @@ export default function SettingsPage() {
 
       <Footer />
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense>
+      <SettingsPageContent />
+    </Suspense>
   );
 }

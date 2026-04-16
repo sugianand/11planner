@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Quiz from "../quiz";
 import Footer from "@/components/Footer";
 
-export default function QuizPage() {
+function QuizPageContent() {
   const searchParams = useSearchParams();
   const isOnboarding = searchParams.get("onboarding") === "1";
   const [showQuiz, setShowQuiz] = useState(!isOnboarding);
@@ -44,4 +44,12 @@ export default function QuizPage() {
   }
 
   return <Quiz />;
+}
+
+export default function QuizPage() {
+  return (
+    <Suspense>
+      <QuizPageContent />
+    </Suspense>
+  );
 }
