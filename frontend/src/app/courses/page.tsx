@@ -7,6 +7,7 @@ import Footer from "@/components/Footer";
 import AppDialog from "@/components/AppDialog";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const WEEK_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"] as const;
 
 const toTimeInputValue = (value?: string | null): string => {
   if (!value) return "";
@@ -35,7 +36,6 @@ const toTimeInputValue = (value?: string | null): string => {
 };
 
 export default function CoursesPage() {
-  const weekDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
   const {
     userId,
     courses,
@@ -54,6 +54,8 @@ export default function CoursesPage() {
   const [sortBy, setSortBy] = useState<"name_asc" | "name_desc" | "time_asc" | "time_desc">("name_asc");
   const [typeFilter, setTypeFilter] = useState<"all" | "online" | "in_person" | "lab">("all");
   const cardSyllabusInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const courseDaysDropdownRef = useRef<HTMLDivElement | null>(null);
+  const lastShownErrorRef = useRef<string | null>(null);
   const [dialog, setDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -88,6 +90,39 @@ export default function CoursesPage() {
     loadCourses();
   }, [userId, loadCourses]);
 
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      if (!showDaysDropdown) return;
+      if (courseDaysDropdownRef.current?.contains(event.target as Node)) return;
+      setShowDaysDropdown(false);
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("touchstart", handlePointerDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
+    };
+  }, [showDaysDropdown]);
+
+  useEffect(() => {
+    if (!error || error === lastShownErrorRef.current) {
+      return;
+    }
+
+    lastShownErrorRef.current = error;
+    const timeoutId = window.setTimeout(() => {
+      setDialog({
+        isOpen: true,
+        title: "Could not save course",
+        message: error,
+      });
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [error]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -98,6 +133,49 @@ export default function CoursesPage() {
         message: "Please fill in Course Name and Course Code before saving.",
       });
       return;
+    }
+
+    const isOnline = !!formData.isOnline;
+    const isLabOnline = !!formData.labIsOnline;
+
+    if (!isOnline) {
+      if (!formData.courseDate || !formData.startTime || !formData.endTime) {
+        setDialog({
+          isOpen: true,
+          title: "Missing course time",
+          message: "Please add course days, start time, and end time before saving this in-person course.",
+        });
+        return;
+      }
+
+      if (formData.startTime >= formData.endTime) {
+        setDialog({
+          isOpen: true,
+          title: "Invalid course time",
+          message: "The start time must be earlier than the end time.",
+        });
+        return;
+      }
+    }
+
+    if (formData.hasLab && !isLabOnline) {
+      if (!formData.labDay || !formData.labStartTime || !formData.labEndTime) {
+        setDialog({
+          isOpen: true,
+          title: "Missing lab time",
+          message: "Please add lab day, start time, and end time before saving this lab section.",
+        });
+        return;
+      }
+
+      if (formData.labStartTime >= formData.labEndTime) {
+        setDialog({
+          isOpen: true,
+          title: "Invalid lab time",
+          message: "The lab start time must be earlier than the end time.",
+        });
+        return;
+      }
     }
 
     try {
@@ -126,6 +204,17 @@ export default function CoursesPage() {
       setShowForm(false);
     } catch (err) {
       console.error("Error saving course:", err);
+      const message = err instanceof Error ? err.message : "Unable to save this course right now. Please try again.";
+      const isTimeIssue = /time/i.test(message);
+      setDialog({
+        isOpen: true,
+        title: isTimeIssue ? "Time issue" : "Could not save course",
+        message: isTimeIssue
+          ? message.includes("start time") || message.includes("end time")
+            ? message
+            : "The course could not be saved because of a time issue. Please check the course and lab times."
+          : message,
+      });
     }
   };
 
@@ -169,6 +258,8 @@ export default function CoursesPage() {
   const selectedDays = (formData.courseDate || "")
     .split(" ")
     .filter(Boolean);
+
+  const orderedSelectedDays = WEEK_DAYS.filter((day) => selectedDays.includes(day));
 
   const onlineCourses = courses.filter((course) => course.isOnline).length;
   const inPersonCourses = courses.filter((course) => !course.isOnline).length;
@@ -251,7 +342,7 @@ export default function CoursesPage() {
 
     setFormData({
       ...formData,
-      courseDate: nextDays.join(" "),
+      courseDate: WEEK_DAYS.filter((weekDay) => nextDays.includes(weekDay)).join(" "),
     });
   };
 
@@ -443,10 +534,12 @@ export default function CoursesPage() {
                         courseDate: "",
                         startTime: "",
                         endTime: "",
+                        isOnline: false,
                         hasLab: false,
                         labDay: "",
                         labStartTime: "",
                         labEndTime: "",
+                        labIsOnline: false,
                       });
                     }}
                     className="text-white font-bold py-2.5 px-6 rounded-xl transition shadow-lg flex items-center gap-2"
@@ -462,13 +555,6 @@ export default function CoursesPage() {
               </div>
             </div>
           </div>
-
-          {/* Error Message */}
-          {error && (
-            <div className="bg-red-50/80 dark:bg-red-900/20 border border-red-200/60 dark:border-red-800/60 text-red-700 dark:text-red-200 px-4 py-3 rounded-lg mb-6">
-              {error}
-            </div>
-          )}
 
           {/* Form */}
           {showForm && (
@@ -551,33 +637,33 @@ export default function CoursesPage() {
                       <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
                         Course Days *
                       </label>
-                      <div className="relative">
+                      <div className="relative" ref={courseDaysDropdownRef}>
                         <button
                           type="button"
                           onClick={() => setShowDaysDropdown((prev) => !prev)}
                           className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-left focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white bg-white dark:bg-slate-800"
                         >
-                          {selectedDays.length > 0
-                            ? selectedDays.join(", ")
+                          {orderedSelectedDays.length > 0
+                            ? orderedSelectedDays.join(", ")
                             : "Select course days"}
                         </button>
 
                         {showDaysDropdown && (
                           <div className="absolute z-10 mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg p-3 space-y-2">
-                            {weekDays.map((day) => (
-                            <label key={day} className="flex items-center gap-2 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={selectedDays.includes(day)}
-                                onChange={(e) => toggleDay(day, e.target.checked)}
-                                className="form-checkbox h-4 w-4 text-blue-600"
-                              />
-                              <span className="text-sm text-slate-700 dark:text-slate-200">{day}</span>
-                            </label>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                            {WEEK_DAYS.map((day) => (
+                              <label key={day} className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedDays.includes(day)}
+                                  onChange={(e) => toggleDay(day, e.target.checked)}
+                                  className="form-checkbox h-4 w-4 text-blue-600"
+                                />
+                                <span className="text-sm text-slate-700 dark:text-slate-200">{day}</span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
 
@@ -621,9 +707,16 @@ export default function CoursesPage() {
                     type="checkbox"
                     id="isOnline"
                     checked={formData.isOnline || false}
-                    onChange={(e) =>
-                      setFormData({ ...formData, isOnline: e.target.checked })
-                    }
+                    onChange={(e) => {
+                      const isOnline = e.target.checked;
+                      setFormData({
+                        ...formData,
+                        isOnline,
+                        courseDate: isOnline ? "" : formData.courseDate,
+                        startTime: isOnline ? "" : formData.startTime,
+                        endTime: isOnline ? "" : formData.endTime,
+                      });
+                    }}
                     className="w-4 h-4 text-[#306844] rounded focus:ring-2 focus:ring-[#306844] cursor-pointer"
                   />
                   <label htmlFor="isOnline" className="ml-2 text-sm font-medium text-slate-700 dark:text-slate-200 cursor-pointer">
@@ -728,9 +821,16 @@ export default function CoursesPage() {
                         type="checkbox"
                         id="labIsOnline"
                         checked={formData.labIsOnline || false}
-                        onChange={(e) =>
-                          setFormData({ ...formData, labIsOnline: e.target.checked })
-                        }
+                        onChange={(e) => {
+                          const labIsOnline = e.target.checked;
+                          setFormData({
+                            ...formData,
+                            labIsOnline,
+                            labDay: labIsOnline ? "" : formData.labDay,
+                            labStartTime: labIsOnline ? "" : formData.labStartTime,
+                            labEndTime: labIsOnline ? "" : formData.labEndTime,
+                          });
+                        }}
                         className="w-4 h-4 text-[#306844] rounded focus:ring-2 focus:ring-[#306844] cursor-pointer"
                       />
                       <label htmlFor="labIsOnline" className="ml-2 text-sm font-medium text-slate-700 dark:text-slate-200 cursor-pointer">

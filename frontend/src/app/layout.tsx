@@ -40,8 +40,12 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${manrope.variable} antialiased bg-white dark:bg-slate-900 text-black dark:text-white transition-colors`}
+        className={`${geistSans.variable} ${geistMono.variable} ${manrope.variable} relative antialiased bg-white dark:bg-slate-900 text-black dark:text-white transition-colors`}
       >
+        <div
+          aria-hidden="true"
+          className="pointer-events-none fixed inset-0 -z-[9] bg-transparent dark:bg-slate-950/55"
+        />
         <ThemeProvider>
           <PlannerProvider>
             <TimerProvider>

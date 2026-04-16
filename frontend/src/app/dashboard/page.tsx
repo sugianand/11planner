@@ -1607,7 +1607,6 @@ export default function Dashboard() {
           style={{ backgroundImage: `url(${activeBackground?.imageUrl || FALLBACK_BACKGROUND_IMAGE})` }}
         />
       ) : null}
-      <div className="fixed inset-0 -z-10 bg-white/15 dark:bg-slate-950/55" />
 
       {videoError && (
         <div className="fixed bottom-6 right-6 z-20 bg-white/90 dark:bg-slate-900/90 text-slate-700 dark:text-slate-200 text-xs px-3 py-2 rounded-full shadow">

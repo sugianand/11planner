@@ -44,6 +44,11 @@
       "format": "text",
       "type": "string"
     },
+    "task_type": {
+      "default": "assignment",
+      "format": "text",
+      "type": "string"
+    },
     "status": {
       "default": "todo",
       "format": "text",

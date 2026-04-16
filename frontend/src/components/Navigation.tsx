@@ -44,10 +44,8 @@ export default function Navigation() {
       localStorage.setItem("colorTheme", "emerald");
       localStorage.removeItem("theme");
       document.documentElement.setAttribute("data-theme", "emerald");
-      document.documentElement.removeAttribute("class");
       if (document.body) {
         document.body.setAttribute("data-theme", "emerald");
-        document.body.removeAttribute("class");
       }
       setTheme("light");
       setColorTheme("emerald");

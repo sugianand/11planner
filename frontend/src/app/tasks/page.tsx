@@ -19,6 +19,23 @@ function getApiBaseUrl(): string {
   return "http://localhost:8000";
 }
 
+function toDateTimeLocalValue(value: string | undefined): string {
+  if (!value) return "";
+
+  const parsed = new Date(value);
+  if (!Number.isNaN(parsed.getTime())) {
+    const year = parsed.getFullYear();
+    const month = String(parsed.getMonth() + 1).padStart(2, "0");
+    const day = String(parsed.getDate()).padStart(2, "0");
+    const hours = String(parsed.getHours()).padStart(2, "0");
+    const minutes = String(parsed.getMinutes()).padStart(2, "0");
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  }
+
+  const normalized = value.replace(" ", "T").slice(0, 16);
+  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(normalized) ? normalized : "";
+}
+
 type TaskCategory = "assignment" | "exam" | "project";
 
 function getTaskCategoryLabel(category: TaskCategory): string {
@@ -140,7 +157,7 @@ export default function TasksPage() {
       title: task.title,
       category: (task.category as TaskCategory | undefined) || "assignment",
       course_id: task.course_id,
-      deadline: task.deadline,
+      deadline: toDateTimeLocalValue(task.deadline),
       estimated_hours: task.estimated_hours,
       priority: task.priority,
       description: task.description,
@@ -550,7 +567,7 @@ export default function TasksPage() {
                     onClick={() => setTypeFilter(type)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition border ${
                       typeFilter === type
-                        ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-slate-900 dark:border-slate-100"
+                        ? "bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-100 border-slate-300 dark:border-slate-600"
                         : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600"
                     }`}
                   >

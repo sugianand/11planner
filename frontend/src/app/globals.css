@@ -193,12 +193,24 @@
 [data-theme] .hover\:bg-emerald-100:hover { background-color: var(--theme-100) !important; }
 [data-theme] .hover\:bg-emerald-600:hover { background-color: var(--theme-600) !important; }
 [data-theme] .hover\:bg-emerald-700:hover { background-color: var(--theme-700) !important; }
+[data-theme] .hover\:text-emerald-500:hover { color: var(--theme-500) !important; }
+[data-theme] .hover\:text-emerald-600:hover { color: var(--theme-600) !important; }
+[data-theme] .hover\:text-emerald-700:hover { color: var(--theme-700) !important; }
+[data-theme] .dark\:hover\:text-emerald-300:is(.dark *):hover { color: var(--theme-300) !important; }
+[data-theme] .dark\:hover\:text-emerald-400:is(.dark *):hover { color: var(--theme-400) !important; }
+[data-theme] .dark\:hover\:text-emerald-500:is(.dark *):hover { color: var(--theme-500) !important; }
+[data-theme] .dark\:hover\:text-emerald-200:is(.dark *):hover { color: color-mix(in srgb, var(--theme-200) 88%, white) !important; }
 [data-theme] .hover\:border-emerald-200:hover { border-color: var(--theme-200) !important; }
 [data-theme] .dark\:hover\:border-emerald-500\/35:is(.dark *):hover { border-color: color-mix(in srgb, var(--theme-500) 35%, transparent) !important; }
 
 [data-theme] .border-emerald-200 { border-color: var(--theme-200) !important; }
 [data-theme] .border-emerald-300 { border-color: var(--theme-300) !important; }
+[data-theme] .border-emerald-400 { border-color: var(--theme-400) !important; }
 [data-theme] .border-emerald-500 { border-color: var(--theme-500) !important; }
+[data-theme] .border-emerald-600 { border-color: var(--theme-600) !important; }
+[data-theme] .border-b-emerald-400 { border-bottom-color: var(--theme-400) !important; }
+[data-theme] .border-b-emerald-500 { border-bottom-color: var(--theme-500) !important; }
+[data-theme] .border-b-emerald-600 { border-bottom-color: var(--theme-600) !important; }
 [data-theme] .border-emerald-100 { border-color: color-mix(in srgb, var(--theme-200) 70%, white) !important; }
 [data-theme] .border-emerald-800 { border-color: color-mix(in srgb, var(--theme-800) 58%, transparent) !important; }
 [data-theme] .border-emerald-200\/50 { border-color: color-mix(in srgb, var(--theme-200) 50%, transparent) !important; }
@@ -230,14 +242,22 @@
 [data-theme] .dark\:to-emerald-950\/20:is(.dark *) { --tw-gradient-to: color-mix(in srgb, var(--theme-800) 20%, black) var(--tw-gradient-to-position) !important; }
 
 [data-theme] .bg-\[\#306844\] { background-color: var(--brand-from) !important; }
+[data-theme] .dark\:bg-\[\#3d8658\]:is(.dark *) { background-color: var(--brand-to-alt) !important; }
 [data-theme] .text-\[\#306844\] { color: var(--brand-from) !important; }
+[data-theme] .dark\:text-\[\#3d8658\]:is(.dark *) { color: var(--brand-to-alt) !important; }
 [data-theme] .border-\[\#306844\] { border-color: var(--brand-from) !important; }
+[data-theme] .focus\:border-\[\#306844\]:focus { border-color: var(--brand-from) !important; }
+[data-theme] .focus\:ring-\[\#306844\]:focus { --tw-ring-color: var(--brand-from) !important; }
+[data-theme] .focus\:ring-\[\#306844\]\/25:focus { --tw-ring-color: color-mix(in srgb, var(--brand-from) 25%, transparent) !important; }
+[data-theme] .focus\:ring-\[\#306844\]\/30:focus { --tw-ring-color: color-mix(in srgb, var(--brand-from) 30%, transparent) !important; }
+[data-theme] .accent-\[\#306844\] { accent-color: var(--brand-from) !important; }
 [data-theme] .shadow-green-900\/10 { --tw-shadow-color: color-mix(in srgb, var(--brand-from) 22%, transparent) !important; }
 [data-theme] .from-\[\#306844\] { --tw-gradient-from: var(--brand-from) var(--tw-gradient-from-position) !important; }
 [data-theme] .via-\[\#2f7f54\] { --tw-gradient-via: var(--brand-via) var(--tw-gradient-via-position) !important; }
 [data-theme] .to-\[\#5ac693\] { --tw-gradient-to: var(--brand-to) var(--tw-gradient-to-position) !important; }
 [data-theme] .to-\[\#3d8658\] { --tw-gradient-to: var(--brand-to-alt) var(--tw-gradient-to-position) !important; }
 [data-theme] .hover\:bg-\[\#255236\]:hover { background-color: var(--brand-hover) !important; }
+[data-theme] .hover\:text-\[\#255236\]:hover { color: var(--brand-hover) !important; }
 
 /* Subtle app-wide tinted glass treatment for common container classes. */
 [data-theme] .bg-white\/50,
