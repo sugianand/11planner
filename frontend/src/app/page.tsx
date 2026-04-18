@@ -7,7 +7,6 @@ import Footer from "@/components/Footer";
 
 export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [activeDemoDay, setActiveDemoDay] = useState('Monday');
   const router = useRouter();
 
   const focusPillars = [
@@ -48,24 +47,6 @@ export default function Home() {
       body: 'Stay ahead of deadlines while keeping enough room for rest, revision, and life outside class.'
     }
   ];
-
-  const demoSchedule: Record<string, Array<{ time: string; task: string; tag: string; tagColor: string }>> = {
-    Monday: [
-      { time: '4:00 PM', task: 'Read Biology Chapter 5', tag: 'Deep Work', tagColor: 'text-emerald-300' },
-      { time: '4:30 PM', task: 'Summarize key diagrams', tag: 'Review', tagColor: 'text-sky-300' },
-      { time: '8:00 PM', task: 'Draft English outline', tag: 'Writing', tagColor: 'text-amber-300' }
-    ],
-    Wednesday: [
-      { time: '2:30 PM', task: 'Calculus problem set (Q1-Q6)', tag: 'Problem Solving', tagColor: 'text-sky-300' },
-      { time: '7:00 PM', task: 'Chemistry flashcards', tag: 'Recall', tagColor: 'text-emerald-300' },
-      { time: '9:00 PM', task: 'Upload discussion response', tag: 'Submission', tagColor: 'text-amber-300' }
-    ],
-    Friday: [
-      { time: '3:00 PM', task: 'Lab reflection first draft', tag: 'Writing', tagColor: 'text-amber-300' },
-      { time: '6:00 PM', task: 'Edit and final checks', tag: 'Polish', tagColor: 'text-emerald-300' },
-      { time: '8:30 PM', task: 'Submit before deadline', tag: 'Done Early', tagColor: 'text-sky-300' }
-    ]
-  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -175,7 +156,7 @@ export default function Home() {
                 onClick={() => router.push('/about')}
                 className="bg-white/70 dark:bg-slate-800/70 text-slate-900 dark:text-slate-100 border border-white/70 dark:border-slate-600 px-9 py-4 rounded-pill text-base md:text-lg font-bold hover:bg-white dark:hover:bg-slate-700 transition-colors"
               >
-                Product Tour
+                About 11Planner
               </button>
             </div>
 
@@ -242,70 +223,53 @@ export default function Home() {
           ))}
         </section>
 
-        <section data-reveal className="mt-12 rounded-[2rem] bg-white/70 dark:bg-slate-900/75 border border-white/70 dark:border-slate-700/65 p-8 md:p-10 backdrop-blur-sm shadow-sm">
-          <div className="flex items-center gap-2 text-xs tracking-[0.16em] uppercase font-bold text-emerald-700 dark:text-emerald-300">
-            <span className="material-symbols-outlined text-sm">play_circle</span>
-            Try Demo First
-          </div>
-          <div className="mt-4 grid lg:grid-cols-[1.05fr_0.95fr] gap-6 items-start">
+        <section data-reveal className="mt-12 rounded-[2rem] bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-950/40 dark:to-slate-900/60 border border-emerald-200/60 dark:border-emerald-800/40 p-8 md:p-12 backdrop-blur-sm shadow-lg overflow-hidden relative">
+          <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-emerald-200/20 dark:bg-emerald-500/10 blur-3xl -z-10"></div>
+
+          <div className="grid lg:grid-cols-[1.15fr_0.85fr] gap-7 lg:gap-8 items-start">
             <div>
-              <h2 className="text-3xl md:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
-                Try a sample week before creating an account.
+              <div className="flex items-center gap-2 text-xs tracking-[0.16em] uppercase font-bold text-emerald-700 dark:text-emerald-400 mb-2">
+                <span className="material-symbols-outlined text-base">play_circle</span>
+                See It In Action
+              </div>
+
+              <h2 className="text-4xl md:text-5xl font-black tracking-tight text-slate-900 dark:text-white leading-tight">
+                Watch the 11Planner product tour.
               </h2>
-              <p className="mt-3 text-slate-700 dark:text-slate-300 text-lg leading-relaxed max-w-xl">
-                Click a day to preview how 11Planner breaks workload into focused blocks. If it feels right, save your own plan in one step.
+              <p className="mt-4 text-slate-700 dark:text-slate-300 text-lg leading-relaxed max-w-2xl">
+                The demo is a guided video walkthrough of the real in-app experience you unlock after signup.
+                It walks through importing course deadlines, turning assignments into focused work blocks,
+                and using your dashboard to stay ahead week after week.
               </p>
 
-              <div className="mt-5 flex flex-wrap gap-2">
-                {Object.keys(demoSchedule).map((day) => {
-                  const isActive = activeDemoDay === day;
-                  return (
-                    <button
-                      key={day}
-                      onClick={() => setActiveDemoDay(day)}
-                      className={`px-4 py-2 rounded-pill font-bold text-sm transition-colors border ${
-                        isActive
-                          ? 'bg-[#306844] text-white border-[#306844] dark:bg-[#3d8658] dark:border-[#3d8658]'
-                          : 'bg-white/75 dark:bg-slate-800/75 text-slate-800 dark:text-slate-200 border-white/70 dark:border-slate-600/70 hover:bg-white dark:hover:bg-slate-700'
-                      }`}
-                    >
-                      {day}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="mt-6 flex flex-wrap gap-3">
-                <button
-                  onClick={handleStartClick}
-                  className="bg-[#306844] dark:bg-[#3d8658] text-white px-7 py-3 rounded-pill font-extrabold hover:opacity-90 transition-opacity"
-                >
-                  Save this as my plan
-                </button>
-                <button
-                  onClick={() => router.push('/demo')}
-                  className="bg-white/75 dark:bg-slate-800/75 border border-white/70 dark:border-slate-600/70 text-slate-900 dark:text-slate-100 px-7 py-3 rounded-pill font-bold hover:bg-white dark:hover:bg-slate-700 transition-colors"
-                >
-                  Open full demo
-                </button>
-              </div>
+              <button
+                onClick={() => router.push('/demo')}
+                className="mt-8 bg-[#306844] dark:bg-[#3d8658] text-white px-8 py-4 rounded-pill font-extrabold text-lg shadow-lg hover:shadow-xl hover:translate-y-[-2px] transition-all"
+              >
+                Watch Demo
+              </button>
             </div>
 
-            <div className="rounded-2xl bg-[#1f2937]/95 dark:bg-slate-950/95 border border-slate-700/70 p-5 md:p-6 text-slate-100">
-              <p className="text-xs uppercase tracking-[0.18em] text-slate-300 font-bold">Demo Planner - {activeDemoDay}</p>
+            <aside className="rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-white/80 dark:border-slate-700/70 p-5 md:p-6 shadow-sm">
+              <p className="text-[11px] uppercase tracking-[0.16em] font-bold text-emerald-700 dark:text-emerald-300">
+                In The Video Tour
+              </p>
+
               <div className="mt-4 space-y-3">
-                {demoSchedule[activeDemoDay].map((block) => (
-                  <article key={`${block.time}-${block.task}`} className="rounded-xl bg-white/10 border border-white/15 p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-bold text-slate-200">{block.time}</p>
-                      <p className={`text-xs font-bold uppercase tracking-wider ${block.tagColor}`}>{block.tag}</p>
-                    </div>
-                    <p className="mt-2 font-semibold text-slate-100">{block.task}</p>
-                  </article>
-                ))}
+                <div className="rounded-xl bg-white/80 dark:bg-slate-800/70 border border-white/80 dark:border-slate-700/70 p-3.5">
+                  <p className="text-sm font-extrabold text-slate-900 dark:text-slate-100">1. Import & Organize</p>
+                  <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">See how syllabus details become structured courses and deadlines.</p>
+                </div>
+                <div className="rounded-xl bg-white/80 dark:bg-slate-800/70 border border-white/80 dark:border-slate-700/70 p-3.5">
+                  <p className="text-sm font-extrabold text-slate-900 dark:text-slate-100">2. Smart Block Planning</p>
+                  <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">Watch assignments split into practical sessions you can actually complete.</p>
+                </div>
+                <div className="rounded-xl bg-white/80 dark:bg-slate-800/70 border border-white/80 dark:border-slate-700/70 p-3.5">
+                  <p className="text-sm font-extrabold text-slate-900 dark:text-slate-100">3. Weekly Execution View</p>
+                  <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">Follow how the dashboard keeps workload, priorities, and progress aligned.</p>
+                </div>
               </div>
-              <p className="text-xs text-slate-300 mt-4">Preview mode only. Create an account to save and personalize your blocks.</p>
-            </div>
+            </aside>
           </div>
         </section>
 

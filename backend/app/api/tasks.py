@@ -354,7 +354,7 @@ async def estimate_task_time(task_id: str, request: TaskEstimateRequest):
         supabase = get_supabase()
         task_result = (
             supabase.table("tasks")
-            .select("id, user_id, task_title, deadline_at, estimated_hours, priority_level, description")
+            .select("id, user_id, task_title, deadline_at, estimated_hours, priority_level, task_type, description")
             .eq("id", task_id)
             .eq("user_id", request.user_id)
             .limit(1)
@@ -368,6 +368,7 @@ async def estimate_task_time(task_id: str, request: TaskEstimateRequest):
         estimated_hours = estimate_task_hours(
             {
                 "title": row.get("task_title") or "Untitled task",
+                "task_type": row.get("task_type") or "assignment",
                 "description": row.get("description") or "",
                 "deadline": row.get("deadline_at"),
                 "priority": int(row.get("priority_level") or 2),

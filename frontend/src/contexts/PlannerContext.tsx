@@ -69,6 +69,18 @@ type SupabaseCourseRow = {
   course_code: string;
   professor: string | null;
   description: string | null;
+  is_online: boolean | null;
+  isOnline?: boolean | null;
+  has_lab: boolean | null;
+  hasLab?: boolean | null;
+  lab_day: string | null;
+  labDay?: string | null;
+  lab_start_time: string | null;
+  labStartTime?: string | null;
+  lab_end_time: string | null;
+  labEndTime?: string | null;
+  lab_is_online: boolean | null;
+  labIsOnline?: boolean | null;
   created_at: string;
 };
 
@@ -80,6 +92,7 @@ type SupabaseTaskRow = {
   deadline_at: string;
   estimated_hours: number | null;
   priority_level: number | null;
+  task_type: string | null;
   description: string | null;
   status: string;
   created_at: string;
@@ -106,14 +119,17 @@ function parseTaskCategoryFromDescription(
   };
 }
 
-function withTaskCategoryTag(
-  description: string | null | undefined,
-  category: TaskCategory | undefined
-): string | null {
+function normalizeTaskCategory(value: string | null | undefined): TaskCategory {
+  const normalized = (value || "").trim().toLowerCase();
+  if (normalized === "exam" || normalized === "project") {
+    return normalized;
+  }
+  return "assignment";
+}
+
+function sanitizeTaskDescription(description: string | null | undefined): string | null {
   const clean = (description || "").replace(TASK_CATEGORY_TAG_RE, "").trim();
-  const normalizedCategory = category || "assignment";
-  const tagged = `[[type:${normalizedCategory}]]`;
-  return clean.length > 0 ? `${tagged} ${clean}` : tagged;
+  return clean.length > 0 ? clean : null;
 }
 
 function parseCourseDays(value: string): string[] {
@@ -121,6 +137,12 @@ function parseCourseDays(value: string): string[] {
     .split(/[,\s]+/)
     .map((d) => d.trim())
     .filter(Boolean);
+}
+
+const WEEK_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"] as const;
+
+function normalizeCourseDays(value: string): string[] {
+  return WEEK_DAYS.filter((day) => parseCourseDays(value).includes(day));
 }
 
 function normalizeTimeForDb(value: string): string {
@@ -150,6 +172,14 @@ function normalizeTimeForDb(value: string): string {
   return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:${String(second).padStart(2, "0")}`;
 }
 
+function normalizeOptionalTimeForDb(value: string | undefined | null): string | null {
+  const trimmed = (value || "").trim();
+  if (!trimmed) {
+    return null;
+  }
+  return normalizeTimeForDb(trimmed);
+}
+
 function normalizeDeadlineForDb(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
@@ -177,17 +207,25 @@ function mapCourseRowToModel(row: SupabaseCourseRow): Course {
     endTime: row.end_time || "",
     professor: row.professor || "",
     description: row.description || "",
+    isOnline: row.is_online ?? row.isOnline ?? false,
+    hasLab: row.has_lab ?? row.hasLab ?? false,
+    labDay: row.lab_day ?? row.labDay ?? "",
+    labStartTime: row.lab_start_time ?? row.labStartTime ?? "",
+    labEndTime: row.lab_end_time ?? row.labEndTime ?? "",
+    labIsOnline: row.lab_is_online ?? row.labIsOnline ?? false,
     created_at: row.created_at,
   };
 }
 
 function mapTaskRowToModel(row: SupabaseTaskRow): Task {
   const parsed = parseTaskCategoryFromDescription(row.description);
+  const category = row.task_type ? normalizeTaskCategory(row.task_type) : parsed.category;
+
   return {
     id: row.id,
     user_id: row.user_id,
     title: row.task_title,
-    category: parsed.category,
+    category,
     course_id: row.course_id || undefined,
     deadline: row.deadline_at,
     estimated_hours: row.estimated_hours ?? 0,
@@ -301,15 +339,22 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
           throw new Error("Please sign in to save courses.");
         }
         setLoading(true);
+        const isOnline = !!course.isOnline;
         const payload = {
           user_id: course.user_id || userId,
           course_name: course.name,
-          course_days: parseCourseDays(course.courseDate),
-          start_time: normalizeTimeForDb(course.startTime),
-          end_time: normalizeTimeForDb(course.endTime),
+          course_days: isOnline ? [] : normalizeCourseDays(course.courseDate),
+          start_time: isOnline ? null : normalizeOptionalTimeForDb(course.startTime),
+          end_time: isOnline ? null : normalizeOptionalTimeForDb(course.endTime),
           course_code: course.code,
           professor: course.professor || null,
           description: course.description || null,
+          is_online: isOnline,
+          has_lab: !!course.hasLab,
+          lab_day: course.hasLab ? course.labDay || null : null,
+          lab_start_time: course.hasLab && !course.labIsOnline ? normalizeOptionalTimeForDb(course.labStartTime) : null,
+          lab_end_time: course.hasLab && !course.labIsOnline ? normalizeOptionalTimeForDb(course.labEndTime) : null,
+          lab_is_online: !!course.labIsOnline,
         };
 
         const { data, error: insertError } = await supabase
@@ -341,11 +386,32 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
       const updatePayload: Record<string, unknown> = {};
       if (course.name !== undefined) updatePayload.course_name = course.name;
       if (course.code !== undefined) updatePayload.course_code = course.code;
-      if (course.courseDate !== undefined) updatePayload.course_days = parseCourseDays(course.courseDate);
-      if (course.startTime !== undefined) updatePayload.start_time = normalizeTimeForDb(course.startTime);
-      if (course.endTime !== undefined) updatePayload.end_time = normalizeTimeForDb(course.endTime);
+      const isOnline = course.isOnline === true;
+      if (course.isOnline !== undefined) updatePayload.is_online = !!course.isOnline;
+      if (course.courseDate !== undefined) {
+        updatePayload.course_days = isOnline ? [] : normalizeCourseDays(course.courseDate);
+      }
+      if (course.startTime !== undefined) {
+        updatePayload.start_time = isOnline ? null : normalizeOptionalTimeForDb(course.startTime);
+      }
+      if (course.endTime !== undefined) {
+        updatePayload.end_time = isOnline ? null : normalizeOptionalTimeForDb(course.endTime);
+      }
       if (course.professor !== undefined) updatePayload.professor = course.professor || null;
       if (course.description !== undefined) updatePayload.description = course.description || null;
+      if (course.hasLab !== undefined) updatePayload.has_lab = !!course.hasLab;
+      if (course.labDay !== undefined) updatePayload.lab_day = course.hasLab ? course.labDay || null : null;
+      if (course.labIsOnline !== undefined) updatePayload.lab_is_online = !!course.labIsOnline;
+      if (course.labStartTime !== undefined) {
+        updatePayload.lab_start_time = course.hasLab && !course.labIsOnline
+          ? normalizeOptionalTimeForDb(course.labStartTime)
+          : null;
+      }
+      if (course.labEndTime !== undefined) {
+        updatePayload.lab_end_time = course.hasLab && !course.labIsOnline
+          ? normalizeOptionalTimeForDb(course.labEndTime)
+          : null;
+      }
 
       const { error: updateError } = await supabase
         .from("courses")
@@ -487,7 +553,8 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
           deadline_at: normalizeDeadlineForDb(task.deadline),
           estimated_hours: task.estimated_hours ?? 0,
           priority_level: task.priority ?? 2,
-          description: withTaskCategoryTag(task.description, task.category),
+          task_type: normalizeTaskCategory(task.category),
+          description: sanitizeTaskDescription(task.description),
           status: "pending",
         };
 
@@ -523,9 +590,8 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
       if (task.deadline !== undefined) updatePayload.deadline_at = normalizeDeadlineForDb(task.deadline);
       if (task.estimated_hours !== undefined) updatePayload.estimated_hours = task.estimated_hours;
       if (task.priority !== undefined) updatePayload.priority_level = task.priority;
-      if (task.description !== undefined || task.category !== undefined) {
-        updatePayload.description = withTaskCategoryTag(task.description, task.category);
-      }
+      if (task.category !== undefined) updatePayload.task_type = normalizeTaskCategory(task.category);
+      if (task.description !== undefined) updatePayload.description = sanitizeTaskDescription(task.description);
       if (task.completed !== undefined) updatePayload.status = task.completed ? "completed" : "pending";
 
       const { error: updateError } = await supabase

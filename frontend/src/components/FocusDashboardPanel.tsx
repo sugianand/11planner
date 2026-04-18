@@ -516,7 +516,7 @@ export default function FocusDashboardPanel({
             value={formatHours(totalHours)}
             subtext={`${formatHours(scheduledHours)} scheduled`}
             icon="schedule"
-            accentColor="indigo"
+            accentColor="blue"
           />
 
           {/* Music Player Panel */}
@@ -895,7 +895,7 @@ export default function FocusDashboardPanel({
           {/* Display today's scheduled tasks and due assignments in a checklist format */}
           <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-3xl p-6 shadow-sm border border-white/40 dark:border-slate-700/40">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-4">
-              Today's Checklist
+              Today&rsquo;s Checklist
             </h3>
             
             {todaysScheduledTasks.length === 0 && dueTodayTasks.length === 0 ? (
