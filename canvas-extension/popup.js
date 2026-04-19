@@ -3,18 +3,21 @@
  * Handles login via Supabase Auth and task extraction/sync.
  */
 
-// ── Supabase config (anon key is safe to embed in client code) ──
+// Supabase configuration (anon key is safe to embed in client code)
 const SUPABASE_URL = 'https://ddszcujvbvvihwsrkzsk.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkc3pjdWp2YnZ2aWh3c3JrenNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAxNjIzNDYsImV4cCI6MjA4NTczODM0Nn0.HfSG1DHiGG3Riv_JVFvFBWJggy40tPS4iAavIDKjs1o';
 
+// State variables for extracted data and user selections
 let extractedTasks = [];
 let extractedCourses = [];
 let selectedCourseCodes = new Set();
 
+// Extracts unique key from course object for identifying selections
 function getCourseKey(course) {
     return String(course?.code || course?.contextCode || course?.id || course?.name || '').trim();
 }
 
+// Filters extracted tasks and courses based on user selections
 function getFilteredSyncData() {
     if (!Array.isArray(extractedCourses) || extractedCourses.length === 0) {
         return { tasks: extractedTasks, courses: extractedCourses };
@@ -42,6 +45,7 @@ function getFilteredSyncData() {
     return { tasks, courses: selectedCourses };
 }
 
+// Renders checkbox UI for selecting which courses to sync
 function renderCourseSelectors(courses, onChange) {
     const panel = document.getElementById('courseFilterPanel');
     const list = document.getElementById('courseSelectionList');
@@ -92,12 +96,14 @@ function renderCourseSelectors(courses, onChange) {
     };
 }
 
+// Checks if the current page is a Canvas LMS URL (instructure.com or canvas domain)
 function isCanvasUrl(url) {
         if (!url) return false;
         // Support instructure.com AND institutional Canvas domains (canvas.wayne.edu, etc)
         return /https?:\/\/([^/]*instructure\.com|.*canvas.*)\//.test(url);
 }
 
+// Enables/disables extract button based on Canvas page availability
 function setExtractAvailability(isAvailable) {
         const extractBtn = document.getElementById('extractBtn');
         const extractBtnGuest = document.getElementById('extractBtnGuest');
@@ -135,13 +141,14 @@ function setExtractAvailability(isAvailable) {
         }
 }
 
-// ── UI helpers ──
+// Shows status message (error, success, or info) to the user
 function showStatus(message, type) {
     const el = document.getElementById('status');
     el.textContent = message;
     el.className = `status ${type}`;
 }
 
+// Toggles between login panel and main panel based on auth status
 function showPanel(loggedIn, email) {
     document.getElementById('loginPanel').style.display = loggedIn ? 'none' : 'block';
     document.getElementById('mainPanel').style.display = loggedIn ? 'block' : 'none';
@@ -151,7 +158,7 @@ function showPanel(loggedIn, email) {
     }
 }
 
-// ── Auth ──
+// Authenticates user with Supabase using email and password
 async function login(email, password) {
     const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
         method: 'POST',
@@ -166,7 +173,7 @@ async function login(email, password) {
     return { userId: data.user.id, email: data.user.email, accessToken: data.access_token };
 }
 
-// ── On load: check if already logged in ──
+// Initializes popup UI when page loads
 document.addEventListener('DOMContentLoaded', () => {
     chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
         const activeTab = tabs?.[0];
@@ -182,7 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // ── Login button ──
+    // Handles login button click
     document.getElementById('loginBtn')?.addEventListener('click', async () => {
         const btn = document.getElementById('loginBtn');
         const email = document.getElementById('loginEmail').value.trim();
@@ -212,7 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // ── Logout button ──
+    // Handles logout button click
     document.getElementById('logoutBtn')?.addEventListener('click', () => {
         chrome.storage.local.remove(['userId', 'userEmail'], () => {
             showPanel(false);
@@ -229,7 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // ── Preview renderer ──
+    // Renders preview list of extracted tasks and courses
     function renderPreview(tasks, courses) {
         const preview = document.getElementById('preview');
         const emptyState = document.getElementById('emptyState');
@@ -288,6 +295,7 @@ document.addEventListener('DOMContentLoaded', () => {
         syncBtn.style.display = 'block';
     }
 
+    // Runs extraction on the current Canvas tab
     async function runExtract(btn) {
 
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -331,18 +339,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // ── Extract buttons (logged-in + guest) ──
+    // Handles extract button click (authenticated users)
     document.getElementById('extractBtn')?.addEventListener('click', async () => {
         const btn = document.getElementById('extractBtn');
         await runExtract(btn);
     });
 
+    // Handles extract button click (guest users)
     document.getElementById('extractBtnGuest')?.addEventListener('click', async () => {
         const btn = document.getElementById('extractBtnGuest');
         await runExtract(btn);
     });
 
-    // ── Sync button ──
+    // Handles sync button click: sends extracted tasks to 11Planner backend
     document.getElementById('syncBtn')?.addEventListener('click', async () => {
         const btn = document.getElementById('syncBtn');
         btn.disabled = true;

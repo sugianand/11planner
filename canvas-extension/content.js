@@ -1,7 +1,9 @@
 /**
  * 11Planner Canvas Extension – Content Script
+ * Injects into Canvas pages to extract courses, assignments, and their details.
  */
 
+// Recursively extracts visible text from DOM elements, skipping hidden/screenreader-only content
 function getVisibleText(el) {
     if (!el) return '';
     let text = '';
@@ -19,7 +21,7 @@ function getVisibleText(el) {
     return text.trim();
 }
 
-// Parse date heading text into YYYY-MM-DD
+// Converts date heading text (like "Today", "Tomorrow", "Mar 10") to ISO YYYY-MM-DD format
 function parseDateHeading(text) {
     if (!text) return null;
     text = text.trim();
@@ -57,10 +59,7 @@ function parseDateHeading(text) {
     return null;
 }
 
-/**
- * Parse a time string from Canvas agenda like "Due 5:30pm", "11:59pm", "4:00pm"
- * Returns { hours, minutes } or null.
- */
+// Parses time strings like "11:59pm", "2:30 am", "14:00" into {hours, minutes} object
 function parseTimeText(text, opts = {}) {
     const assumePmWhenMissing = Boolean(opts.assumePmWhenMissing);
     if (!text) return null;
@@ -114,6 +113,7 @@ function parseCalendarEventTime(event, rawTitle) {
     return null;
 }
 
+// Converts date object to local ISO string (YYYY-MM-DDTHH:mm:ss)
 function toLocalIsoString(dateObj) {
     const y = dateObj.getFullYear();
     const m = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -124,6 +124,7 @@ function toLocalIsoString(dateObj) {
     return `${y}-${m}-${d}T${hh}:${mm}:${ss}`;
 }
 
+// Parses "Due: Mar 3 at 11:59pm" style text into ISO datetime string
 function parseDueDateFromText(text) {
     if (!text) return null;
     const normalized = text.replace(/\s+/g, ' ').trim();
@@ -159,6 +160,7 @@ function parseDueDateFromText(text) {
     return toLocalIsoString(parsedDate);
 }
 
+// Extracts due date from event metadata: title, aria-label, or time elements
 function extractDueDateFromEventMetadata(event) {
     const timeEl = event.querySelector('time[datetime]');
     const timeAttr = timeEl?.getAttribute('datetime');
@@ -183,6 +185,7 @@ function extractDueDateFromEventMetadata(event) {
     return null;
 }
 
+// Combines a date string and time object into a full ISO datetime
 function buildISOFromDateAndTime(dateStr, timeObj) {
     if (!dateStr) return null;
     try {
@@ -197,14 +200,17 @@ function buildISOFromDateAndTime(dateStr, timeObj) {
     } catch (_) { return null; }
 }
 
+// Simple utility: clamps a value between min and max bounds
 function clamp(value, min, max) {
     return Math.min(max, Math.max(min, value));
 }
 
+// Rounds hours to nearest 0.5 (e.g., 2.3 -> 2.5)
 function roundToHalfHour(hours) {
     return Math.round(hours * 2) / 2;
 }
 
+// Calculates days until due date from now
 function daysUntilDue(dueDate) {
     if (!dueDate) return 7;
     const due = new Date(dueDate);
@@ -214,6 +220,7 @@ function daysUntilDue(dueDate) {
     return Math.ceil((due.getTime() - now.getTime()) / msPerDay);
 }
 
+// Checks if due date is in the future
 function isDueAfterNow(dueDate) {
     if (!dueDate) return false;
     const due = new Date(dueDate);
@@ -221,6 +228,8 @@ function isDueAfterNow(dueDate) {
     return due.getTime() > Date.now();
 }
 
+// Estimates time in hours needed to complete an assignment
+// Uses keywords, points, description length, and urgency to calculate estimate
 function estimateHours(assignment) {
     const title = (assignment.title || '').toLowerCase();
     const description = (assignment.description || '').toLowerCase();
@@ -262,6 +271,7 @@ function estimateHours(assignment) {
     return clamp(roundToHalfHour(hours), 0.5, 16);
 }
 
+// Estimates priority level (1-5) based on deadline, effort, and stakes
 function estimatePriorityLevel(assignment) {
     const title = (assignment.title || '').toLowerCase();
     const description = (assignment.description || '').toLowerCase();
@@ -302,9 +312,7 @@ function estimatePriorityLevel(assignment) {
     return clamp(Math.round(score), 1, 5);
 }
 
-/**
- * Build course ID → course name from the Canvas calendar sidebar.
- */
+// Builds a map of Canvas course IDs to course names from various sources
 function buildCourseMap() {
     const map = {};
 
@@ -392,7 +400,7 @@ function buildCourseMap() {
     return map;
 }
 
-// Walk up DOM looking for group_course_XXXXX class
+// Walks up DOM tree looking for group_course_XXXXX class to find course ID
 function getCourseCodeFromClasses(el) {
     if (!el) return null;
 
@@ -406,7 +414,7 @@ function getCourseCodeFromClasses(el) {
     return null;
 }
 
-// Get course name from a /courses/ID URL
+// Extracts course name from a /courses/ID URL using the course map
 function extractCourseFromUrl(url, courseMap) {
     if (!url) return null;
     const m = url.match(/\/courses\/(\d+)/);
@@ -416,9 +424,7 @@ function extractCourseFromUrl(url, courseMap) {
     return null;
 }
 
-/**
- * Return true only for assignment-like items (skip regular meetings/events).
- */
+// Checks if a DOM node represents an assignment (not just a regular event)
 function isAssignmentLikeNode(node) {
     if (!node) return false;
 
@@ -438,6 +444,7 @@ function isAssignmentLikeNode(node) {
     return false;
 }
 
+// Extracts course ID from a DOM node's class or data attributes
 function parseCourseIdFromNode(node) {
     if (!node) return null;
 
@@ -452,6 +459,7 @@ function parseCourseIdFromNode(node) {
     return null;
 }
 
+// Extracts assignment ID from various node attributes and URLs
 function parseAssignmentIdFromNode(node) {
     if (!node) return null;
 
@@ -478,6 +486,7 @@ function parseAssignmentIdFromNode(node) {
     return null;
 }
 
+// Finds an assignment link by matching its text to a title
 function findAssignmentAnchorByTitle(title) {
     if (!title) return null;
     const normalizedTitle = title.trim().toLowerCase();
@@ -489,6 +498,7 @@ function findAssignmentAnchorByTitle(title) {
     return null;
 }
 
+// Resolves assignment URL from various sources (href, API, fallback)
 function resolveAssignmentUrl(node, title) {
     // 1) Direct href on node or descendants
     const directHref =
@@ -513,6 +523,7 @@ function resolveAssignmentUrl(node, title) {
     return window.location.href;
 }
 
+// Checks if URL is likely a Calendar page (not an assignment page)
 function isLikelyCalendarUrl(url) {
     if (!url) return true;
     try {
@@ -523,6 +534,7 @@ function isLikelyCalendarUrl(url) {
     }
 }
 
+// Normalizes text for comparison (lowercase, trim, single spaces)
 function normalizeTitle(text) {
     return (text || '')
         .toLowerCase()
@@ -530,6 +542,7 @@ function normalizeTitle(text) {
         .trim();
 }
 
+// Strips HTML tags from text, leaving only readable content
 function stripHtmlToText(html) {
     if (!html) return '';
     try {
@@ -541,6 +554,7 @@ function stripHtmlToText(html) {
     }
 }
 
+// Determines assignment type (quiz, discussion, exam) from Canvas API data
 function inferAssignmentTypeFromApi(item) {
     if (!item) return null;
     const submissionTypes = Array.isArray(item.submission_types) ? item.submission_types : [];
@@ -552,6 +566,7 @@ function inferAssignmentTypeFromApi(item) {
     return 'assignment';
 }
 
+// Parses course schedule text like "MWF 9:00 AM - 10:15 AM" into structured data
 function parseCourseScheduleFromText(text) {
     if (!text) return null;
     const normalized = String(text).replace(/\s+/g, ' ').trim();
@@ -571,6 +586,7 @@ function parseCourseScheduleFromText(text) {
     };
 }
 
+// Builds a map of course codes to their meeting times from course links
 function buildCourseMeetingMap() {
     const byCode = {};
 
@@ -594,6 +610,7 @@ function buildCourseMeetingMap() {
     return byCode;
 }
 
+// Compares if two date strings refer to the same calendar day
 function sameDateOnly(a, b) {
     if (!a || !b) return false;
     try {
@@ -610,6 +627,7 @@ function sameDateOnly(a, b) {
     }
 }
 
+// Queries Canvas API to find assignment URL by title and course
 async function fetchAssignmentUrlFromCanvasApi(courseId, title, dueDate) {
     if (!courseId || !title) return null;
 
@@ -644,6 +662,7 @@ async function fetchAssignmentUrlFromCanvasApi(courseId, title, dueDate) {
     }
 }
 
+// Enriches assignments with URLs from Canvas API
 async function enrichAssignmentUrls(assignments) {
     const cache = new Map();
 
@@ -667,6 +686,7 @@ async function enrichAssignmentUrls(assignments) {
     return assignments;
 }
 
+// Fetches detailed assignment info (description, points, type) from Canvas API
 async function fetchAssignmentDetailsFromCanvasApi(courseId, title, dueDate) {
     if (!courseId || !title) return null;
 
@@ -703,6 +723,7 @@ async function fetchAssignmentDetailsFromCanvasApi(courseId, title, dueDate) {
     }
 }
 
+// Enriches assignments with details (description, points) from Canvas API
 async function enrichAssignmentDetails(assignments) {
     const cache = new Map();
 
@@ -843,7 +864,7 @@ function extractFromAgenda() {
     return assignments;
 }
 
-// ===== ASSIGNMENTS LIST PAGE =====
+// Extracts assignments from a dedicated assignments list page
 function extractFromAssignmentsPage() {
     const assignments = [];
     const courseName = (() => {
@@ -892,7 +913,7 @@ function extractFromCalendar() {
     const courseMap = buildCourseMap();
 
     /**
-     * Helper: Map a table cell to its actual column index,
+     * Helper: Maps a table cell to its actual column index,
      * accounting for rowspan from previous rows
      */
     function getCellColumnIndex(td) {
@@ -1008,6 +1029,8 @@ function extractFromCalendar() {
     return assignments;
 }
 
+// Main extraction function: tries agenda, calendar, and assignments pages
+// Returns deduplicated, enriched assignment list with time estimates
 async function extractAssignments() {
     const path = window.location.pathname;
     const hash = window.location.hash;
@@ -1067,6 +1090,7 @@ async function extractAssignments() {
     return enriched;
 }
 
+// Extracts all courses from Canvas course map and meeting schedule data
 function extractCourses() {
     const courseMap = buildCourseMap();
     const meetingMap = buildCourseMeetingMap();
@@ -1085,7 +1109,10 @@ function extractCourses() {
     });
 }
 
+// Listens for 'extract' message from popup and returns extracted courses/assignments
+// Listens for 'extract' message from popup and returns extracted courses/assignments
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    // Handles extraction request: extracts all assignments and courses
     if (message.action === 'extract') {
         (async () => {
             const assignments = await extractAssignments();
