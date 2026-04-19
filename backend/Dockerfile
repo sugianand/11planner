@@ -10,14 +10,14 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
-COPY backend/requirements.txt ./
+COPY requirements.txt ./
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the backend application
-COPY backend/app ./app
-COPY backend/schema.json ./schema.json
+COPY app ./app
+COPY schema.json ./schema.json
 
 # Expose port
 EXPOSE 8000
