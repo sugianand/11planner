@@ -77,6 +77,11 @@ export default function Quiz() {
   const progress = Math.round((step / TOTAL_STEPS) * 100);
 
   function nextStep() {
+    if (step === 2 && currentPreferences.workdays.length === 0) {
+      setErrorMessage("Please select at least one work day before continuing.");
+      return;
+    }
+    setErrorMessage("");
     setStep((prev) => Math.min(prev + 1, TOTAL_STEPS));
   }
 

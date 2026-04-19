@@ -79,8 +79,22 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
   const parseCourseDays = (value?: string | null) => {
     const text = (value || '').trim();
     if (!text) return [] as string[];
-    const normalized = text.replace(/[,/]+/g, ' ').replace(/\s+/g, ' ').trim();
-    const tokens = normalized.split(' ');
+
+    const rawTokens = text.replace(/[,/]+/g, ' ').replace(/\s+/g, ' ').trim().split(' ').filter(Boolean);
+
+    // matches backend parse_course_weekdays logic
+    const expandedTokens: string[] = [];
+    for (const token of rawTokens) {
+      const t = token.toLowerCase();
+      if (t === 'mwf' || t === 'm/w/f') {
+        expandedTokens.push('mon', 'wed', 'fri');
+      } else if (t === 'tth' || t === 'tu/th' || t === 't/th' || t === 'tr') {
+        expandedTokens.push('tue', 'thu');
+      } else {
+        expandedTokens.push(t);
+      }
+    }
+
     const dayLookup: Record<string, string> = {
       monday: 'Monday', mon: 'Monday', m: 'Monday',
       tuesday: 'Tuesday', tue: 'Tuesday', tues: 'Tuesday', t: 'Tuesday',
@@ -91,18 +105,11 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
       sunday: 'Sunday', sun: 'Sunday', u: 'Sunday',
     };
 
-    const dayMatches = tokens
-      .map((token) => dayLookup[token.toLowerCase()])
+    const dayMatches = expandedTokens
+      .map((token) => dayLookup[token])
       .filter((day): day is string => Boolean(day));
 
-    if (dayMatches.length > 0) {
-      return Array.from(new Set(dayMatches));
-    }
-
-    const compact = normalized.toLowerCase();
-    if (compact === 'mwf') return ['Monday', 'Wednesday', 'Friday'];
-    if (compact === 'tth') return ['Tuesday', 'Thursday'];
-    return [];
+    return Array.from(new Set(dayMatches));
   };
 
   const classEvents = useMemo(() => {

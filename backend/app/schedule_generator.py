@@ -1,3 +1,4 @@
+import math
 from datetime import datetime, time, timedelta
 from typing import Any, Callable, Dict, List, Optional
 from app.models import Task, ScheduleBlock
@@ -119,7 +120,9 @@ class ScheduleGenerator:
             ],
             work_start=time(6, 0),
             work_end=time(23, 0),
-            study_limit_hours=pref.study_limit_hours,
+            # Daily cap is made so the task can fit before the deadline.
+            # Floor at 6 h/day; ceiling at 10 h/day to avoid burnout.
+            study_limit_hours=min(max(pref.study_limit_hours, 6.0), 10.0),
             workstyle=pref.workstyle,
             additional_info=pref.additional_info,
             assignment_plan=pref.assignment_plan,
@@ -159,22 +162,11 @@ class ScheduleGenerator:
 
     def get_block_hours_for_plan(self, prefs: Preferences, task: Task, hours_remaining: float) -> float:
         """
-        Determine block size based on assignment plan preference.
-        - early: Smaller blocks (0.5-1 hr) to spread over more days
-        - deadline: Larger blocks (2-3 hr) to finish closer to deadline
-        - balanced: Default behavior (1-2 hr blocks)
+        Block size comes  from the user's workstyle preference.
+        Plan ("early", "deadline", "balanced") controls when work is scheduled,
+        not how large each block is:
         """
-        plan = (prefs.assignment_plan or "").strip().lower()
-        
-        if plan == "early":
-            # Smaller blocks to spread work out
-            return min(1.0, hours_remaining)
-        elif plan == "deadline":
-            # Larger blocks to complete faster
-            return min(3.0, hours_remaining)
-        else:  # balanced or default
-            # Standard focus blocks
-            return min(self.focus_block_hours, hours_remaining)
+        return min(self.focus_block_hours, hours_remaining)
  
 
     def move_to_preferred_day(
@@ -248,16 +240,18 @@ class ScheduleGenerator:
 
         def urgency_score(task: Task):
             days_until = (task.deadline - start_date).days
-            hours_needed = task.estimated_hours or 1
-            priority = task.priority or 2
+            hours_needed = float(task.estimated_hours or 1)
             priority_value = getattr(task, "priority", None)
             if priority_value is None:
                 priority_value = getattr(task, "priority_level", 2) or 2
+            priority_value = int(priority_value or 2)
 
             if days_until <= 0:
-                return -999
+                # Overdue: primary sort keeps them first; secondary puts highest priority first
+                return (-999, -priority_value)
 
-            return (days_until / hours_needed) - (priority_value * 0.3)
+
+            return (days_until / hours_needed, -priority_value)
 
         sorted_tasks = sorted(pending_tasks, key=urgency_score)
 
@@ -326,6 +320,12 @@ class ScheduleGenerator:
             deadline_override_mode = strict_capacity_hours + 1e-6 < float(task.estimated_hours or 1)
             runtime_prefs = self.relaxed_deadline_prefs(prefs) if deadline_override_mode else prefs
 
+            # Per-task daily cap: in override mode this comes from the relaxed prefs
+     
+            effective_max_hours = float(runtime_prefs.study_limit_hours)
+            if effective_max_hours <= 0:
+                effective_max_hours = max_hours_per_day
+
             task_preferred_days = preferred_days_map.get(str(task.id), [])
             task_preferred_day_set = self.normalized_day_set(task_preferred_days)
             if task_preferred_days and not deadline_override_mode:
@@ -336,6 +336,22 @@ class ScheduleGenerator:
                     current_dt = candidate_dt
                     hours_today = 0.0 if current_dt.time() == runtime_prefs.work_start else hours_today
             hours_remaining = float(task.estimated_hours or 1)
+
+            # Deadline Sprint: delay start until the sprint window so work is
+            # concentrated near the due date rather than starting immediately.
+
+            plan = (runtime_prefs.assignment_plan or "").strip().lower()
+            if plan == "deadline" and not deadline_override_mode:
+                days_needed = max(1, math.ceil(hours_remaining / effective_max_hours))
+                sprint_start_date = task.deadline.date() - timedelta(days=days_needed)
+                if sprint_start_date > current_dt.date():
+                    sprint_dt = datetime.combine(sprint_start_date, runtime_prefs.work_start)
+                    sprint_dt = self.move_to_next_work_start(sprint_dt, runtime_prefs)
+                    sprint_dt = self.skip_if_busy(sprint_dt, busy)
+                    sprint_dt = self.round_up_to_five(sprint_dt)
+                    if sprint_dt < task.deadline:
+                        current_dt = sprint_dt
+                        hours_today = 0.0
 
             override_list = block_minutes_override.get(str(task.id), [])
             override_idx = 0
@@ -366,7 +382,7 @@ class ScheduleGenerator:
                         current_dt = self.round_up_to_five(moved_dt)
                         hours_today = 0.0
 
-                if hours_today >= max_hours_per_day:
+                if hours_today >= effective_max_hours:
                     current_dt = self.next_day_start(current_dt, runtime_prefs)
                     current_dt = self.skip_if_busy(current_dt, busy)
                     current_dt = self.round_up_to_five(current_dt)
@@ -386,7 +402,7 @@ class ScheduleGenerator:
                     break
 
                 remaining_minutes = max(int(round(hours_remaining * 60)), 15)
-                available_today_minutes = max(int(round((max_hours_per_day - hours_today) * 60)), 0)
+                available_today_minutes = max(int(round((effective_max_hours - hours_today) * 60)), 0)
                 available_window_minutes = max(int((effective_window_end - current_dt).total_seconds() // 60), 0)
 
                 if override_idx < len(override_list):
