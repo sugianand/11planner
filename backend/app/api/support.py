@@ -92,6 +92,7 @@ ROUTE_HINT_KEYWORDS = {
     "/courses",
     "/schedule",
     "/settings",
+    "/notifications",
     "/profile",
     "/support",
     "/about",
@@ -155,14 +156,17 @@ APP_NAVIGATION_CONTEXT = (
     "  5) After generation, users can drag schedule blocks; overlapping blocks are prevented.\n"
     "  6) Color by Priority or Color by Course changes the event coloring.\n"
     "- Settings page exact flow:\n"
-    "  1) Use Search settings to filter panels by keyword.\n"
-    "  2) Panels are Schedule Setup, Personalize, Reminders, Account, Support.\n"
-    "  3) Schedule Setup controls Daily Study Limit (1-12 hours) and caps generation per day.\n"
-    "  4) Personalize controls Theme Mode (light/dark) and Accent Theme (emerald, ocean, rose, slate, amber, violet).\n"
-    "  5) Reminders controls Push Notifications, Notification Sound, Browser Permission enable, Reminder lead time (hours), Email Updates, Weekly Report.\n"
-    "  6) Account & Privacy includes Change Password, Public Profile Visibility, Usage Analytics, Personalized Insights, Share Progress with Integrations, Export Schedule as PDF, Clear Account Data, and Delete Account.\n"
-    "  7) Support panel includes Open Support Page link.\n"
-    "  8) Bottom status shows All changes saved or Saving..., and Reset This Section resets only the currently open panel.\n"
+    "  1) Use Search settings to filter the three panels: Personalize, Notifications, and Account.\n"
+    "  2) Personalize controls Theme Mode (light/dark) and Accent Theme (emerald, ocean, rose, slate, amber, violet).\n"
+    "  3) Notifications controls Push Notifications, Notification Sound, Browser Permission, Reminder lead time (1-168 hours), Email Updates, and Weekly Report.\n"
+    "  4) Account includes Change Password, Public Profile Visibility, Usage Analytics, Personalized Insights, Share Progress with Integrations, Export Schedule as PDF, Clear Account Data, and Delete Account.\n"
+    "  5) The bottom status bar shows All changes saved or Saving..., and Reset This Section resets the currently open panel.\n"
+    "- Notifications page exact flow:\n"
+    "  1) The header shows live reminder status, current lead window, and counts for Task Alerts and Block Alerts.\n"
+    "  2) Task Alerts includes overdue tasks and due-soon tasks based on the selected reminder lead time.\n"
+    "  3) Overdue task cards include a Mark Complete button for users who already finished the task.\n"
+    "  4) Study Block Alerts shows current study blocks and upcoming blocks in the current reminder window.\n"
+    "  5) The page links back to /settings?panel=notifications for reminder configuration.\n"
     "- Profile page exact flow:\n"
     "  1) Profile shows Focus Profile identity info, email state, and initials avatar.\n"
     "  2) Users can click Edit Name, update First name and Last name, then Save Name (or Cancel).\n"
@@ -212,6 +216,7 @@ PATHNAME_CONTEXT = {
 }
 
 
+# Provides route-specific context hints used in support responses.
 def get_pathname_context(pathname: str | None) -> str:
     route = (pathname or "").lower()
     if route.startswith("/profile/quiz"):
@@ -252,6 +257,7 @@ class SupportStatusResponse(BaseModel):
     reason: str | None = None
 
 
+# Reports why OpenAI support is currently unavailable, if applicable.
 def get_openai_unavailable_reason() -> str | None:
     if OpenAI is None:
         return "OpenAI SDK not installed or failed to import"
@@ -260,6 +266,7 @@ def get_openai_unavailable_reason() -> str | None:
     return None
 
 
+# Filters messages to keep support focused on 11Planner topics.
 def is_11planner_related(message: str, pathname: str | None) -> bool:
     normalized = message.lower().strip()
     tokens = set(re.findall(r"[a-z0-9_/-]+", normalized))
@@ -282,6 +289,7 @@ def is_11planner_related(message: str, pathname: str | None) -> bool:
     return False
 
 
+# Returns deterministic fallback help when AI output is unavailable.
 def fallback_reply(message: str, pathname: str | None = None) -> tuple[str, str | None]:
     normalized = message.lower()
     route = (pathname or "").lower()
@@ -320,6 +328,18 @@ def fallback_reply(message: str, pathname: str | None = None) -> tuple[str, str 
         return (
             "The Demo page plays a product tour video. The video showcases the main features of 11Planner after you sign up.",
             "support",
+        )
+
+    if route.startswith("/notifications"):
+        return (
+            "The Notifications page is your live alert center. It shows task alerts for overdue and due-soon tasks based on the reminder lead time, lets you mark overdue tasks complete, and shows current and upcoming study blocks. It is the place to review and act on reminders, not just read them.",
+            "notifications",
+        )
+
+    if route.startswith("/settings"):
+        return (
+            "The Settings page lets you control how 11Planner looks and behaves. Use Search settings to find panels, then adjust Personalize, Notifications, or Account options. You can change Theme Mode and Accent Theme, manage Push Notifications and Reminder lead time, update email and weekly report preferences, and handle password, privacy, export, and account actions from there.",
+            "settings",
         )
 
     if any(keyword in normalized for keyword in ("get started", "start", "onboard", "first time", "new user")):
@@ -367,7 +387,7 @@ def fallback_reply(message: str, pathname: str | None = None) -> tuple[str, str 
 
     if any(keyword in normalized for keyword in ("setting", "notification", "theme", "reminder", "password", "privacy", "account", "delete", "export")):
         return (
-            "Settings has five panels: Schedule Setup, Personalize, Reminders, Account, and Support. You can adjust Daily Study Limit, Theme Mode and Accent Theme, reminder channels and lead time, privacy toggles, Change Password, Export Schedule as PDF, Clear Account Data, or Delete Account. Use Search settings to jump to a panel, and Reset This Section to reset only the current panel.",
+            "Settings is organized into three panels: Personalize, Notifications, and Account. Use Search settings to jump to the right panel. Personalize controls Theme Mode and Accent Theme; Notifications controls Push Notifications, Notification Sound, Browser Permission, Reminder lead time, Email Updates, and Weekly Report; Account controls Change Password, privacy toggles, Export Schedule as PDF, Clear Account Data, and Delete Account. Reset This Section resets only the current panel.",
             "settings",
         )
     if any(keyword in normalized for keyword in ("bug", "error", "issue", "support", "problem")):
@@ -398,17 +418,21 @@ def fallback_reply(message: str, pathname: str | None = None) -> tuple[str, str 
     if route.startswith("/courses"):
         return "I can help with Courses. Ask me about course setup, labs, syllabi, filters, or sort options.", "courses"
     if route.startswith("/settings"):
-        return "I can help with Settings. Ask me about Schedule Setup, Personalize, Reminders, Account actions (password/privacy/export/delete), or how Reset This Section works.", "settings"
+        return "I can help with Settings. Ask me about the Search settings filter, Personalize, Notifications, Account options, or how Reset This Section works.", "settings"
+    if route.startswith("/notifications"):
+        return "I can help with Notifications. Ask me about Task Alerts, overdue and due-soon reminders, reminder lead time, the Mark Complete button for overdue tasks, or Study Block Alerts.", "notifications"
 
     return "I can help with Tasks, Courses, Schedule, Settings, and support issues. Tell me what you’re trying to do.", None
 
 
+# Exposes support AI availability for frontend diagnostics.
 @router.get("/status", response_model=SupportStatusResponse)
 async def support_status():
     reason = get_openai_unavailable_reason()
     return SupportStatusResponse(openai_enabled=reason is None, reason=reason)
 
 
+# Handles support chat requests with topic checks and AI response generation.
 @router.post("/chat", response_model=SupportChatResponse)
 async def chat_support(request: SupportChatRequest):
     if not is_11planner_related(request.message, request.pathname):

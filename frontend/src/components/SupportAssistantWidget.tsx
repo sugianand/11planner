@@ -1,18 +1,26 @@
 "use client";
 
-import Link from "next/link";
 import Image from "next/image";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { usePlanner } from "@/contexts/PlannerContext";
 
 type ChatRole = "assistant" | "user";
-type WidgetView = "home" | "chat" | "news" | "news-detail" | "help-center" | "article";
+type WidgetView = "chat-list" | "chat" | "news" | "news-detail" | "help-center" | "article";
 
 type ChatMessage = {
   id: string;
   role: ChatRole;
   text: string;
+};
+
+type ChatSession = {
+  id: string;
+  title: string;
+  messages: ChatMessage[];
+  createdAt: number;
+  updatedAt: number;
+  ended?: boolean;
 };
 
 type HelpArticle = {
@@ -48,7 +56,8 @@ const routeHints: Array<{ match: RegExp; hint: string }> = [
   { match: /^\/terms/, hint: "The Terms page explains acceptable use, content ownership, availability, account actions, and the limits of scheduling guidance." },
   { match: /^\/logo-story/, hint: "The Logo Story page explains the inspiration behind the logo and the student-centered brand story." },
   { match: /^\/demo/, hint: "The Demo page plays a product tour video that showcases the main features of 11Planner." },
-  { match: /^\/settings/, hint: "Settings has Schedule Setup, Personalize, Reminders, Account, and Support panels with Search settings, plus controls like Daily Study Limit, Theme Mode, Accent Theme, notification options, privacy toggles, password reset, export PDF, clear data, delete account, and Reset This Section." },
+  { match: /^\/settings/, hint: "Settings has three panels: Personalize, Notifications, and Account. Use Search settings to filter them, and manage Theme Mode, Accent Theme, Push Notifications, Notification Sound, Browser Permission, Reminder lead time, Email Updates, Weekly Report, privacy toggles, password reset, export PDF, clear data, delete account, and Reset This Section." },
+  { match: /^\/notifications/, hint: "Notifications page shows live reminder status, Task Alerts for overdue and due-soon tasks, a Mark Complete button for overdue tasks, and Study Block Alerts for current and upcoming blocks." },
 ];
 
 const quickQuestions = [
@@ -334,46 +343,6 @@ const getReadTimeLabel = (article: HelpArticle): string => {
   return `${minutes} min read`;
 };
 
-function TopCard({
-  title,
-  subtitle,
-  icon,
-  iconColor,
-  href,
-  onClick,
-}: {
-  title: string;
-  subtitle: string;
-  icon: string;
-  iconColor?: string;
-  href?: string;
-  onClick?: () => void;
-}) {
-  const content = (
-    <div className="w-full rounded-2xl bg-white/94 dark:bg-slate-800/92 border border-slate-200/90 dark:border-slate-700/80 px-4 py-3 shadow-[0_10px_26px_-22px_rgba(15,23,42,0.7)] hover:shadow-[0_16px_30px_-22px_rgba(15,23,42,0.75)] transition-all duration-200">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="font-semibold text-slate-900 dark:text-white text-[16px] leading-tight">{title}</p>
-          <p className="text-[13px] text-slate-500 dark:text-slate-300 mt-1 leading-snug">{subtitle}</p>
-        </div>
-        <span className="material-symbols-outlined text-[21px]" style={iconColor ? { color: iconColor } : undefined}>
-          {icon}
-        </span>
-      </div>
-    </div>
-  );
-
-  if (href) {
-    return <Link href={href}>{content}</Link>;
-  }
-
-  return (
-    <button onClick={onClick} className="w-full text-left">
-      {content}
-    </button>
-  );
-}
-
 function ElevenAvatar({ size = "md" }: { size?: "sm" | "md" }) {
   const avatarSize = size === "sm" ? "h-8 w-8" : "h-10 w-10";
   const textSize = size === "sm" ? "text-[12px]" : "text-[13px]";
@@ -403,14 +372,13 @@ export default function SupportAssistantWidget() {
   const { userId } = usePlanner();
 
   const [isOpen, setIsOpen] = useState(false);
-  const [view, setView] = useState<WidgetView>("chat");
+  const [view, setView] = useState<WidgetView>("chat-list");
   const [selectedNewsId, setSelectedNewsId] = useState<string | null>(null);
   const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
-  const [articleBackView, setArticleBackView] = useState<"home" | "help-center">("help-center");
+  const [articleBackView, setArticleBackView] = useState<"help-center">("help-center");
   const [searchValue, setSearchValue] = useState("");
   const [inputValue, setInputValue] = useState("");
   const [isThinking, setIsThinking] = useState(false);
-  const [isNewChatConfirmOpen, setIsNewChatConfirmOpen] = useState(false);
   const [isCloseFlowOpen, setIsCloseFlowOpen] = useState(false);
   const [closeFlowStep, setCloseFlowStep] = useState<"prompt" | "escalate">("prompt");
   const [escalationNotes, setEscalationNotes] = useState("");
@@ -429,6 +397,14 @@ export default function SupportAssistantWidget() {
   };
 
   const nextMessageId = (prefix: string) => makeUniqueId(prefix);
+  const createSessionTitle = (sessionMessages: ChatMessage[]) => {
+    const firstUserMessage = sessionMessages.find((message) => message.role === "user")?.text.trim();
+    if (!firstUserMessage) {
+      return "New chat";
+    }
+    return firstUserMessage.length > 44 ? `${firstUserMessage.slice(0, 44)}...` : firstUserMessage;
+  };
+
   const createInitialMessages = (): ChatMessage[] => [
     {
       id: nextMessageId("assistant"),
@@ -437,16 +413,76 @@ export default function SupportAssistantWidget() {
     },
   ];
 
+  const createInitialSession = (): ChatSession => {
+    const now = Date.now();
+    const initialMessages = createInitialMessages();
+    return {
+      id: makeUniqueId("chat"),
+      title: createSessionTitle(initialMessages),
+      messages: initialMessages,
+      createdAt: now,
+      updatedAt: now,
+    };
+  };
+
   const storageKey = userId ? `support-assistant-chat:${userId}` : "support-assistant-chat:guest";
-  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>(() => {
     if (typeof window === "undefined") {
-      return createInitialMessages();
+      return [createInitialSession()];
     }
 
     try {
       const raw = localStorage.getItem(storageKey);
       if (raw) {
-        const parsed = JSON.parse(raw) as { messages: ChatMessage[] };
+        const parsed = JSON.parse(raw) as {
+          messages?: ChatMessage[];
+          sessions?: ChatSession[];
+        };
+
+        if (Array.isArray(parsed.sessions) && parsed.sessions.length > 0) {
+          const usedSessionIds = new Set<string>();
+          const restoredSessions = parsed.sessions
+            .filter((session) => Array.isArray(session.messages) && session.messages.length > 0)
+            .map((session) => {
+              const safeSessionId =
+                session.id && !usedSessionIds.has(session.id)
+                  ? session.id
+                  : makeUniqueId("chat");
+              usedSessionIds.add(safeSessionId);
+
+              const usedMessageIds = new Set<string>();
+              const restoredMessages = session.messages.map((message) => {
+                const safeMessageId =
+                  message.id && !usedMessageIds.has(message.id)
+                    ? message.id
+                    : nextMessageId(message.role || "message");
+                usedMessageIds.add(safeMessageId);
+                return { ...message, id: safeMessageId };
+              });
+
+              const baseMessages = restoredMessages.some((message) => message.role === "user")
+                ? restoredMessages
+                : createInitialMessages();
+              const createdAt = typeof session.createdAt === "number" ? session.createdAt : Date.now();
+              const updatedAt = typeof session.updatedAt === "number" ? session.updatedAt : createdAt;
+
+              return {
+                id: safeSessionId,
+                title:
+                  typeof session.title === "string" && session.title.trim().length > 0
+                    ? session.title
+                    : createSessionTitle(baseMessages),
+                messages: baseMessages,
+                createdAt,
+                updatedAt,
+              };
+            });
+
+          if (restoredSessions.length > 0) {
+            return restoredSessions.sort((a, b) => b.updatedAt - a.updatedAt);
+          }
+        }
+
         if (Array.isArray(parsed.messages) && parsed.messages.length > 0) {
           const usedMessageIds = new Set<string>();
           const restoredMessages = parsed.messages.map((message) => {
@@ -458,59 +494,121 @@ export default function SupportAssistantWidget() {
             return { ...message, id: safeMessageId };
           });
 
-          // Send a single welcome message.
-          if (!restoredMessages.some((message) => message.role === "user")) {
-            return createInitialMessages();
-          }
+          const legacyMessages = restoredMessages.some((message) => message.role === "user")
+            ? restoredMessages
+            : createInitialMessages();
+          const now = Date.now();
 
-          return restoredMessages;
+          return [
+            {
+              id: makeUniqueId("chat"),
+              title: createSessionTitle(legacyMessages),
+              messages: legacyMessages,
+              createdAt: now,
+              updatedAt: now,
+            },
+          ];
         }
       }
     } catch {
       // fall back to default messages
     }
 
-    return createInitialMessages();
+    return [createInitialSession()];
   });
 
+  const [activeChatId, setActiveChatId] = useState<string | null>(() => {
+    if (typeof window === "undefined") {
+      return null;
+    }
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as { activeChatId?: string };
+      return typeof parsed.activeChatId === "string" ? parsed.activeChatId : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const sortedChatSessions = useMemo(
+    () => [...chatSessions].sort((a, b) => b.updatedAt - a.updatedAt),
+    [chatSessions]
+  );
+
+  const activeSession = useMemo(() => {
+    if (chatSessions.length === 0) return null;
+    return (
+      chatSessions.find((session) => session.id === activeChatId) ||
+      sortedChatSessions[0] ||
+      null
+    );
+  }, [activeChatId, chatSessions, sortedChatSessions]);
+
+  const messages = useMemo(() => activeSession?.messages ?? [], [activeSession]);
+
   useEffect(() => {
-    if (messages.length === 0) return;
-    localStorage.setItem(storageKey, JSON.stringify({ messages }));
-  }, [messages, storageKey]);
+    if (!activeSession || chatSessions.length === 0) return;
+    localStorage.setItem(
+      storageKey,
+      JSON.stringify({
+        sessions: chatSessions,
+        activeChatId: activeSession.id,
+      })
+    );
+  }, [activeSession, chatSessions, storageKey]);
 
   const updateMessages = (updater: (prevMessages: ChatMessage[]) => ChatMessage[]) => {
-    setMessages((prevMessages) => updater(prevMessages));
+    if (!activeSession) return;
+    setChatSessions((prevSessions) =>
+      prevSessions.map((session) => {
+        if (session.id !== activeSession.id) {
+          return session;
+        }
+        const nextMessages = updater(session.messages);
+        return {
+          ...session,
+          messages: nextMessages,
+          title: createSessionTitle(nextMessages),
+          updatedAt: Date.now(),
+        };
+      })
+    );
   };
 
   const startNewChat = () => {
-    setMessages(createInitialMessages());
+    const newSession = createInitialSession();
+    setChatSessions((prevSessions) => [newSession, ...prevSessions]);
+    setActiveChatId(newSession.id);
+    setView("chat");
     setInputValue("");
     setIsThinking(false);
-    setIsNewChatConfirmOpen(false);
     setIsCloseFlowOpen(false);
     setCloseFlowStep("prompt");
     setEscalationNotes("");
     setDidCreateSupportEmail(false);
   };
 
-  const handleStartNewChatPrompt = () => {
-    setIsNewChatConfirmOpen((prev) => !prev);
+  const openChatSession = (sessionId: string) => {
+    setActiveChatId(sessionId);
+    setView("chat");
+    setInputValue("");
     setIsCloseFlowOpen(false);
     setCloseFlowStep("prompt");
-  };
-
-  const handleConfirmStartNewChat = () => {
-    startNewChat();
+    setEscalationNotes("");
+    setDidCreateSupportEmail(false);
   };
 
   const handleCloseChatPrompt = () => {
     setIsCloseFlowOpen((prev) => !prev);
     setCloseFlowStep("prompt");
-    setIsNewChatConfirmOpen(false);
     setDidCreateSupportEmail(false);
   };
 
   const handleSatisfiedClose = () => {
+    if (activeSession) {
+      endChat(activeSession.id);
+    }
     setIsCloseFlowOpen(false);
     setCloseFlowStep("prompt");
     setIsOpen(false);
@@ -524,6 +622,9 @@ export default function SupportAssistantWidget() {
   };
 
   const handleEndAndStartNewAfterEscalation = () => {
+    if (activeSession) {
+      endChat(activeSession.id);
+    }
     startNewChat();
   };
 
@@ -634,7 +735,7 @@ export default function SupportAssistantWidget() {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const trimmed = inputValue.trim();
-    if (!trimmed || isThinking) return;
+    if (!trimmed || isThinking || activeSession?.ended) return;
 
     const userMessage: ChatMessage = {
       id: nextMessageId("user"),
@@ -698,7 +799,7 @@ export default function SupportAssistantWidget() {
     scrollChatToBottom();
   };
 
-  const openArticle = (articleId: string, origin: "home" | "help-center") => {
+  const openArticle = (articleId: string, origin: "help-center") => {
     setSelectedArticleId(articleId);
     setArticleBackView(origin);
     setView("article");
@@ -710,7 +811,7 @@ export default function SupportAssistantWidget() {
   };
 
   const closeToHome = () => {
-    setView("home");
+    setView("chat-list");
     setSelectedNewsId(null);
     setSelectedArticleId(null);
   };
@@ -723,8 +824,22 @@ export default function SupportAssistantWidget() {
     setView("news");
   };
 
+  const deleteChat = (sessionId: string) => {
+    setChatSessions((prev) => prev.filter((s) => s.id !== sessionId));
+    if (activeChatId === sessionId) {
+      setActiveChatId(null);
+      setView("chat-list");
+    }
+  };
+
+  const endChat = (sessionId: string) => {
+    setChatSessions((prev) =>
+      prev.map((s) => (s.id === sessionId ? { ...s, ended: true } : s))
+    );
+  };
+
   const handleBackFromSection = () => {
-    setView("home");
+    setView("chat-list");
   };
 
   if (userId === "user_demo") {
@@ -736,7 +851,7 @@ export default function SupportAssistantWidget() {
       {isOpen && (
         <section className={`font-[var(--font-manrope)] rounded-[28px] border border-slate-200/90 dark:border-slate-700/80 bg-white dark:bg-slate-900 shadow-[0_32px_75px_-30px_rgba(15,23,42,0.9)] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 transition-all duration-300 ease-out ${view === "article" || view === "news-detail" ? "w-[min(96vw,760px)] h-[min(86vh,760px)]" : "w-[min(92vw,420px)] h-[min(80vh,680px)]"}`}>
           <header
-            className={`relative px-5 border-b border-slate-200/85 dark:border-slate-700/80 bg-white dark:bg-slate-900 text-slate-900 dark:text-white ${view === "home" ? "pt-4 pb-4" : "pt-3 pb-2"}`}
+            className={`relative px-5 border-b border-slate-200/85 dark:border-slate-700/80 bg-white dark:bg-slate-900 text-slate-900 dark:text-white pt-3 pb-2`}
           >
             <div className="relative z-10">
               <div className="flex items-center justify-between gap-3 mb-3">
@@ -753,121 +868,102 @@ export default function SupportAssistantWidget() {
           </header>
 
           <div className={view === "chat" ? "flex-1 min-h-0 px-4 pt-3 pb-3" : "flex-1 overflow-y-auto px-4 pt-3 pb-3 space-y-3.5"}>
-            {view === "home" && (
-              <>
-                <TopCard
-                  title="Ask a question"
-                  subtitle="We are here to help."
-                  icon="chat_bubble"
-                  iconColor="var(--theme-accent-strong)"
-                  onClick={() => setView("chat")}
-                />
-
-                <TopCard
-                  title="Report an issue"
-                  subtitle="Found a bug? Let us know."
-                  icon="bug_report"
-                  iconColor="#dc2626"
-                  href="/support"
-                />
-
-                <TopCard
-                  title="Request a feature"
-                  subtitle="What would you like to see next?"
-                  icon="lightbulb"
-                  iconColor="#d97706"
-                  href="/support"
-                />
-
-                <div className="rounded-2xl bg-white/94 dark:bg-slate-800/92 border border-slate-200/90 dark:border-slate-700/80 px-3 py-3 shadow-[0_10px_26px_-22px_rgba(15,23,42,0.7)]">
-                  <div className="relative">
-                    <input
-                      value={searchValue}
-                      onChange={(event) => setSearchValue(event.target.value)}
-                      placeholder="Search for help"
-                      className="w-full h-11 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100/85 dark:bg-slate-900/75 px-4 pr-10 text-sm text-slate-900 dark:text-slate-100 outline-none"
-                    />
-                    <button
-                      onClick={() => setView("help-center")}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-md flex items-center justify-center text-slate-500 hover:bg-slate-200/70 dark:hover:bg-slate-700/70"
-                      aria-label="Open help center"
-                    >
-                      <span className="material-symbols-outlined text-[20px]">search</span>
-                    </button>
+            {view === "chat-list" && (
+              <div className="px-1 py-1">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-200/80 dark:border-slate-700/80">
+                  <div>
+                    <p className="font-semibold text-[15px] text-slate-900 dark:text-white">Your chats</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-300">Open a previous conversation or start a new one.</p>
                   </div>
-
-                  <div className="mt-3 divide-y divide-slate-200 dark:divide-slate-700">
-                    {filteredArticles.slice(0, 3).map((article) => (
-                      <button
-                        key={article.id}
-                        onClick={() => openArticle(article.id, "home")}
-                        className="w-full flex items-center justify-between gap-3 py-3 text-left"
-                      >
-                        <div>
-                          <p className="font-semibold text-slate-900 dark:text-white text-[14px] leading-tight">{article.title}</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-300 mt-1">{article.subtitle}</p>
-                        </div>
-                        <span className="material-symbols-outlined" style={{ color: "var(--theme-accent-strong)" }}>
-                          chevron_right
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-
-                  <button
-                    onClick={() => setView("help-center")}
-                    className="mt-2 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-900/70 px-3 py-2 text-sm font-semibold text-slate-700 dark:text-slate-200"
-                  >
-                    Open Help Center
-                  </button>
                 </div>
-              </>
+
+                <button
+                  type="button"
+                  onClick={startNewChat}
+                  className="mt-3 w-full inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold text-white"
+                  style={{ backgroundColor: "var(--theme-accent-strong)" }}
+                >
+                  <span className="material-symbols-outlined text-[18px]">add</span>
+                  Start new chat
+                </button>
+
+                <div className="mt-3 space-y-2 max-h-[430px] overflow-y-auto pr-1">
+                  {sortedChatSessions.map((session) => {
+                    const previewMessage =
+                      [...session.messages]
+                        .reverse()
+                        .find((message) => message.role === "assistant" || message.role === "user")?.text || "No messages yet.";
+                    const preview = previewMessage.length > 72 ? `${previewMessage.slice(0, 72)}...` : previewMessage;
+
+                    return (
+                      <div
+                        key={session.id}
+                        className={`rounded-xl border px-3 py-3 transition ${
+                          activeSession?.id === session.id
+                            ? "border-[var(--theme-accent)] bg-[var(--theme-accent-soft)]/70"
+                            : "border-slate-200 dark:border-slate-700 bg-white/75 dark:bg-slate-900/45"
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => openChatSession(session.id)}
+                          className="w-full text-left"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <p className="font-semibold text-[14px] text-slate-900 dark:text-white truncate">{session.title}</p>
+                                {session.ended && (
+                                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-300 dark:bg-slate-700 text-slate-700 dark:text-slate-200 whitespace-nowrap">ended</span>
+                                )}
+                              </div>
+                              <p className="mt-1 text-xs text-slate-600 dark:text-slate-300 line-clamp-2">{preview}</p>
+                            </div>
+                            <div className="flex flex-col items-end">
+                              <p className="text-[11px] text-slate-500 dark:text-slate-300 whitespace-nowrap">
+                                {new Date(session.updatedAt).toLocaleDateString()}
+                              </p>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteChat(session.id);
+                                }}
+                                className="mt-1 p-1 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 transition"
+                                aria-label="Delete chat"
+                              >
+                                <span className="material-symbols-outlined text-[16px]">delete</span>
+                              </button>
+                            </div>
+                          </div>
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             )}
 
             {view === "chat" && (
               <div className="flex-1 min-h-0 h-full flex flex-col">
                 <div className="flex items-center justify-between pb-3 border-b border-slate-200/80 dark:border-slate-700/80">
-                  <div className="flex items-center gap-2.5">
-                    <ElevenAvatar size="sm" />
-                    <div>
-                      <p className="font-semibold text-[16px] text-slate-900 dark:text-white">11</p>
-                      <p className="text-[12px] text-slate-500 dark:text-slate-300">11Planner AI Assistant</p>
-                    </div>
-                  </div>
                   <button
                     type="button"
-                    onClick={handleStartNewChatPrompt}
-                    className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-white whitespace-nowrap"
-                    style={{ backgroundColor: "var(--theme-accent-strong)" }}
+                    onClick={() => setView("chat-list")}
+                    className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200"
                   >
-                    <span className="material-symbols-outlined text-[16px]">add</span>
-                    New chat
+                    <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+                    Back
                   </button>
-                </div>
-
-                {isNewChatConfirmOpen && (
-                  <div className="mb-2 rounded-xl border border-slate-200/85 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-900/80 p-3 space-y-2">
-                    <p className="text-sm font-semibold text-slate-900 dark:text-white">Start a new chat?</p>
-                    <p className="text-xs text-slate-600 dark:text-slate-300">This will end your current chat and clear this conversation.</p>
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={handleConfirmStartNewChat}
-                        className="rounded-full px-3 py-1.5 text-xs font-semibold text-white"
-                        style={{ backgroundColor: "var(--theme-accent-strong)" }}
-                      >
-                        Yes, start new chat
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setIsNewChatConfirmOpen(false)}
-                        className="rounded-full px-3 py-1.5 text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200"
-                      >
-                        Cancel
-                      </button>
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white truncate max-w-[82%] text-right">
+                      {activeSession?.title || "Chat"}
+                    </p>
+                    {activeSession?.ended && (
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-300 dark:bg-slate-700 text-slate-700 dark:text-slate-200 whitespace-nowrap">ended</span>
+                    )}
                   </div>
-                )}
+                </div>
 
                 <div ref={listRef} className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1 pt-1 pb-2">
                   {messages.map((message) => (
@@ -898,118 +994,121 @@ export default function SupportAssistantWidget() {
                   )}
                 </div>
 
-                <div className="sticky bottom-0 z-10 mt-auto pt-3 space-y-2 border-t border-slate-200/80 dark:border-slate-700/80 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm">
-                  {!hasUserSentMessage && (
-                    <div className="flex flex-wrap gap-2 pr-1">
-                      {quickQuestions.map((question) => (
-                        <button
-                          key={question}
-                          onClick={() => handleQuickQuestion(question)}
-                          className="rounded-full px-3 py-1.5 text-left text-[12px] border border-slate-200 dark:border-slate-700/80 bg-slate-100 dark:bg-slate-800/70 text-slate-700 dark:text-slate-200"
-                        >
-                          {question}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                {!activeSession?.ended && (
+                  <div className="sticky bottom-0 z-10 mt-auto pt-3 space-y-2 border-t border-slate-200/80 dark:border-slate-700/80 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm">
+                    {!hasUserSentMessage && (
+                      <div className="flex flex-wrap gap-2 pr-1">
+                        {quickQuestions.map((question) => (
+                          <button
+                            key={question}
+                            onClick={() => handleQuickQuestion(question)}
+                            className="rounded-full px-3 py-1.5 text-left text-[12px] border border-slate-200 dark:border-slate-700/80 bg-slate-100 dark:bg-slate-800/70 text-slate-700 dark:text-slate-200"
+                          >
+                            {question}
+                          </button>
+                        ))}
+                      </div>
+                    )}
 
-                  <button
-                    type="button"
-                    onClick={handleCloseChatPrompt}
-                    className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/70 text-slate-700 dark:text-slate-200"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">close</span>
-                    Close chat
-                  </button>
+                    <button
+                      type="button"
+                      onClick={handleCloseChatPrompt}
+                      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/70 text-slate-700 dark:text-slate-200"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">close</span>
+                      End chat
+                    </button>
 
-                  {isCloseFlowOpen && (
-                    <div className="rounded-xl border border-slate-200/85 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-900/80 p-3 space-y-2">
-                      {closeFlowStep === "prompt" ? (
-                        <>
-                          <p className="text-sm font-semibold text-slate-900 dark:text-white">Are you satisfied with this chat?</p>
-                          <div className="flex flex-wrap gap-2">
-                            <button
-                              type="button"
-                              onClick={handleSatisfiedClose}
-                              className="rounded-full px-3 py-1.5 text-xs font-semibold text-white"
-                              style={{ backgroundColor: "var(--theme-accent-strong)" }}
-                            >
-                              Yes, close and end chat
-                            </button>
-                            <button
-                              type="button"
-                              onClick={handleEscalation}
-                              className="rounded-full px-3 py-1.5 text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200"
-                            >
-                              I need human support
-                            </button>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <p className="text-sm font-semibold text-slate-900 dark:text-white">Escalate to support</p>
-                          <p className="text-xs text-slate-600 dark:text-slate-300">
-                            Add any extra context below, then create an email draft with this chat transcript.
-                          </p>
-                          <textarea
-                            value={escalationNotes}
-                            onChange={(event) => setEscalationNotes(event.target.value)}
-                            rows={3}
-                            placeholder="Describe your issue or what you want support to know..."
-                            maxLength={escalationNotesMaxLength}
-                            className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 outline-none"
-                          />
-                          <div className="flex flex-wrap gap-2">
-                            <button
-                              type="button"
-                              onClick={handleCreateSupportEmail}
-                              className="rounded-full px-3 py-1.5 text-xs font-semibold text-white"
-                              style={{ backgroundColor: "var(--theme-accent-strong)" }}
-                            >
-                              Create support email
-                            </button>
-                            {didCreateSupportEmail && (
+                    {isCloseFlowOpen && (
+                      <div className="rounded-xl border border-slate-200/85 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-900/80 p-3 space-y-2">
+                        {closeFlowStep === "prompt" ? (
+                          <>
+                            <p className="text-sm font-semibold text-slate-900 dark:text-white">Are you satisfied with this chat?</p>
+                            <div className="flex flex-wrap gap-2">
                               <button
                                 type="button"
-                                onClick={handleEndAndStartNewAfterEscalation}
+                                onClick={handleSatisfiedClose}
+                                className="rounded-full px-3 py-1.5 text-xs font-semibold text-white"
+                                style={{ backgroundColor: "var(--theme-accent-strong)" }}
+                              >
+                                Yes, close and end chat
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleEscalation}
                                 className="rounded-full px-3 py-1.5 text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200"
                               >
-                                End and start new chat
+                                I need human support
                               </button>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => setCloseFlowStep("prompt")}
-                              className="rounded-full px-3 py-1.5 text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200"
-                            >
-                              Back
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )}
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-sm font-semibold text-slate-900 dark:text-white">Escalate to support</p>
+                            <p className="text-xs text-slate-600 dark:text-slate-300">
+                              Add any extra context below, then create an email draft with this chat transcript.
+                            </p>
+                            <textarea
+                              value={escalationNotes}
+                              onChange={(event) => setEscalationNotes(event.target.value)}
+                              rows={3}
+                              placeholder="Describe your issue or what you want support to know..."
+                              maxLength={escalationNotesMaxLength}
+                              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 outline-none"
+                            />
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={handleCreateSupportEmail}
+                                className="rounded-full px-3 py-1.5 text-xs font-semibold text-white"
+                                style={{ backgroundColor: "var(--theme-accent-strong)" }}
+                              >
+                                Create support email
+                              </button>
+                              {didCreateSupportEmail && (
+                                <button
+                                  type="button"
+                                  onClick={handleEndAndStartNewAfterEscalation}
+                                  className="rounded-full px-3 py-1.5 text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200"
+                                >
+                                  End and start new chat
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => setCloseFlowStep("prompt")}
+                                className="rounded-full px-3 py-1.5 text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200"
+                              >
+                                Back
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
 
-                  <form onSubmit={handleSubmit} className="flex items-center gap-2">
-                      <textarea
-                        ref={composerRef}
-                      value={inputValue}
-                        onChange={(event) => setInputValue(event.target.value)}
-                      placeholder="Write a message..."
-                      maxLength={chatMessageMaxLength}
-                        rows={1}
-                        className="flex-1 min-h-10 max-h-28 resize-none overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm leading-5 text-slate-900 dark:text-slate-100 outline-none"
-                    />
-                    <button
-                      type="submit"
-                      className="h-10 px-4 rounded-xl text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
-                      style={{ backgroundColor: "var(--theme-accent-strong)" }}
-                      disabled={isThinking}
-                    >
-                      {isThinking ? "Thinking..." : "Send"}
-                    </button>
-                  </form>
-                </div>
+                    <form onSubmit={handleSubmit} className="flex items-center gap-2">
+                        <textarea
+                          ref={composerRef}
+                        value={inputValue}
+                          onChange={(event) => setInputValue(event.target.value)}
+                        placeholder="Write a message..."
+                        maxLength={chatMessageMaxLength}
+                          rows={1}
+                          disabled={activeSession?.ended}
+                          className="flex-1 min-h-10 max-h-28 resize-none overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm leading-5 text-slate-900 dark:text-slate-100 outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                      />
+                      <button
+                        type="submit"
+                        className="h-10 px-4 rounded-xl text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+                        style={{ backgroundColor: "var(--theme-accent-strong)" }}
+                        disabled={isThinking || activeSession?.ended}
+                      >
+                        {isThinking ? "Thinking..." : activeSession?.ended ? "Ended" : "Send"}
+                      </button>
+                    </form>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1152,7 +1251,7 @@ export default function SupportAssistantWidget() {
                         <button
                           key={article.id}
                           onClick={() => openArticle(article.id, "help-center")}
-                          className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white/75 dark:bg-slate-900/45 px-3 py-3 text-left flex items-center justify-between gap-3"
+                          className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white/75 dark:bg-slate-900/45 overflow-hidden"
                         >
                           <div>
                             <p className="font-semibold text-slate-900 dark:text-white text-[14px]">{article.title}</p>
@@ -1273,6 +1372,7 @@ export default function SupportAssistantWidget() {
           </span>
         </span>
       </button>
+
     </div>
   );
 }

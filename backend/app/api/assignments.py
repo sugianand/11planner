@@ -14,6 +14,7 @@ router = APIRouter(prefix="/api/assignments", tags=["assignments"])
 _supabase_client: Client | None = None
 
 
+# Lazily initializes and returns a shared Supabase client.
 def get_supabase() -> Client:
     global _supabase_client
     if _supabase_client is not None:
@@ -26,6 +27,7 @@ def get_supabase() -> Client:
     return _supabase_client
 
 
+# Parses incoming datetimes and normalizes them to local naive datetime objects.
 def parse_dt(value: str | datetime) -> datetime:
     if isinstance(value, datetime):
         dt = value
@@ -51,6 +53,7 @@ def parse_dt(value: str | datetime) -> datetime:
     return dt
 
 
+# Maps raw assignment rows from storage into API response shape.
 def map_row(row: dict) -> dict:
     return {
         "id": row["id"],
@@ -72,6 +75,7 @@ def map_row(row: dict) -> dict:
 
 # ========== CRUD ==========
 
+# Returns all assignments for a user ordered by deadline.
 @router.get("/{user_id}", response_model=List[Assignment])
 async def get_assignments_by_user(user_id: str):
     import os
@@ -90,6 +94,7 @@ async def get_assignments_by_user(user_id: str):
     return [map_row(r) for r in (result.data or [])]
 
 
+# Returns one assignment by its unique identifier.
 @router.get("/detail/{assignment_id}", response_model=Assignment)
 async def get_assignment_by_id(assignment_id: str):
     supabase = get_supabase()
@@ -99,6 +104,7 @@ async def get_assignment_by_id(assignment_id: str):
     return map_row(result.data[0])
 
 
+# Creates a new assignment and returns the inserted record.
 @router.post("", response_model=Assignment)
 async def create_assignment(assignment: AssignmentCreate):
     supabase = get_supabase()
@@ -132,6 +138,7 @@ async def create_assignment(assignment: AssignmentCreate):
     return map_row(result.data[0])
 
 
+# Updates mutable assignment fields and returns the latest record.
 @router.put("/{assignment_id}", response_model=Assignment)
 async def update_assignment(assignment_id: str, assignment: AssignmentUpdate):
     supabase = get_supabase()
@@ -168,6 +175,7 @@ async def update_assignment(assignment_id: str, assignment: AssignmentUpdate):
     return map_row(result.data)
 
 
+# Deletes an assignment by id.
 @router.delete("/{assignment_id}")
 async def delete_assignment(assignment_id: str):
     supabase = get_supabase()
@@ -203,6 +211,7 @@ class SyncRequest(PydanticBase):
     client_timezone: Optional[str] = None
 
 
+# Syncs Canvas extension payload into courses/tasks while avoiding duplicates.
 @router.post("/sync")
 async def sync_assignments(sync_request: SyncRequest):
     """

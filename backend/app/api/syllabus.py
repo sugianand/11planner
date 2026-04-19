@@ -3,6 +3,7 @@ from app.syllabus_parser import extract_text_from_pdf_bytes, parse_syllabus_text
 
 router = APIRouter(prefix="/api/syllabus", tags=["syllabus"])
 
+# Accepts a syllabus PDF and returns extracted structured details.
 @router.post("/parse")
 async def parse_syllabus(file: UploadFile = File(...)):
     """Parse a syllabus PDF and extract course information"""

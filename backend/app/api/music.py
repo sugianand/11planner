@@ -14,6 +14,7 @@ class SpotifyTokenExchangeRequest(BaseModel):
     client_id: str
 
 
+# Exchanges a Spotify authorization code for access tokens.
 @router.post("/spotify/token")
 async def exchange_spotify_token(payload: SpotifyTokenExchangeRequest):
     form = parse.urlencode(

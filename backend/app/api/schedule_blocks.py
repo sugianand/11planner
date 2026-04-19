@@ -15,6 +15,7 @@ router = APIRouter(prefix="/api/schedule-blocks", tags=["schedule"])
 _supabase_client: Client | None = None
 
 
+# Lazily initializes and returns a shared Supabase client.
 def get_supabase() -> Client:
     global _supabase_client
     if _supabase_client is not None:
@@ -38,6 +39,7 @@ def get_supabase() -> Client:
     return _supabase_client
 
 
+# Parses datetimes from storage and normalizes them for API logic.
 def parse_dt(value: str | datetime) -> datetime:
     if isinstance(value, datetime):
         dt = value
@@ -69,6 +71,7 @@ def parse_dt(value: str | datetime) -> datetime:
     return dt
 
 
+# Rounds a datetime up to the nearest five-minute boundary.
 def round_to_five(dt: datetime) -> datetime:
     """Round up to nearest 5-minute increment for user-moved blocks."""
     dt = dt.replace(second=0, microsecond=0)
@@ -78,6 +81,7 @@ def round_to_five(dt: datetime) -> datetime:
     return dt + timedelta(minutes=(5 - remainder))
 
 
+# Converts local datetimes to UTC ISO format for persistence.
 def to_storage_iso(dt: datetime) -> str:
     if dt.tzinfo is None:
         local_tz = datetime.now().astimezone().tzinfo
@@ -85,10 +89,12 @@ def to_storage_iso(dt: datetime) -> str:
     return dt.astimezone(timezone.utc).isoformat()
 
 
+# Checks whether two time ranges overlap.
 def overlaps(a_start: datetime, a_end: datetime, b_start: datetime, b_end: datetime) -> bool:
     return a_start < b_end and b_start < a_end
 
 
+# Parses class/lab time strings into a time object.
 def parse_clock(value: object) -> time | None:
     if not value or not isinstance(value, str):
         return None
@@ -101,6 +107,7 @@ def parse_clock(value: object) -> time | None:
     return None
 
 
+# Normalizes course day strings into weekday numbers.
 def parse_course_days(value: object) -> set[int]:
     mapping = {
         "monday": 0,
@@ -142,6 +149,7 @@ def parse_course_days(value: object) -> set[int]:
     return days
 
 
+# Detects whether a block overlaps with a course or lab meeting.
 def course_time_conflicts(course_row: dict, block_start: datetime, block_end: datetime) -> bool:
     weekday = block_start.weekday()
 
@@ -171,6 +179,7 @@ def course_time_conflicts(course_row: dict, block_start: datetime, block_end: da
     return False
 
 
+# Validates that a requested block does not conflict with class times or fixed blocks.
 def ensure_block_is_available(
     supabase: Client,
     user_id: str,
@@ -211,6 +220,7 @@ def ensure_block_is_available(
                 raise HTTPException(status_code=400, detail="Study block conflicts with another scheduled block")
 
 
+# Maps schedule block table rows into the API response shape.
 def map_row_to_block(row: dict) -> dict:
     starts_at = parse_dt(row["starts_at"])
     ends_at = parse_dt(row["ends_at"])
@@ -228,6 +238,7 @@ def map_row_to_block(row: dict) -> dict:
     }
 
 
+# Creates a new manual schedule block after conflict checks.
 @router.post("", response_model=ScheduleBlock)
 async def create_schedule_block(block: ScheduleBlockCreate):
     supabase = get_supabase()
@@ -259,6 +270,7 @@ async def create_schedule_block(block: ScheduleBlockCreate):
     return map_row_to_block(rows[0])
 
 
+# Returns all schedule blocks for a user.
 @router.get("/{user_id}", response_model=List[ScheduleBlock])
 async def get_schedule_blocks_by_user(user_id: str):
     supabase = get_supabase()
@@ -272,6 +284,7 @@ async def get_schedule_blocks_by_user(user_id: str):
     rows = result.data or []
     return [map_row_to_block(row) for row in rows]
 
+# Exports a user's schedule blocks as an ICS calendar feed.
 @router.get("/{user_id}/calendar.ics")
 async def get_schedule_calendar_ics(user_id: str):
     import datetime as dt
@@ -323,6 +336,7 @@ async def get_schedule_calendar_ics(user_id: str):
     return PlainTextResponse(content="\r\n".join(lines), media_type="text/calendar")
 
 
+# Updates an existing schedule block and re-validates conflicts.
 @router.put("/{block_id}", response_model=ScheduleBlock)
 async def update_schedule_block(block_id: str, block_update: ScheduleBlockUpdate):
     supabase = get_supabase()
@@ -365,6 +379,7 @@ async def update_schedule_block(block_id: str, block_update: ScheduleBlockUpdate
     return map_row_to_block(rows[0])
 
 
+# Deletes a schedule block by id.
 @router.delete("/{block_id}")
 async def delete_schedule_block(block_id: str):
     supabase = get_supabase()
