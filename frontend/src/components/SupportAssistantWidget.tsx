@@ -1,18 +1,27 @@
 "use client";
 
-import Link from "next/link";
 import Image from "next/image";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { usePlanner } from "@/contexts/PlannerContext";
+import { useTheme } from "@/contexts/ThemeContext";
 
 type ChatRole = "assistant" | "user";
-type WidgetView = "home" | "chat" | "news" | "news-detail" | "help-center" | "article";
+type WidgetView = "chat-list" | "chat" | "news" | "news-detail" | "help-center" | "article";
 
 type ChatMessage = {
   id: string;
   role: ChatRole;
   text: string;
+};
+
+type ChatSession = {
+  id: string;
+  title: string;
+  messages: ChatMessage[];
+  createdAt: number;
+  updatedAt: number;
+  ended?: boolean;
 };
 
 type HelpArticle = {
@@ -48,7 +57,8 @@ const routeHints: Array<{ match: RegExp; hint: string }> = [
   { match: /^\/terms/, hint: "The Terms page explains acceptable use, content ownership, availability, account actions, and the limits of scheduling guidance." },
   { match: /^\/logo-story/, hint: "The Logo Story page explains the inspiration behind the logo and the student-centered brand story." },
   { match: /^\/demo/, hint: "The Demo page plays a product tour video that showcases the main features of 11Planner." },
-  { match: /^\/settings/, hint: "Settings has Schedule Setup, Personalize, Reminders, Account, and Support panels with Search settings, plus controls like Daily Study Limit, Theme Mode, Accent Theme, notification options, privacy toggles, password reset, export PDF, clear data, delete account, and Reset This Section." },
+  { match: /^\/settings/, hint: "Settings has three panels: Personalize, Notifications, and Account. Use Search settings to filter them, and manage Theme Mode, Accent Theme, Push Notifications, Notification Sound, Browser Permission, Reminder lead time, Email Updates, Weekly Report, privacy toggles, password reset, export PDF, clear data, delete account, and Reset This Section." },
+  { match: /^\/notifications/, hint: "Notifications page shows live reminder status, Task Alerts for overdue and due-soon tasks, a Mark Complete button for overdue tasks, and Study Block Alerts for current and upcoming blocks." },
 ];
 
 const quickQuestions = [
@@ -281,6 +291,7 @@ const helpArticles: HelpArticle[] = [
   },
 ];
 
+// Builds a fallback assistant response, optionally including page-specific guidance.
 const createAssistantReply = (input: string, pathname: string): string => {
   const hint = routeHints.find((entry) => entry.match.test(pathname))?.hint;
   return (
@@ -290,6 +301,7 @@ const createAssistantReply = (input: string, pathname: string): string => {
   );
 };
 
+// Sends the current prompt and recent chat history to the backend support endpoint.
 const sendSupportChatMessage = async (
   message: string,
   pathname: string,
@@ -314,6 +326,7 @@ const sendSupportChatMessage = async (
   return response.json() as Promise<SupportChatApiResponse>;
 };
 
+// Estimates reading time for help center articles from total word count.
 const getReadTimeLabel = (article: HelpArticle): string => {
   const words = [
     article.title,
@@ -334,46 +347,7 @@ const getReadTimeLabel = (article: HelpArticle): string => {
   return `${minutes} min read`;
 };
 
-function TopCard({
-  title,
-  subtitle,
-  icon,
-  iconColor,
-  href,
-  onClick,
-}: {
-  title: string;
-  subtitle: string;
-  icon: string;
-  iconColor?: string;
-  href?: string;
-  onClick?: () => void;
-}) {
-  const content = (
-    <div className="w-full rounded-2xl bg-white/94 dark:bg-slate-800/92 border border-slate-200/90 dark:border-slate-700/80 px-4 py-3 shadow-[0_10px_26px_-22px_rgba(15,23,42,0.7)] hover:shadow-[0_16px_30px_-22px_rgba(15,23,42,0.75)] transition-all duration-200">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="font-semibold text-slate-900 dark:text-white text-[16px] leading-tight">{title}</p>
-          <p className="text-[13px] text-slate-500 dark:text-slate-300 mt-1 leading-snug">{subtitle}</p>
-        </div>
-        <span className="material-symbols-outlined text-[21px]" style={iconColor ? { color: iconColor } : undefined}>
-          {icon}
-        </span>
-      </div>
-    </div>
-  );
-
-  if (href) {
-    return <Link href={href}>{content}</Link>;
-  }
-
-  return (
-    <button onClick={onClick} className="w-full text-left">
-      {content}
-    </button>
-  );
-}
-
+// Renders the assistant avatar used in message rows.
 function ElevenAvatar({ size = "md" }: { size?: "sm" | "md" }) {
   const avatarSize = size === "sm" ? "h-8 w-8" : "h-10 w-10";
   const textSize = size === "sm" ? "text-[12px]" : "text-[13px]";
@@ -398,19 +372,20 @@ function ElevenAvatar({ size = "md" }: { size?: "sm" | "md" }) {
   );
 }
 
+// Main support assistant widget with chat history, help content, and escalation flow.
 export default function SupportAssistantWidget() {
   const pathname = usePathname();
   const { userId } = usePlanner();
+  const { effectiveTheme } = useTheme();
 
   const [isOpen, setIsOpen] = useState(false);
-  const [view, setView] = useState<WidgetView>("chat");
+  const [view, setView] = useState<WidgetView>("chat-list");
   const [selectedNewsId, setSelectedNewsId] = useState<string | null>(null);
   const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
-  const [articleBackView, setArticleBackView] = useState<"home" | "help-center">("help-center");
+  const [articleBackView, setArticleBackView] = useState<"help-center">("help-center");
   const [searchValue, setSearchValue] = useState("");
   const [inputValue, setInputValue] = useState("");
   const [isThinking, setIsThinking] = useState(false);
-  const [isNewChatConfirmOpen, setIsNewChatConfirmOpen] = useState(false);
   const [isCloseFlowOpen, setIsCloseFlowOpen] = useState(false);
   const [closeFlowStep, setCloseFlowStep] = useState<"prompt" | "escalate">("prompt");
   const [escalationNotes, setEscalationNotes] = useState("");
@@ -420,6 +395,38 @@ export default function SupportAssistantWidget() {
 
   const listRef = useRef<HTMLDivElement | null>(null);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const panelBackgroundStyle = useMemo(() => {
+    if (effectiveTheme === "dark") {
+      return {
+        backgroundImage:
+          "linear-gradient(180deg, color-mix(in srgb, var(--theme-accent-soft) 32%, rgb(15, 23, 42)) 0%, color-mix(in srgb, var(--theme-accent-soft) 18%, rgb(15, 23, 42)) 38%, rgb(2, 6, 23) 100%)",
+        backgroundColor: "rgb(15, 23, 42)",
+      } as const;
+    }
+
+    return {
+      backgroundImage:
+        "linear-gradient(180deg, color-mix(in srgb, var(--theme-accent-soft) 78%, white) 0%, color-mix(in srgb, var(--theme-accent-soft) 46%, white) 38%, rgba(255,255,255,0.94) 100%)",
+      backgroundColor: "#fff",
+    } as const;
+  }, [effectiveTheme]);
+
+  const panelGlowStyle = useMemo(() => {
+    if (effectiveTheme === "dark") {
+      return {
+        backgroundImage:
+          "radial-gradient(circle at top right, color-mix(in srgb, var(--theme-accent) 26%, transparent), transparent 32%), radial-gradient(circle at bottom left, color-mix(in srgb, var(--theme-accent-strong) 18%, transparent), transparent 36%)",
+      } as const;
+    }
+
+    return {
+      backgroundImage:
+        "radial-gradient(circle at top right, color-mix(in srgb, var(--theme-accent) 38%, transparent), transparent 32%), radial-gradient(circle at bottom left, color-mix(in srgb, var(--theme-accent-strong) 26%, transparent), transparent 36%)",
+    } as const;
+  }, [effectiveTheme]);
+
+  // Creates stable IDs for sessions/messages without depending on backend identifiers.
   const makeUniqueId = (prefix: string) => {
     const randomPart =
       typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -428,7 +435,17 @@ export default function SupportAssistantWidget() {
     return `${prefix}-${randomPart}`;
   };
 
+  // Derives a readable session title from the first user-authored message.
   const nextMessageId = (prefix: string) => makeUniqueId(prefix);
+  const createSessionTitle = (sessionMessages: ChatMessage[]) => {
+    const firstUserMessage = sessionMessages.find((message) => message.role === "user")?.text.trim();
+    if (!firstUserMessage) {
+      return "New chat";
+    }
+    return firstUserMessage.length > 44 ? `${firstUserMessage.slice(0, 44)}...` : firstUserMessage;
+  };
+
+  // Creates the initial assistant greeting for new conversations.
   const createInitialMessages = (): ChatMessage[] => [
     {
       id: nextMessageId("assistant"),
@@ -437,16 +454,77 @@ export default function SupportAssistantWidget() {
     },
   ];
 
+  // Creates a fresh chat session object with timestamps and welcome message.
+  const createInitialSession = (): ChatSession => {
+    const now = Date.now();
+    const initialMessages = createInitialMessages();
+    return {
+      id: makeUniqueId("chat"),
+      title: createSessionTitle(initialMessages),
+      messages: initialMessages,
+      createdAt: now,
+      updatedAt: now,
+    };
+  };
+
   const storageKey = userId ? `support-assistant-chat:${userId}` : "support-assistant-chat:guest";
-  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>(() => {
     if (typeof window === "undefined") {
-      return createInitialMessages();
+      return [createInitialSession()];
     }
 
     try {
       const raw = localStorage.getItem(storageKey);
       if (raw) {
-        const parsed = JSON.parse(raw) as { messages: ChatMessage[] };
+        const parsed = JSON.parse(raw) as {
+          messages?: ChatMessage[];
+          sessions?: ChatSession[];
+        };
+
+        if (Array.isArray(parsed.sessions) && parsed.sessions.length > 0) {
+          const usedSessionIds = new Set<string>();
+          const restoredSessions = parsed.sessions
+            .filter((session) => Array.isArray(session.messages) && session.messages.length > 0)
+            .map((session) => {
+              const safeSessionId =
+                session.id && !usedSessionIds.has(session.id)
+                  ? session.id
+                  : makeUniqueId("chat");
+              usedSessionIds.add(safeSessionId);
+
+              const usedMessageIds = new Set<string>();
+              const restoredMessages = session.messages.map((message) => {
+                const safeMessageId =
+                  message.id && !usedMessageIds.has(message.id)
+                    ? message.id
+                    : nextMessageId(message.role || "message");
+                usedMessageIds.add(safeMessageId);
+                return { ...message, id: safeMessageId };
+              });
+
+              const baseMessages = restoredMessages.some((message) => message.role === "user")
+                ? restoredMessages
+                : createInitialMessages();
+              const createdAt = typeof session.createdAt === "number" ? session.createdAt : Date.now();
+              const updatedAt = typeof session.updatedAt === "number" ? session.updatedAt : createdAt;
+
+              return {
+                id: safeSessionId,
+                title:
+                  typeof session.title === "string" && session.title.trim().length > 0
+                    ? session.title
+                    : createSessionTitle(baseMessages),
+                messages: baseMessages,
+                createdAt,
+                updatedAt,
+              };
+            });
+
+          if (restoredSessions.length > 0) {
+            return restoredSessions.sort((a, b) => b.updatedAt - a.updatedAt);
+          }
+        }
+
         if (Array.isArray(parsed.messages) && parsed.messages.length > 0) {
           const usedMessageIds = new Set<string>();
           const restoredMessages = parsed.messages.map((message) => {
@@ -458,75 +536,146 @@ export default function SupportAssistantWidget() {
             return { ...message, id: safeMessageId };
           });
 
-          // Send a single welcome message.
-          if (!restoredMessages.some((message) => message.role === "user")) {
-            return createInitialMessages();
-          }
+          const legacyMessages = restoredMessages.some((message) => message.role === "user")
+            ? restoredMessages
+            : createInitialMessages();
+          const now = Date.now();
 
-          return restoredMessages;
+          return [
+            {
+              id: makeUniqueId("chat"),
+              title: createSessionTitle(legacyMessages),
+              messages: legacyMessages,
+              createdAt: now,
+              updatedAt: now,
+            },
+          ];
         }
       }
     } catch {
       // fall back to default messages
     }
 
-    return createInitialMessages();
+    return [createInitialSession()];
   });
 
-  useEffect(() => {
-    if (messages.length === 0) return;
-    localStorage.setItem(storageKey, JSON.stringify({ messages }));
-  }, [messages, storageKey]);
+  const [activeChatId, setActiveChatId] = useState<string | null>(() => {
+    if (typeof window === "undefined") {
+      return null;
+    }
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as { activeChatId?: string };
+      return typeof parsed.activeChatId === "string" ? parsed.activeChatId : null;
+    } catch {
+      return null;
+    }
+  });
 
+  const sortedChatSessions = useMemo(
+    () => [...chatSessions].sort((a, b) => b.updatedAt - a.updatedAt),
+    [chatSessions]
+  );
+
+  const activeSession = useMemo(() => {
+    if (chatSessions.length === 0) return null;
+    return (
+      chatSessions.find((session) => session.id === activeChatId) ||
+      sortedChatSessions[0] ||
+      null
+    );
+  }, [activeChatId, chatSessions, sortedChatSessions]);
+
+  const messages = useMemo(() => activeSession?.messages ?? [], [activeSession]);
+
+  useEffect(() => {
+    if (!activeSession || chatSessions.length === 0) return;
+    localStorage.setItem(
+      storageKey,
+      JSON.stringify({
+        sessions: chatSessions,
+        activeChatId: activeSession.id,
+      })
+    );
+  }, [activeSession, chatSessions, storageKey]);
+
+  // Applies message changes to the active session and updates title/timestamp.
   const updateMessages = (updater: (prevMessages: ChatMessage[]) => ChatMessage[]) => {
-    setMessages((prevMessages) => updater(prevMessages));
+    if (!activeSession) return;
+    setChatSessions((prevSessions) =>
+      prevSessions.map((session) => {
+        if (session.id !== activeSession.id) {
+          return session;
+        }
+        const nextMessages = updater(session.messages);
+        return {
+          ...session,
+          messages: nextMessages,
+          title: createSessionTitle(nextMessages),
+          updatedAt: Date.now(),
+        };
+      })
+    );
   };
 
+  // Starts a new chat and resets transient UI state.
   const startNewChat = () => {
-    setMessages(createInitialMessages());
+    const newSession = createInitialSession();
+    setChatSessions((prevSessions) => [newSession, ...prevSessions]);
+    setActiveChatId(newSession.id);
+    setView("chat");
     setInputValue("");
     setIsThinking(false);
-    setIsNewChatConfirmOpen(false);
     setIsCloseFlowOpen(false);
     setCloseFlowStep("prompt");
     setEscalationNotes("");
     setDidCreateSupportEmail(false);
   };
 
-  const handleStartNewChatPrompt = () => {
-    setIsNewChatConfirmOpen((prev) => !prev);
+  // Opens an existing session and resets in-chat prompt/escalation UI.
+  const openChatSession = (sessionId: string) => {
+    setActiveChatId(sessionId);
+    setView("chat");
+    setInputValue("");
     setIsCloseFlowOpen(false);
     setCloseFlowStep("prompt");
-  };
-
-  const handleConfirmStartNewChat = () => {
-    startNewChat();
-  };
-
-  const handleCloseChatPrompt = () => {
-    setIsCloseFlowOpen((prev) => !prev);
-    setCloseFlowStep("prompt");
-    setIsNewChatConfirmOpen(false);
+    setEscalationNotes("");
     setDidCreateSupportEmail(false);
   };
 
-  const handleSatisfiedClose = () => {
-    setIsCloseFlowOpen(false);
+  // Toggles the end-chat confirmation panel.
+  const handleCloseChatPrompt = () => {
+    setIsCloseFlowOpen((prev) => !prev);
     setCloseFlowStep("prompt");
-    setIsOpen(false);
-    startNewChat();
+    setDidCreateSupportEmail(false);
   };
 
+  // Marks the active chat as ended without creating a new session.
+  const handleSatisfiedClose = () => {
+    if (activeSession) {
+      endChat(activeSession.id);
+    }
+    setIsCloseFlowOpen(false);
+    setCloseFlowStep("prompt");
+  };
+
+  // Moves the close flow from confirmation to escalation details.
   const handleEscalation = () => {
     setCloseFlowStep("escalate");
     setEscalationNotes("");
     setDidCreateSupportEmail(false);
   };
 
+  // Ends the current chat then starts a fresh conversation after escalation.
   const handleEndAndStartNewAfterEscalation = () => {
+    if (activeSession) {
+      endChat(activeSession.id);
+    }
     startNewChat();
   };
 
+  // Builds and opens a prefilled support email containing metadata and transcript.
   const handleCreateSupportEmail = () => {
     const transcript = messages
       .map((message, index) => {
@@ -564,6 +713,7 @@ export default function SupportAssistantWidget() {
     setDidCreateSupportEmail(true);
   };
 
+  // Keeps the latest chat messages visible as conversation content grows.
   const scrollChatToBottom = () => {
     requestAnimationFrame(() => {
       if (!listRef.current) return;
@@ -571,6 +721,7 @@ export default function SupportAssistantWidget() {
     });
   };
 
+  // Auto-resizes the composer textarea based on content height.
   const adjustComposerHeight = () => {
     const composer = composerRef.current;
     if (!composer) return;
@@ -631,10 +782,11 @@ export default function SupportAssistantWidget() {
     [messages]
   );
 
+  // Handles user text submission, calls support API, and appends assistant reply.
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const trimmed = inputValue.trim();
-    if (!trimmed || isThinking) return;
+    if (!trimmed || isThinking || activeSession?.ended) return;
 
     const userMessage: ChatMessage = {
       id: nextMessageId("user"),
@@ -670,6 +822,7 @@ export default function SupportAssistantWidget() {
     scrollChatToBottom();
   };
 
+  // Sends one-tap quick prompts through the same message pipeline as typed input.
   const handleQuickQuestion = async (question: string) => {
     if (isThinking) return;
 
@@ -698,33 +851,55 @@ export default function SupportAssistantWidget() {
     scrollChatToBottom();
   };
 
-  const openArticle = (articleId: string, origin: "home" | "help-center") => {
+  // Opens a help article and records where to return when navigating back.
+  const openArticle = (articleId: string, origin: "help-center") => {
     setSelectedArticleId(articleId);
     setArticleBackView(origin);
     setView("article");
   };
 
+  // Opens the full view for a selected news item.
   const openNewsDetail = (newsId: string) => {
     setSelectedNewsId(newsId);
     setView("news-detail");
   };
 
+  // Returns to chat list and clears detail selections.
   const closeToHome = () => {
-    setView("home");
+    setView("chat-list");
     setSelectedNewsId(null);
     setSelectedArticleId(null);
   };
 
+  // Returns from an article to its origin view.
   const handleArticleBack = () => {
     setView(articleBackView);
   };
 
+  // Returns from a news detail page to the news list.
   const handleNewsBack = () => {
     setView("news");
   };
 
+  // Deletes a chat session and safely resets selection if it was active.
+  const deleteChat = (sessionId: string) => {
+    setChatSessions((prev) => prev.filter((s) => s.id !== sessionId));
+    if (activeChatId === sessionId) {
+      setActiveChatId(null);
+      setView("chat-list");
+    }
+  };
+
+  // Marks a chat session as ended to disable additional messages.
+  const endChat = (sessionId: string) => {
+    setChatSessions((prev) =>
+      prev.map((s) => (s.id === sessionId ? { ...s, ended: true } : s))
+    );
+  };
+
+  // Shared back handler for section views that should return to the chat list.
   const handleBackFromSection = () => {
-    setView("home");
+    setView("chat-list");
   };
 
   if (userId === "user_demo") {
@@ -734,149 +909,141 @@ export default function SupportAssistantWidget() {
   return (
     <div className="fixed bottom-6 right-6 z-[60] flex flex-col items-end">
       {isOpen && (
-        <section className={`font-[var(--font-manrope)] rounded-[28px] border border-slate-200/90 dark:border-slate-700/80 bg-white dark:bg-slate-900 shadow-[0_32px_75px_-30px_rgba(15,23,42,0.9)] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 transition-all duration-300 ease-out ${view === "article" || view === "news-detail" ? "w-[min(96vw,760px)] h-[min(86vh,760px)]" : "w-[min(92vw,420px)] h-[min(80vh,680px)]"}`}>
-          <header
-            className={`relative px-5 border-b border-slate-200/85 dark:border-slate-700/80 bg-white dark:bg-slate-900 text-slate-900 dark:text-white ${view === "home" ? "pt-4 pb-4" : "pt-3 pb-2"}`}
-          >
+        <section
+          className={`relative overflow-hidden font-[var(--font-manrope)] rounded-[32px] border border-white/70 dark:border-slate-700/80 shadow-[0_40px_90px_-35px_rgba(15,23,42,0.92)] flex flex-col animate-in fade-in zoom-in-95 transition-all duration-300 ease-out ${view === "article" || view === "news-detail" ? "w-[min(96vw,760px)] h-[min(86vh,760px)]" : "w-[min(92vw,420px)] h-[min(80vh,680px)]"}`}
+          style={panelBackgroundStyle}
+        >
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={panelGlowStyle}
+          />
+          <header className="relative overflow-hidden px-5 pt-4 pb-3 border-b border-slate-200/75 dark:border-slate-700/80 bg-white/85 dark:bg-slate-950/80 text-slate-900 dark:text-white backdrop-blur-xl">
+            <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[var(--theme-accent)]/50 to-transparent" />
             <div className="relative z-10">
               <div className="flex items-center justify-between gap-3 mb-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="h-8 w-8 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-[18px]">school</span>
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-2xl bg-[var(--theme-accent-strong)] text-white shadow-[0_14px_26px_-16px_rgba(15,23,42,0.45)] flex items-center justify-center ring-1 ring-white/60">
+                    <span className="material-symbols-outlined text-[20px]">school</span>
                   </div>
-                  <h2 className="text-[24px] font-extrabold leading-none tracking-tight">11Planner</h2>
+                  <div>
+                    <h2 className="text-[24px] font-extrabold leading-none tracking-tight">11Planner</h2>
+                    <p className="mt-1 text-[12px] uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">Chat Support Assistant</p>
+                  </div>
                 </div>
               </div>
 
-              <p className="text-[18px] leading-none font-semibold text-slate-700 dark:text-slate-200">Chat Support Assistant</p>
+              <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 dark:border-slate-700/80 bg-white/70 dark:bg-slate-900/70 px-3 py-1 text-[12px] font-medium text-slate-600 dark:text-slate-300 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.55)]">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                Fast answers, saved history, and escalation when needed
+              </div>
             </div>
           </header>
 
-          <div className={view === "chat" ? "flex-1 min-h-0 px-4 pt-3 pb-3" : "flex-1 overflow-y-auto px-4 pt-3 pb-3 space-y-3.5"}>
-            {view === "home" && (
-              <>
-                <TopCard
-                  title="Ask a question"
-                  subtitle="We are here to help."
-                  icon="chat_bubble"
-                  iconColor="var(--theme-accent-strong)"
-                  onClick={() => setView("chat")}
-                />
-
-                <TopCard
-                  title="Report an issue"
-                  subtitle="Found a bug? Let us know."
-                  icon="bug_report"
-                  iconColor="#dc2626"
-                  href="/support"
-                />
-
-                <TopCard
-                  title="Request a feature"
-                  subtitle="What would you like to see next?"
-                  icon="lightbulb"
-                  iconColor="#d97706"
-                  href="/support"
-                />
-
-                <div className="rounded-2xl bg-white/94 dark:bg-slate-800/92 border border-slate-200/90 dark:border-slate-700/80 px-3 py-3 shadow-[0_10px_26px_-22px_rgba(15,23,42,0.7)]">
-                  <div className="relative">
-                    <input
-                      value={searchValue}
-                      onChange={(event) => setSearchValue(event.target.value)}
-                      placeholder="Search for help"
-                      className="w-full h-11 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100/85 dark:bg-slate-900/75 px-4 pr-10 text-sm text-slate-900 dark:text-slate-100 outline-none"
-                    />
-                    <button
-                      onClick={() => setView("help-center")}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-md flex items-center justify-center text-slate-500 hover:bg-slate-200/70 dark:hover:bg-slate-700/70"
-                      aria-label="Open help center"
-                    >
-                      <span className="material-symbols-outlined text-[20px]">search</span>
-                    </button>
+          <div className={view === "chat" ? "relative flex-1 min-h-0 px-4 pt-3 pb-3" : "relative flex-1 overflow-y-auto px-4 pt-3 pb-3 space-y-3.5"}>
+            {view === "chat-list" && (
+              <div className="px-1 py-1">
+                <div className="flex items-end justify-between pb-3 border-b border-slate-200/70 dark:border-slate-700/80">
+                  <div>
+                    <p className="font-semibold text-[15px] text-slate-900 dark:text-white">Your chats</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-300">Open a previous conversation or start a new one.</p>
                   </div>
-
-                  <div className="mt-3 divide-y divide-slate-200 dark:divide-slate-700">
-                    {filteredArticles.slice(0, 3).map((article) => (
-                      <button
-                        key={article.id}
-                        onClick={() => openArticle(article.id, "home")}
-                        className="w-full flex items-center justify-between gap-3 py-3 text-left"
-                      >
-                        <div>
-                          <p className="font-semibold text-slate-900 dark:text-white text-[14px] leading-tight">{article.title}</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-300 mt-1">{article.subtitle}</p>
-                        </div>
-                        <span className="material-symbols-outlined" style={{ color: "var(--theme-accent-strong)" }}>
-                          chevron_right
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-
-                  <button
-                    onClick={() => setView("help-center")}
-                    className="mt-2 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-900/70 px-3 py-2 text-sm font-semibold text-slate-700 dark:text-slate-200"
-                  >
-                    Open Help Center
-                  </button>
+                  <span className="inline-flex items-center rounded-full border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/70 px-2.5 py-1 text-[11px] font-semibold text-slate-500 dark:text-slate-300">
+                    {sortedChatSessions.length} total
+                  </span>
                 </div>
-              </>
+
+                <button
+                  type="button"
+                  onClick={startNewChat}
+                  className="mt-3 w-full inline-flex items-center justify-center gap-2 rounded-2xl px-3.5 py-3 text-sm font-semibold text-white shadow-[0_16px_30px_-18px_rgba(15,23,42,0.35)] transition hover:brightness-105"
+                  style={{ backgroundColor: "var(--theme-accent-strong)" }}
+                >
+                  <span className="material-symbols-outlined text-[18px]">add_circle</span>
+                  Start new chat
+                </button>
+
+                <div className="mt-4 space-y-3 max-h-[430px] overflow-y-auto pr-1 pb-1">
+                  {sortedChatSessions.map((session) => {
+                    const previewMessage =
+                      [...session.messages]
+                        .reverse()
+                        .find((message) => message.role === "assistant" || message.role === "user")?.text || "No messages yet.";
+                    const preview = previewMessage.length > 72 ? `${previewMessage.slice(0, 72)}...` : previewMessage;
+
+                    return (
+                      <div
+                        key={session.id}
+                        className={`group rounded-[22px] border px-3 py-3 shadow-[0_16px_30px_-26px_rgba(15,23,42,0.55)] transition-all duration-200 ${
+                          activeSession?.id === session.id
+                            ? "border-[var(--theme-accent)] bg-[var(--theme-accent-soft)]/35 dark:bg-slate-900"
+                            : "border-slate-200/80 dark:border-slate-700 bg-white/88 dark:bg-slate-900/55 hover:-translate-y-0.5 hover:shadow-[0_20px_36px_-26px_rgba(15,23,42,0.75)]"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <button
+                            type="button"
+                            onClick={() => openChatSession(session.id)}
+                            className="flex-1 min-w-0 text-left"
+                          >
+                            <div className="flex min-w-0 items-center gap-2">
+                              <p className="font-semibold text-[14px] text-slate-900 dark:text-white truncate">{session.title}</p>
+                              {session.ended && (
+                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-200 whitespace-nowrap">ended</span>
+                              )}
+                            </div>
+                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-300 line-clamp-2">{preview}</p>
+                          </button>
+
+                          <div className="flex flex-none flex-col items-end">
+                            <p className="max-w-[92px] truncate text-[11px] font-medium text-slate-500 dark:text-slate-300 whitespace-nowrap text-right">
+                              {new Date(session.updatedAt).toLocaleDateString()}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => deleteChat(session.id)}
+                              className="mt-1 inline-flex h-8 w-8 items-center justify-center rounded-full text-red-600 dark:text-red-400 hover:bg-red-100/80 dark:hover:bg-red-900/30 transition"
+                              aria-label="Delete chat"
+                            >
+                              <span className="material-symbols-outlined text-[17px]">delete</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             )}
 
             {view === "chat" && (
               <div className="flex-1 min-h-0 h-full flex flex-col">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-200/80 dark:border-slate-700/80">
-                  <div className="flex items-center gap-2.5">
-                    <ElevenAvatar size="sm" />
-                    <div>
-                      <p className="font-semibold text-[16px] text-slate-900 dark:text-white">11</p>
-                      <p className="text-[12px] text-slate-500 dark:text-slate-300">11Planner AI Assistant</p>
-                    </div>
-                  </div>
+                <div className="flex items-center justify-between pb-3 border-b border-slate-200/75 dark:border-slate-700/80">
                   <button
                     type="button"
-                    onClick={handleStartNewChatPrompt}
-                    className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-white whitespace-nowrap"
-                    style={{ backgroundColor: "var(--theme-accent-strong)" }}
+                    onClick={() => setView("chat-list")}
+                    className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-semibold border border-slate-200/80 dark:border-slate-700 bg-white/90 dark:bg-slate-900/70 text-slate-700 dark:text-slate-200 shadow-[0_10px_24px_-20px_rgba(15,23,42,0.7)]"
                   >
-                    <span className="material-symbols-outlined text-[16px]">add</span>
-                    New chat
+                    <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+                    Back
                   </button>
+                  <div className="flex flex-1 min-w-0 items-center justify-end gap-2 pl-3">
+                    <p className="min-w-0 text-sm font-semibold text-slate-900 dark:text-white truncate text-right">
+                      {activeSession?.title || "Chat"}
+                    </p>
+                    {activeSession?.ended && (
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-200 whitespace-nowrap">ended</span>
+                    )}
+                  </div>
                 </div>
 
-                {isNewChatConfirmOpen && (
-                  <div className="mb-2 rounded-xl border border-slate-200/85 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-900/80 p-3 space-y-2">
-                    <p className="text-sm font-semibold text-slate-900 dark:text-white">Start a new chat?</p>
-                    <p className="text-xs text-slate-600 dark:text-slate-300">This will end your current chat and clear this conversation.</p>
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={handleConfirmStartNewChat}
-                        className="rounded-full px-3 py-1.5 text-xs font-semibold text-white"
-                        style={{ backgroundColor: "var(--theme-accent-strong)" }}
-                      >
-                        Yes, start new chat
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setIsNewChatConfirmOpen(false)}
-                        className="rounded-full px-3 py-1.5 text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                <div ref={listRef} className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1 pt-1 pb-2">
+                <div ref={listRef} className="relative flex-1 min-h-0 overflow-y-auto space-y-3 pr-1 pt-3 pb-2">
                   {messages.map((message) => (
                     <div key={message.id} className={`flex gap-2 ${message.role === "assistant" ? "justify-start" : "justify-end"}`}>
                       {message.role === "assistant" && <ElevenAvatar size="sm" />}
                       <div
-                        className={`max-w-[82%] rounded-2xl px-3 py-2 text-sm leading-relaxed whitespace-pre-line break-words ${
+                        className={`max-w-[82%] rounded-[22px] px-3.5 py-3 text-sm leading-relaxed whitespace-pre-line break-words shadow-[0_14px_30px_-24px_rgba(15,23,42,0.55)] ${
                           message.role === "assistant"
-                            ? "border border-slate-200/80 dark:border-slate-700/80 bg-slate-50/90 dark:bg-slate-900/75 text-slate-800 dark:text-slate-100"
+                            ? "border border-slate-200/80 dark:border-slate-700/80 bg-white/90 dark:bg-slate-900/75 text-slate-800 dark:text-slate-100 backdrop-blur"
                             : "text-white"
                         }`}
                         style={message.role === "user" ? { backgroundColor: "var(--theme-accent-strong)" } : undefined}
@@ -889,7 +1056,7 @@ export default function SupportAssistantWidget() {
                   {isThinking && (
                     <div className="flex gap-2 justify-start">
                       <ElevenAvatar size="sm" />
-                      <div className="border border-slate-200/80 dark:border-slate-700/80 bg-slate-50/90 dark:bg-slate-900/75 rounded-2xl px-3 py-2 inline-flex items-center gap-1.5">
+                      <div className="border border-slate-200/80 dark:border-slate-700/80 bg-white/90 dark:bg-slate-900/75 rounded-[22px] px-3.5 py-2.5 inline-flex items-center gap-1.5 shadow-[0_14px_30px_-24px_rgba(15,23,42,0.55)]">
                         <span className="h-1.5 w-1.5 rounded-full bg-slate-500 dark:bg-slate-300 animate-bounce" style={{ animationDelay: "0ms" }} />
                         <span className="h-1.5 w-1.5 rounded-full bg-slate-500 dark:bg-slate-300 animate-bounce" style={{ animationDelay: "120ms" }} />
                         <span className="h-1.5 w-1.5 rounded-full bg-slate-500 dark:bg-slate-300 animate-bounce" style={{ animationDelay: "240ms" }} />
@@ -898,118 +1065,121 @@ export default function SupportAssistantWidget() {
                   )}
                 </div>
 
-                <div className="sticky bottom-0 z-10 mt-auto pt-3 space-y-2 border-t border-slate-200/80 dark:border-slate-700/80 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm">
-                  {!hasUserSentMessage && (
-                    <div className="flex flex-wrap gap-2 pr-1">
-                      {quickQuestions.map((question) => (
-                        <button
-                          key={question}
-                          onClick={() => handleQuickQuestion(question)}
-                          className="rounded-full px-3 py-1.5 text-left text-[12px] border border-slate-200 dark:border-slate-700/80 bg-slate-100 dark:bg-slate-800/70 text-slate-700 dark:text-slate-200"
-                        >
-                          {question}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                {!activeSession?.ended && (
+                  <div className="sticky bottom-0 z-10 mt-auto pt-3 space-y-2 border-t border-slate-200/70 dark:border-slate-700/80 bg-transparent backdrop-blur-xl">
+                    {!hasUserSentMessage && (
+                      <div className="flex flex-wrap gap-2 pr-1">
+                        {quickQuestions.map((question) => (
+                          <button
+                            key={question}
+                            onClick={() => handleQuickQuestion(question)}
+                            className="rounded-full px-3 py-1.5 text-left text-[12px] border border-slate-200/80 dark:border-slate-700/80 bg-white/70 dark:bg-slate-900/65 text-slate-700 dark:text-slate-200 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.45)] transition hover:-translate-y-0.5 hover:border-[var(--theme-accent)]"
+                          >
+                            {question}
+                          </button>
+                        ))}
+                      </div>
+                    )}
 
-                  <button
-                    type="button"
-                    onClick={handleCloseChatPrompt}
-                    className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/70 text-slate-700 dark:text-slate-200"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">close</span>
-                    Close chat
-                  </button>
+                    <button
+                      type="button"
+                      onClick={handleCloseChatPrompt}
+                      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold border border-slate-200/80 dark:border-slate-700 bg-white/80 dark:bg-slate-900/65 text-slate-700 dark:text-slate-200 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.45)]"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">close</span>
+                      End chat
+                    </button>
 
-                  {isCloseFlowOpen && (
-                    <div className="rounded-xl border border-slate-200/85 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-900/80 p-3 space-y-2">
-                      {closeFlowStep === "prompt" ? (
-                        <>
-                          <p className="text-sm font-semibold text-slate-900 dark:text-white">Are you satisfied with this chat?</p>
-                          <div className="flex flex-wrap gap-2">
-                            <button
-                              type="button"
-                              onClick={handleSatisfiedClose}
-                              className="rounded-full px-3 py-1.5 text-xs font-semibold text-white"
-                              style={{ backgroundColor: "var(--theme-accent-strong)" }}
-                            >
-                              Yes, close and end chat
-                            </button>
-                            <button
-                              type="button"
-                              onClick={handleEscalation}
-                              className="rounded-full px-3 py-1.5 text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200"
-                            >
-                              I need human support
-                            </button>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <p className="text-sm font-semibold text-slate-900 dark:text-white">Escalate to support</p>
-                          <p className="text-xs text-slate-600 dark:text-slate-300">
-                            Add any extra context below, then create an email draft with this chat transcript.
-                          </p>
-                          <textarea
-                            value={escalationNotes}
-                            onChange={(event) => setEscalationNotes(event.target.value)}
-                            rows={3}
-                            placeholder="Describe your issue or what you want support to know..."
-                            maxLength={escalationNotesMaxLength}
-                            className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 outline-none"
-                          />
-                          <div className="flex flex-wrap gap-2">
-                            <button
-                              type="button"
-                              onClick={handleCreateSupportEmail}
-                              className="rounded-full px-3 py-1.5 text-xs font-semibold text-white"
-                              style={{ backgroundColor: "var(--theme-accent-strong)" }}
-                            >
-                              Create support email
-                            </button>
-                            {didCreateSupportEmail && (
+                    {isCloseFlowOpen && (
+                      <div className="rounded-[22px] border border-slate-200/85 dark:border-slate-700/80 bg-white/75 dark:bg-slate-900/78 p-3 space-y-2 shadow-[0_18px_34px_-26px_rgba(15,23,42,0.7)] backdrop-blur-md">
+                        {closeFlowStep === "prompt" ? (
+                          <>
+                            <p className="text-sm font-semibold text-slate-900 dark:text-white">Are you satisfied with this chat?</p>
+                            <div className="flex flex-wrap gap-2">
                               <button
                                 type="button"
-                                onClick={handleEndAndStartNewAfterEscalation}
-                                className="rounded-full px-3 py-1.5 text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200"
+                                onClick={handleSatisfiedClose}
+                                className="rounded-full px-3 py-1.5 text-xs font-semibold text-white shadow-[0_12px_22px_-18px_rgba(15,23,42,0.32)]"
+                                style={{ backgroundColor: "var(--theme-accent-strong)" }}
                               >
-                                End and start new chat
+                                Yes, close and end chat
                               </button>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => setCloseFlowStep("prompt")}
-                              className="rounded-full px-3 py-1.5 text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200"
-                            >
-                              Back
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )}
+                              <button
+                                type="button"
+                                onClick={handleEscalation}
+                                className="rounded-full px-3 py-1.5 text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/65 text-slate-700 dark:text-slate-200"
+                              >
+                                I need human support
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-sm font-semibold text-slate-900 dark:text-white">Escalate to support</p>
+                            <p className="text-xs text-slate-600 dark:text-slate-300">
+                              Add any extra context below, then create an email draft with this chat transcript.
+                            </p>
+                            <textarea
+                              value={escalationNotes}
+                              onChange={(event) => setEscalationNotes(event.target.value)}
+                              rows={3}
+                              placeholder="Describe your issue or what you want support to know..."
+                              maxLength={escalationNotesMaxLength}
+                              className="w-full rounded-2xl border border-slate-200/80 dark:border-slate-700 bg-white/30 dark:bg-slate-950/20 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 outline-none backdrop-blur-md"
+                            />
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={handleCreateSupportEmail}
+                                className="rounded-full px-3 py-1.5 text-xs font-semibold text-white shadow-[0_12px_22px_-18px_rgba(15,23,42,0.32)]"
+                                style={{ backgroundColor: "var(--theme-accent-strong)" }}
+                              >
+                                Create support email
+                              </button>
+                              {didCreateSupportEmail && (
+                                <button
+                                  type="button"
+                                  onClick={handleEndAndStartNewAfterEscalation}
+                                  className="rounded-full px-3 py-1.5 text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/65 text-slate-700 dark:text-slate-200"
+                                >
+                                  End and start new chat
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => setCloseFlowStep("prompt")}
+                                className="rounded-full px-3 py-1.5 text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/65 text-slate-700 dark:text-slate-200"
+                              >
+                                Back
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
 
-                  <form onSubmit={handleSubmit} className="flex items-center gap-2">
-                      <textarea
-                        ref={composerRef}
-                      value={inputValue}
-                        onChange={(event) => setInputValue(event.target.value)}
-                      placeholder="Write a message..."
-                      maxLength={chatMessageMaxLength}
-                        rows={1}
-                        className="flex-1 min-h-10 max-h-28 resize-none overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm leading-5 text-slate-900 dark:text-slate-100 outline-none"
-                    />
-                    <button
-                      type="submit"
-                      className="h-10 px-4 rounded-xl text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
-                      style={{ backgroundColor: "var(--theme-accent-strong)" }}
-                      disabled={isThinking}
-                    >
-                      {isThinking ? "Thinking..." : "Send"}
-                    </button>
-                  </form>
-                </div>
+                    <form onSubmit={handleSubmit} className="flex items-center gap-2">
+                        <textarea
+                          ref={composerRef}
+                        value={inputValue}
+                          onChange={(event) => setInputValue(event.target.value)}
+                        placeholder="Write a message..."
+                        maxLength={chatMessageMaxLength}
+                          rows={1}
+                          disabled={activeSession?.ended}
+                          className="flex-1 min-h-11 max-h-28 resize-none overflow-y-auto rounded-2xl border border-slate-200/75 dark:border-slate-700 bg-white/18 dark:bg-slate-950/12 px-3.5 py-2.5 text-sm leading-5 text-slate-900 dark:text-slate-100 outline-none shadow-[0_16px_30px_-26px_rgba(15,23,42,0.35)] backdrop-blur-md placeholder:text-slate-400/80 disabled:opacity-50 disabled:cursor-not-allowed"
+                      />
+                      <button
+                        type="submit"
+                        className="h-11 px-4 rounded-2xl text-sm font-semibold text-white transition hover:brightness-105 disabled:opacity-60 shadow-[0_16px_30px_-20px_rgba(15,23,42,0.32)]"
+                        style={{ backgroundColor: "var(--theme-accent-strong)" }}
+                        disabled={isThinking || activeSession?.ended}
+                      >
+                        {isThinking ? "Thinking..." : activeSession?.ended ? "Ended" : "Send"}
+                      </button>
+                    </form>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1152,7 +1322,7 @@ export default function SupportAssistantWidget() {
                         <button
                           key={article.id}
                           onClick={() => openArticle(article.id, "help-center")}
-                          className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white/75 dark:bg-slate-900/45 px-3 py-3 text-left flex items-center justify-between gap-3"
+                          className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white/75 dark:bg-slate-900/45 overflow-hidden"
                         >
                           <div>
                             <p className="font-semibold text-slate-900 dark:text-white text-[14px]">{article.title}</p>
@@ -1238,21 +1408,23 @@ export default function SupportAssistantWidget() {
             )}
           </div>
 
-          <div className="h-3 border-t border-slate-200/80 dark:border-slate-700/80 bg-white/96 dark:bg-slate-900/96" />
+          <div className="h-3 border-t border-slate-200/75 dark:border-slate-700/80 bg-transparent" />
         </section>
       )}
 
       <button
         onClick={() => setIsOpen((prev) => !prev)}
-        className="group relative h-14 w-14 rounded-full shadow-[0_16px_30px_-16px_rgba(15,23,42,0.9)] transition-transform duration-200 hover:scale-[1.04] flex items-center justify-center"
+        className="group relative h-14 w-14 rounded-full shadow-[0_20px_40px_-18px_rgba(15,23,42,0.9)] transition-transform duration-200 hover:scale-[1.05] flex items-center justify-center"
         aria-label={isOpen ? "Hide support assistant" : "Open support assistant"}
         title="Support Assistant"
       >
-        <span className="absolute inset-0 rounded-full border-2 border-white/85 dark:border-slate-200/80" />
+        <span className="absolute inset-0 rounded-full border-2 border-white/90 dark:border-slate-200/80" />
         <span
           className="absolute inset-[3px] rounded-full border"
           style={{
-            backgroundColor: isOpen ? "#0f172a" : "#0ea5e9",
+            backgroundImage: isOpen
+              ? "linear-gradient(135deg, #0f172a, #334155)"
+              : "linear-gradient(135deg, var(--theme-accent-strong), var(--theme-accent), var(--theme-accent-soft))",
             borderColor: isOpen ? "#1e293b" : "#0284c7",
           }}
         />
@@ -1273,6 +1445,7 @@ export default function SupportAssistantWidget() {
           </span>
         </span>
       </button>
+
     </div>
   );
 }

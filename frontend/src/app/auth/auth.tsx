@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import "./auth.css";
 import { supabase } from "@/lib/supabaseClient";
 import { AuthChangeEvent } from "@supabase/supabase-js";
 import AppDialog from "@/components/AppDialog";

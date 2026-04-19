@@ -1,6 +1,5 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import "./auth.css";
 import { supabase } from "@/lib/supabaseClient";
 import Footer from "@/components/Footer";
 import Image from "next/image";

@@ -47,6 +47,7 @@ from app.api.assignments import sync_assignments, SyncRequest
 @app.post("/api/assignments/sync/")
 @app.post("/api/tasks/sync")
 @app.post("/sync")
+# Catches legacy/typo sync paths and forwards to the canonical sync handler.
 async def fallback_sync_route(sync_request: SyncRequest):
     return await sync_assignments(sync_request)
 # -----------------------------------------------------------
@@ -54,11 +55,13 @@ async def fallback_sync_route(sync_request: SyncRequest):
 
 # Health check endpoint
 @app.get("/health")
+# Reports basic API health for uptime checks.
 async def health_check():
     return {"status": "healthy", "service": "11Planner API"}
 
 # Root endpoint
 @app.get("/")
+# Returns basic API metadata and docs link.
 async def root():
     return {
         "message": "Welcome to 11Planner API",
@@ -68,5 +71,6 @@ async def root():
 
 # API ping endpoint
 @app.get("/api/ping")
+# Lightweight ping endpoint used by clients for connectivity checks.
 async def api_ping():
     return {"message": "pong"}

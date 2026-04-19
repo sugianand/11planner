@@ -16,7 +16,16 @@ export interface NotificationItem {
 
 interface NotificationContextType {
   notifications: NotificationItem[];
+  notificationHistory: NotificationItem[];
   dismissNotification: (id: string) => void;
+  createNotification: (payload: {
+    title: string;
+    message: string;
+    type?: NotificationType;
+    taskId?: string;
+    showBrowser?: boolean;
+    autoDismissMs?: number;
+  }) => void;
   requestPermission: () => Promise<NotificationPermission | "unsupported">;
   permission: NotificationPermission | "unsupported";
   notificationsEnabled: boolean;
@@ -30,14 +39,63 @@ const NotificationContext = createContext<NotificationContextType | undefined>(u
 const STORAGE_KEYS = {
   enabled: "notifications",
   leadHours: "reminderLeadHours",
-  notified: "notifiedDeadlines",
+  notified: "notificationAlertState",
 };
 
 const DEFAULT_LEAD_HOURS = 24;
+type AlertState = "none" | "soon" | "overdue";
 
+let toastAudio: HTMLAudioElement | null = null;
+let toastAudioStopTimer: number | null = null;
+
+// Plays the short toast sound, falling back to a generated tone if the mp3 cannot be used.
+const playToastSound = () => {
+  if (typeof window === "undefined") {
+    return;
+  }
+  if (localStorage.getItem("soundEnabled") === "false") {
+    return;
+  }
+
+  try {
+    if (!toastAudio) {
+      toastAudio = new Audio("/sounds/sfx/notification-chime.wav");
+      toastAudio.preload = "auto";
+      toastAudio.volume = 0.9;
+    }
+
+    if (toastAudioStopTimer) {
+      window.clearTimeout(toastAudioStopTimer);
+      toastAudioStopTimer = null;
+    }
+
+    toastAudio.currentTime = 0;
+    const playPromise = toastAudio.play();
+    if (playPromise) {
+      void playPromise.catch(() => {
+        // Ignore playback failures (autoplay restrictions, muted output, etc.).
+      });
+    }
+
+    // Use only a short portion so this behaves like a notification ping.
+    toastAudioStopTimer = window.setTimeout(() => {
+      if (!toastAudio) {
+        return;
+      }
+      toastAudio.pause();
+      toastAudio.currentTime = 0;
+    }, 420);
+  } catch {
+    // Ignore audio setup failures and continue without sound.
+  }
+};
+
+// Owns toast state, persistent notification history, and deadline-based reminder logic.
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const { tasks } = usePlanner();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [notificationHistory, setNotificationHistory] = useState<NotificationItem[]>([]);
+  const activeNotificationIdsRef = useRef<Set<string>>(new Set());
   const [notificationsEnabled, setNotificationsEnabledState] = useState(() => {
     if (typeof window === "undefined") {
       return true;
@@ -55,7 +113,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [permission, setPermission] = useState<NotificationPermission | "unsupported">(() =>
     typeof window === "undefined" || !("Notification" in window) ? "unsupported" : Notification.permission
   );
-  const notifiedRef = useRef<Record<string, string>>(
+  const notifiedRef = useRef<Record<string, AlertState>>(
     (() => {
       if (typeof window === "undefined") {
         return {};
@@ -65,7 +123,17 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         return {};
       }
       try {
-        return JSON.parse(savedNotified) || {};
+        const parsed = JSON.parse(savedNotified) || {};
+        if (typeof parsed !== "object" || Array.isArray(parsed)) {
+          return {};
+        }
+        const cleaned: Record<string, AlertState> = {};
+        Object.entries(parsed).forEach(([key, value]) => {
+          if (value === "none" || value === "soon" || value === "overdue") {
+            cleaned[key] = value;
+          }
+        });
+        return cleaned;
       } catch {
         return {};
       }
@@ -86,54 +154,87 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     localStorage.setItem(STORAGE_KEYS.leadHours, String(reminderLeadHours));
   }, [reminderLeadHours]);
 
-  const saveNotified = () => {
+  // Persists the current alert state map so reminder transitions survive refreshes.
+  const saveNotified = useCallback(() => {
     if (typeof window === "undefined") {
       return;
     }
     localStorage.setItem(STORAGE_KEYS.notified, JSON.stringify(notifiedRef.current));
-  };
+  }, []);
 
+  // Updates the reminder window without clearing prior alert state unless the task range changes naturally.
+  const setReminderLeadHours = useCallback((hours: number) => {
+    setReminderLeadHoursState(hours);
+  }, []);
+
+  // Removes a toast from the active on-screen stack.
   const dismissNotification = useCallback((id: string) => {
+    activeNotificationIdsRef.current.delete(id);
     setNotifications((prev) => prev.filter((item) => item.id !== id));
   }, []);
 
-  const playSound = useCallback(() => {
-    if (typeof window === "undefined") return;
-    if (localStorage.getItem("soundEnabled") === "false") return;
-    try {
-      const ctx = new AudioContext();
-      const gain = ctx.createGain();
-      gain.connect(ctx.destination);
-
-      const play = (freq: number, start: number, duration: number) => {
-        const osc = ctx.createOscillator();
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
-        osc.connect(gain);
-        gain.gain.setValueAtTime(0, ctx.currentTime + start);
-        gain.gain.linearRampToValueAtTime(0.25, ctx.currentTime + start + 0.01);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + duration);
-        osc.start(ctx.currentTime + start);
-        osc.stop(ctx.currentTime + start + duration);
-        osc.onended = () => ctx.close();
-      };
-
-      play(880, 0, 0.15);
-      play(1100, 0.15, 0.2);
-    } catch {}
-  }, []);
-
-  const pushNotification = useCallback((item: NotificationItem) => {
-    setNotifications((prev) => [item, ...prev].slice(0, 5));
-    if (permission === "granted") {
+  // Adds a toast to the active stack, stores it in history, and optionally mirrors it to the browser notification API.
+  const pushNotification = useCallback((item: NotificationItem, options?: { showBrowser?: boolean; autoDismissMs?: number }) => {
+    const showBrowser = options?.showBrowser ?? true;
+    const autoDismissMs = options?.autoDismissMs ?? 10000;
+    const didInsert = !activeNotificationIdsRef.current.has(item.id);
+    if (didInsert) {
+      activeNotificationIdsRef.current.add(item.id);
+    }
+    setNotifications((prev) => {
+      if (!didInsert) {
+        return prev;
+      }
+      return [item, ...prev].slice(0, 5);
+    });
+    setNotificationHistory((prev) => {
+      if (prev.some((existing) => existing.id === item.id)) {
+        return prev;
+      }
+      return [item, ...prev].slice(0, 50);
+    });
+    if (showBrowser && permission === "granted") {
       new Notification(item.title, { body: item.message });
     }
-    playSound();
+    if (didInsert) {
+      playToastSound();
+    }
     setTimeout(() => {
       dismissNotification(item.id);
-    }, 10000);
-  }, [permission, dismissNotification, playSound]);
+    }, autoDismissMs);
+  }, [permission, dismissNotification]);
 
+  // Creates a manual in-app notification for UI actions and feedback messages.
+  const createNotification = useCallback(
+    ({
+      title,
+      message,
+      type = "info",
+      taskId,
+      showBrowser = false,
+      autoDismissMs = 10000,
+    }: {
+      title: string;
+      message: string;
+      type?: NotificationType;
+      taskId?: string;
+      showBrowser?: boolean;
+      autoDismissMs?: number;
+    }) => {
+      const item: NotificationItem = {
+        id: `manual-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        title,
+        message,
+        type,
+        createdAt: new Date().toISOString(),
+        taskId,
+      };
+      pushNotification(item, { showBrowser, autoDismissMs });
+    },
+    [pushNotification]
+  );
+
+  // Requests browser notification permission when the user opts in.
   const requestPermission = useCallback(async () => {
     if (typeof window === "undefined" || !("Notification" in window)) {
       setPermission("unsupported");
@@ -152,6 +253,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     const checkDeadlines = () => {
       const now = Date.now();
       const leadMs = reminderLeadHours * 60 * 60 * 1000;
+      const activeKeys = new Set<string>();
+      let didChangeState = false;
 
       tasks.forEach((task) => {
         if (task.completed) {
@@ -163,14 +266,18 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         }
 
         const key = `${task.id}:${deadline.toISOString()}`;
-        if (notifiedRef.current[key]) {
-          return;
-        }
+        activeKeys.add(key);
+        const previousState = notifiedRef.current[key] ?? "none";
 
         const diffMs = deadline.getTime() - now;
-        if (diffMs <= 0) {
+        const nextState: AlertState = diffMs <= 0 ? "overdue" : diffMs <= leadMs ? "soon" : "none";
+
+        const makeNotificationId = (kind: "soon" | "overdue") =>
+          `${kind}-${task.id}-${deadline.getTime()}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+        if (nextState === "overdue" && previousState !== "overdue") {
           const item: NotificationItem = {
-            id: `overdue-${task.id}-${deadline.getTime()}`,
+            id: makeNotificationId("overdue"),
             title: "Task overdue",
             message: `${task.title} was due ${deadline.toLocaleString()}.`,
             type: "danger",
@@ -178,14 +285,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             taskId: task.id,
           };
           pushNotification(item);
-          notifiedRef.current[key] = "overdue";
-          saveNotified();
-          return;
-        }
-
-        if (diffMs <= leadMs) {
+        } else if (nextState === "soon" && previousState !== "soon") {
           const item: NotificationItem = {
-            id: `soon-${task.id}-${deadline.getTime()}`,
+            id: makeNotificationId("soon"),
             title: "Deadline soon",
             message: `${task.title} is due ${deadline.toLocaleString()}.`,
             type: "warning",
@@ -193,35 +295,54 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             taskId: task.id,
           };
           pushNotification(item);
-          notifiedRef.current[key] = "soon";
-          saveNotified();
+        }
+
+        if (previousState !== nextState) {
+          notifiedRef.current[key] = nextState;
+          didChangeState = true;
         }
       });
+
+      Object.keys(notifiedRef.current).forEach((key) => {
+        if (!activeKeys.has(key)) {
+          delete notifiedRef.current[key];
+          didChangeState = true;
+        }
+      });
+
+      if (didChangeState) {
+        saveNotified();
+      }
     };
 
     checkDeadlines();
     const interval = setInterval(checkDeadlines, 60000);
     return () => clearInterval(interval);
-  }, [notificationsEnabled, reminderLeadHours, tasks, permission, pushNotification]);
+  }, [notificationsEnabled, reminderLeadHours, tasks, permission, pushNotification, saveNotified]);
 
   const value = useMemo(
     () => ({
       notifications,
+      notificationHistory,
       dismissNotification,
+      createNotification,
       requestPermission,
       permission,
       notificationsEnabled,
       setNotificationsEnabled: setNotificationsEnabledState,
       reminderLeadHours,
-      setReminderLeadHours: setReminderLeadHoursState,
+      setReminderLeadHours,
     }),
     [
       notifications,
+      notificationHistory,
       dismissNotification,
+      createNotification,
       requestPermission,
       permission,
       notificationsEnabled,
       reminderLeadHours,
+      setReminderLeadHours,
     ]
   );
 

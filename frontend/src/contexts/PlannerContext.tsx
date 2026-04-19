@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import {
   Course,
   CourseCreate,
@@ -245,6 +245,27 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
+  const activeUserIdRef = useRef(userId);
+
+  const resetPlannerState = useCallback(() => {
+    setCourses([]);
+    setAssignments([]);
+    setTasks([]);
+    setScheduleBlocks([]);
+    setPreferences(null);
+    setError(null);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    activeUserIdRef.current = userId;
+  }, [userId]);
+
+  useEffect(() => {
+    if (userId === "user_demo") {
+      resetPlannerState();
+    }
+  }, [userId, resetPlannerState]);
 
   // Sync with Supabase Auth
   useEffect(() => {
@@ -268,17 +289,19 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
       if (session?.user) {
         setUserId(session.user.id);
       } else {
+        resetPlannerState();
         setUserId("user_demo");
       }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [resetPlannerState]);
 
   // ========== Courses ==========
   const loadCourses = useCallback(async () => {
+    const requestUserId = userId;
     try {
-      if (userId === "user_demo") {
+      if (requestUserId === "user_demo") {
         setCourses([]);
         return;
       }
@@ -287,22 +310,31 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
       const { data, error: queryError } = await supabase
         .from("courses")
         .select("*")
-        .eq("user_id", userId)
+        .eq("user_id", requestUserId)
         .order("created_at", { ascending: false });
 
       if (queryError) throw queryError;
+      if (activeUserIdRef.current !== requestUserId) {
+        return;
+      }
       setCourses((data as SupabaseCourseRow[]).map(mapCourseRowToModel));
     } catch (err) {
+      if (activeUserIdRef.current !== requestUserId) {
+        return;
+      }
       setError(err instanceof Error ? err.message : "Failed to load courses");
     } finally {
-      setLoading(false);
+      if (activeUserIdRef.current === requestUserId) {
+        setLoading(false);
+      }
     }
   }, [userId]);
 
 
   const loadPreferences = useCallback(async () => {
+    const requestUserId = userId;
     try {
-      if (userId === "user_demo") {
+      if (requestUserId === "user_demo") {
         setPreferences(null);
         return;
       }
@@ -310,10 +342,13 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
       const { data, error: queryError } = await supabase
         .from("profiles")
         .select("worktime, workdays, workstyle, assignmentplan, additional_info, daily_study_limit")
-        .eq("id", userId)
+        .eq("id", requestUserId)
         .single();
 
       if (queryError) throw queryError;
+      if (activeUserIdRef.current !== requestUserId) {
+        return;
+      }
 
       setPreferences({
         worktime: data.worktime || "",
@@ -324,6 +359,9 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
         dailyLimit: clampStudyLimit(data.daily_study_limit, 4),
       });
     } catch (err) {
+      if (activeUserIdRef.current !== requestUserId) {
+        return;
+      }
       setError(err instanceof Error ? err.message : "Failed to load preferences");
     }
   }, [userId]);
@@ -455,15 +493,28 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
 
   // ========== Assignments ==========
   const loadAssignments = useCallback(async () => {
+    const requestUserId = userId;
     try {
+      if (requestUserId === "user_demo") {
+        setAssignments([]);
+        return;
+      }
       setLoading(true);
       setError(null);
-      const data = await assignmentAPI.getByUser(userId);
+      const data = await assignmentAPI.getByUser(requestUserId);
+      if (activeUserIdRef.current !== requestUserId) {
+        return;
+      }
       setAssignments(data);
     } catch (err) {
+      if (activeUserIdRef.current !== requestUserId) {
+        return;
+      }
       setError(err instanceof Error ? err.message : "Failed to load assignments");
     } finally {
-      setLoading(false);
+      if (activeUserIdRef.current === requestUserId) {
+        setLoading(false);
+      }
     }
   }, [userId]);
 
@@ -517,8 +568,9 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
 
   // ========== Tasks ==========
   const loadTasks = useCallback(async () => {
+    const requestUserId = userId;
     try {
-      if (userId === "user_demo") {
+      if (requestUserId === "user_demo") {
         setTasks([]);
         return;
       }
@@ -527,15 +579,23 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
       const { data, error: queryError } = await supabase
         .from("tasks")
         .select("*")
-        .eq("user_id", userId)
+        .eq("user_id", requestUserId)
         .order("created_at", { ascending: false });
 
       if (queryError) throw queryError;
+      if (activeUserIdRef.current !== requestUserId) {
+        return;
+      }
       setTasks((data as SupabaseTaskRow[]).map(mapTaskRowToModel));
     } catch (err) {
+      if (activeUserIdRef.current !== requestUserId) {
+        return;
+      }
       setError(err instanceof Error ? err.message : "Failed to load tasks");
     } finally {
-      setLoading(false);
+      if (activeUserIdRef.current === requestUserId) {
+        setLoading(false);
+      }
     }
   }, [userId]);
 
@@ -636,15 +696,28 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
 
   // ========== Schedule Blocks ==========
   const loadScheduleBlocks = useCallback(async () => {
+    const requestUserId = userId;
     try {
+      if (requestUserId === "user_demo") {
+        setScheduleBlocks([]);
+        return;
+      }
       setLoading(true);
       setError(null);
-      const data = await scheduleAPI.getByUser(userId);
+      const data = await scheduleAPI.getByUser(requestUserId);
+      if (activeUserIdRef.current !== requestUserId) {
+        return;
+      }
       setScheduleBlocks(data);
     } catch (err) {
+      if (activeUserIdRef.current !== requestUserId) {
+        return;
+      }
       setError(err instanceof Error ? err.message : "Failed to load schedule blocks");
     } finally {
-      setLoading(false);
+      if (activeUserIdRef.current === requestUserId) {
+        setLoading(false);
+      }
     }
   }, [userId]);
 

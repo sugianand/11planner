@@ -12,7 +12,14 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 type Theme = "light" | "dark" | "auto";
 type ColorTheme = "emerald" | "ocean" | "rose" | "slate" | "amber" | "violet";
-type SettingsPanel = "personalize" | "reminders" | "account" | "support";
+type SettingsPanel = "personalize" | "notifications" | "account";
+
+type UserSummary = {
+  id?: string;
+  email?: string;
+  firstname?: string | null;
+  lastname?: string | null;
+};
 
 const colorThemeSwatches: Record<ColorTheme, string> = {
   emerald: "linear-gradient(135deg, #10b981, #059669)",
@@ -23,47 +30,17 @@ const colorThemeSwatches: Record<ColorTheme, string> = {
   violet: "linear-gradient(135deg, #a78bfa, #7c3aed)",
 };
 
-const sliderStyles = `
-  input[type="range"] {
-    accent-color: var(--theme-accent);
-  }
-  input[type="range"]::-webkit-slider-thumb {
-    accent-color: var(--theme-accent);
-  }
-  input[type="range"]::-moz-range-thumb {
-    background-color: var(--theme-accent);
-    border-color: var(--theme-accent);
-  }
-`;
-
+// Reads a boolean preference from localStorage with a fallback for first-time visitors.
 const readStoredBoolean = (key: string, fallback: boolean): boolean => {
   if (typeof window === "undefined") return fallback;
   const value = localStorage.getItem(key);
   return value === null ? fallback : value !== "false";
 };
 
-
+// Hosts the full settings dashboard, including appearance, notifications, and account controls.
 function SettingsPageContent() {
   const searchParams = useSearchParams();
   const { theme, setTheme, colorTheme, setColorTheme, colorThemes, effectiveTheme } = useTheme();
-  const [isMounted, setIsMounted] = useState(false);
-  const [user, setUser] = useState<{ id?: string; email?: string } | null>(null);
-  const [soundEnabled, setSoundEnabled] = useState(() => readStoredBoolean("soundEnabled", true));
-  const [privacyProfileVisible, setPrivacyProfileVisible] = useState(() => readStoredBoolean("privacyProfileVisible", true));
-  const [privacyAnalyticsEnabled, setPrivacyAnalyticsEnabled] = useState(() => readStoredBoolean("privacyAnalyticsEnabled", false));
-  const [privacyPersonalizationEnabled, setPrivacyPersonalizationEnabled] = useState(() => readStoredBoolean("privacyPersonalizationEnabled", true));
-  const [privacyShareProgress, setPrivacyShareProgress] = useState(() => readStoredBoolean("privacyShareProgress", false));
-  const [emailUpdates, setEmailUpdates] = useState(() => readStoredBoolean("emailUpdates", true));
-  const [weeklyReport, setWeeklyReport] = useState(() => readStoredBoolean("weeklyReport", true));
-  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
-  const [isClearingAccountData, setIsClearingAccountData] = useState(false);
-  const [activePanel, setActivePanel] = useState<SettingsPanel>("personalize");
-  const [settingsSearch, setSettingsSearch] = useState("");
-  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
-  const [isSendingPasswordReset, setIsSendingPasswordReset] = useState(false);
-  const [isExportingPdf, setIsExportingPdf] = useState(false);
-  const [actionMessage, setActionMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-
   const {
     notificationsEnabled,
     setNotificationsEnabled,
@@ -72,23 +49,58 @@ function SettingsPageContent() {
     permission,
     requestPermission,
   } = useNotification();
+  const [user, setUser] = useState<UserSummary | null>(null);
+  const [soundEnabled, setSoundEnabled] = useState(() => readStoredBoolean("soundEnabled", true));
+  const [emailUpdates, setEmailUpdates] = useState(() => readStoredBoolean("emailUpdates", true));
+  const [weeklyReport, setWeeklyReport] = useState(() => readStoredBoolean("weeklyReport", true));
+  const [privacyProfileVisible, setPrivacyProfileVisible] = useState(() => readStoredBoolean("privacyProfileVisible", true));
+  const [privacyAnalyticsEnabled, setPrivacyAnalyticsEnabled] = useState(() => readStoredBoolean("privacyAnalyticsEnabled", false));
+  const [privacyPersonalizationEnabled, setPrivacyPersonalizationEnabled] = useState(() => readStoredBoolean("privacyPersonalizationEnabled", true));
+  const [privacyShareProgress, setPrivacyShareProgress] = useState(() => readStoredBoolean("privacyShareProgress", false));
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [isClearingAccountData, setIsClearingAccountData] = useState(false);
+  const [activePanel, setActivePanel] = useState<SettingsPanel>("personalize");
+  const [settingsSearch, setSettingsSearch] = useState("");
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [isSendingPasswordReset, setIsSendingPasswordReset] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [actionMessage, setActionMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
       const authUser = data?.user ?? null;
-      setUser(authUser ? { id: authUser.id, email: authUser.email ?? undefined } : null);
-
-      if (!authUser?.id) {
+      if (!authUser) {
+        setUser(null);
         return;
       }
 
+      const nextUser: UserSummary = {
+        id: authUser.id,
+        email: authUser.email ?? undefined,
+      };
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("firstname, lastname")
+        .eq("id", authUser.id)
+        .maybeSingle();
+
+      setUser({
+        ...nextUser,
+        firstname: profile?.firstname ?? null,
+        lastname: profile?.lastname ?? null,
+      });
     });
   }, []);
 
   useEffect(() => {
     const panelParam = searchParams.get("panel");
-    const validPanels: SettingsPanel[] = ["personalize", "reminders", "account", "support"];
+    const validPanels: SettingsPanel[] = ["personalize", "notifications", "account"];
     if (panelParam && validPanels.includes(panelParam as SettingsPanel)) {
       setActivePanel(panelParam as SettingsPanel);
     }
@@ -98,52 +110,64 @@ function SettingsPageContent() {
     theme: theme as Theme,
     colorTheme: colorTheme as ColorTheme,
     notifications: notificationsEnabled,
+    reminderLeadHours,
+    soundEnabled,
+    emailUpdates,
+    weeklyReport,
     privacyProfileVisible,
     privacyAnalyticsEnabled,
     privacyPersonalizationEnabled,
     privacyShareProgress,
-    emailUpdates,
-    weeklyReport,
-    reminderLeadHours,
   });
 
+  // Updates the light/dark theme mode.
   const handleThemeChange = (newTheme: Theme) => setTheme(newTheme);
+  // Updates the accent color theme.
   const handleColorThemeChange = (newColorTheme: ColorTheme) => setColorTheme(newColorTheme);
 
-  const handleNotificationChange = (value: boolean) => {
-    setNotificationsEnabled(value);
+  // Stores whether notification sounds should play.
+  const handleSoundChange = (value: boolean) => {
+    setSoundEnabled(value);
+    localStorage.setItem("soundEnabled", String(value));
   };
 
+  // Stores the email reminder preference.
   const handleEmailUpdatesChange = (value: boolean) => {
     setEmailUpdates(value);
     localStorage.setItem("emailUpdates", String(value));
   };
 
+  // Stores the weekly report preference.
   const handleWeeklyReportChange = (value: boolean) => {
     setWeeklyReport(value);
     localStorage.setItem("weeklyReport", String(value));
   };
 
+  // Stores whether the profile is visible in shared views.
   const handlePrivacyProfileVisibleChange = (value: boolean) => {
     setPrivacyProfileVisible(value);
     localStorage.setItem("privacyProfileVisible", String(value));
   };
 
+  // Stores the analytics opt-in preference.
   const handlePrivacyAnalyticsChange = (value: boolean) => {
     setPrivacyAnalyticsEnabled(value);
     localStorage.setItem("privacyAnalyticsEnabled", String(value));
   };
 
+  // Stores whether personalized insights are enabled.
   const handlePrivacyPersonalizationChange = (value: boolean) => {
     setPrivacyPersonalizationEnabled(value);
     localStorage.setItem("privacyPersonalizationEnabled", String(value));
   };
 
+  // Stores whether planner progress can be shared with integrations.
   const handlePrivacyShareProgressChange = (value: boolean) => {
     setPrivacyShareProgress(value);
     localStorage.setItem("privacyShareProgress", String(value));
   };
 
+  // Sends a password reset email to the signed-in account.
   const handleChangePassword = async () => {
     setActionMessage(null);
     setIsSendingPasswordReset(true);
@@ -180,6 +204,7 @@ function SettingsPageContent() {
     }
   };
 
+  // Opens the schedule in a print-ready tab so the user can save it as PDF.
   const handleExportScheduleAsPdf = () => {
     setActionMessage(null);
     setIsExportingPdf(true);
@@ -190,7 +215,6 @@ function SettingsPageContent() {
       return;
     }
 
-    // Trigger browser print to save schedule page as PDF.
     setTimeout(() => {
       scheduleWindow.focus();
       scheduleWindow.print();
@@ -199,6 +223,7 @@ function SettingsPageContent() {
     }, 1200);
   };
 
+  // Clears planner data and resets saved preferences for the current account.
   const handleClearAccountData = () => {
     setActionMessage(null);
     void (async () => {
@@ -225,7 +250,7 @@ function SettingsPageContent() {
           "soundEnabled",
           "notifications",
           "reminderLeadHours",
-          "notifiedDeadlines",
+          "notificationAlertState",
           "colorTheme",
           "theme",
         ];
@@ -271,10 +296,10 @@ function SettingsPageContent() {
         handleThemeChange("light");
         handleColorThemeChange("emerald");
         setNotificationsEnabled(true);
-        setSoundEnabled(true);
+        setReminderLeadHours(24);
+        handleSoundChange(true);
         handleEmailUpdatesChange(true);
         handleWeeklyReportChange(true);
-        setReminderLeadHours(24);
         handlePrivacyProfileVisibleChange(true);
         handlePrivacyAnalyticsChange(false);
         handlePrivacyPersonalizationChange(true);
@@ -292,6 +317,7 @@ function SettingsPageContent() {
     })();
   };
 
+  // Permanently deletes the current account after confirmation.
   const handleDeleteAccount = async () => {
     setActionMessage(null);
     if (!user?.id) {
@@ -340,25 +366,27 @@ function SettingsPageContent() {
       theme !== savedSettings.theme ||
       colorTheme !== savedSettings.colorTheme ||
       notificationsEnabled !== savedSettings.notifications ||
+      reminderLeadHours !== savedSettings.reminderLeadHours ||
+      soundEnabled !== savedSettings.soundEnabled ||
+      emailUpdates !== savedSettings.emailUpdates ||
+      weeklyReport !== savedSettings.weeklyReport ||
       privacyProfileVisible !== savedSettings.privacyProfileVisible ||
       privacyAnalyticsEnabled !== savedSettings.privacyAnalyticsEnabled ||
       privacyPersonalizationEnabled !== savedSettings.privacyPersonalizationEnabled ||
-      privacyShareProgress !== savedSettings.privacyShareProgress ||
-      emailUpdates !== savedSettings.emailUpdates ||
-      weeklyReport !== savedSettings.weeklyReport ||
-      reminderLeadHours !== savedSettings.reminderLeadHours
+      privacyShareProgress !== savedSettings.privacyShareProgress
     );
   }, [
     theme,
     colorTheme,
     notificationsEnabled,
+    reminderLeadHours,
+    soundEnabled,
+    emailUpdates,
+    weeklyReport,
     privacyProfileVisible,
     privacyAnalyticsEnabled,
     privacyPersonalizationEnabled,
     privacyShareProgress,
-    emailUpdates,
-    weeklyReport,
-    reminderLeadHours,
     savedSettings,
   ]);
 
@@ -370,13 +398,14 @@ function SettingsPageContent() {
         theme: theme as Theme,
         colorTheme: colorTheme as ColorTheme,
         notifications: notificationsEnabled,
+        reminderLeadHours,
+        soundEnabled,
+        emailUpdates,
+        weeklyReport,
         privacyProfileVisible,
         privacyAnalyticsEnabled,
         privacyPersonalizationEnabled,
         privacyShareProgress,
-        emailUpdates,
-        weeklyReport,
-        reminderLeadHours,
       });
       setLastSavedAt(
         new Date().toLocaleTimeString("en-US", {
@@ -392,32 +421,15 @@ function SettingsPageContent() {
     theme,
     colorTheme,
     notificationsEnabled,
+    reminderLeadHours,
+    soundEnabled,
+    emailUpdates,
+    weeklyReport,
     privacyProfileVisible,
     privacyAnalyticsEnabled,
     privacyPersonalizationEnabled,
     privacyShareProgress,
-    emailUpdates,
-    weeklyReport,
-    reminderLeadHours,
   ]);
-
-  const permissionLabel = useMemo(() => {
-    if (permission === "granted") return "Notifications enabled in your browser";
-    if (permission === "denied") return "Blocked by your browser";
-    if (permission === "unsupported") return "Not supported in this browser";
-    return "Not enabled yet";
-  }, [permission]);
-
-  const permissionButtonLabel = useMemo(
-    () => (permission === "granted" ? "Enabled" : "Enable"),
-    [permission]
-  );
-
-  const permissionButtonClass = useMemo(() => {
-    return permission === "granted"
-      ? "text-white"
-      : "bg-slate-200 text-slate-700 hover:bg-slate-300";
-  }, [permission]);
 
   const accentSoftStyle = {
     backgroundColor: "var(--theme-accent-soft)",
@@ -431,18 +443,19 @@ function SettingsPageContent() {
     color: "#ffffff",
   } as const;
 
+  // Restores the defaults for whichever settings section is currently open.
   const handleResetDefaults = () => {
     switch (activePanel) {
       case "personalize":
         handleThemeChange("light");
         handleColorThemeChange("emerald");
         break;
-      case "reminders":
+      case "notifications":
         setNotificationsEnabled(true);
-        setSoundEnabled(true);
+        setReminderLeadHours(24);
+        handleSoundChange(true);
         handleEmailUpdatesChange(true);
         handleWeeklyReportChange(true);
-        setReminderLeadHours(24);
         break;
       case "account":
         handlePrivacyProfileVisibleChange(true);
@@ -464,22 +477,16 @@ function SettingsPageContent() {
         keywords: ["theme", "color", "accent", "appearance", "dark", "light"],
       },
       {
-        id: "reminders",
-        label: "Reminders",
+        id: "notifications",
+        label: "Notifications",
         icon: "notifications",
-        keywords: ["reminder", "notification", "email", "weekly", "report", "alerts", "sound"],
+        keywords: ["push", "sound", "email", "weekly", "reports", "alerts", "reminders"],
       },
       {
         id: "account",
         label: "Account",
         icon: "person",
         keywords: ["account", "privacy", "security", "password", "export", "delete"],
-      },
-      {
-        id: "support",
-        label: "Support",
-        icon: "support_agent",
-        keywords: ["support", "help", "contact", "faq"],
       },
     ],
     []
@@ -504,9 +511,42 @@ function SettingsPageContent() {
   const sectionCardClass =
     "rounded-2xl border border-slate-200/70 dark:border-slate-700/70 bg-white/70 dark:bg-slate-800/55 backdrop-blur-md p-5 md:p-6";
 
+  const profileDisplayName = useMemo(() => {
+    const first = (user?.firstname || "").trim();
+    const last = (user?.lastname || "").trim();
+    const full = `${first} ${last}`.trim();
+    return full || user?.email || "User";
+  }, [user]);
+
+  const profileInitial = useMemo(() => {
+    const first = user?.firstname?.trim()?.[0];
+    const last = user?.lastname?.trim()?.[0];
+    const fromName = `${first || ""}${last || ""}`.trim();
+    if (fromName) return fromName.toUpperCase();
+    return (user?.email?.charAt(0).toUpperCase() || "U");
+  }, [user]);
+
+  if (!isMounted) {
+    return (
+      <div className="min-h-screen relative">
+        <div className="fixed inset-0 bg-focus-light dark:bg-focus-dark bg-cover bg-center -z-20"></div>
+        <div className="p-4 md:p-6">
+          <div className="max-w-6xl mx-auto rounded-3xl border border-slate-200/70 dark:border-slate-700/60 bg-white/85 dark:bg-slate-900/80 backdrop-blur-xl shadow-[0_30px_70px_-35px_rgba(15,23,42,0.6)] overflow-hidden">
+            <div className="px-5 md:px-8 py-5 border-b border-slate-200/70 dark:border-slate-700/70">
+              <div className="h-8 w-40 rounded-lg bg-slate-200/70 dark:bg-slate-700/70" />
+            </div>
+            <div className="p-6">
+              <div className="h-48 rounded-2xl bg-slate-100/80 dark:bg-slate-800/60 animate-pulse" />
+            </div>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen relative">
-      <style>{sliderStyles}</style>
       <div className="fixed inset-0 bg-focus-light dark:bg-focus-dark bg-cover bg-center -z-20"></div>
 
       <div className="p-4 md:p-6">
@@ -520,9 +560,24 @@ function SettingsPageContent() {
                   : "linear-gradient(to right, color-mix(in srgb, var(--theme-accent-soft) 58%, white), rgba(255,255,255,0.72), color-mix(in srgb, var(--theme-accent-soft) 40%, transparent))",
             }}
           >
-            <div className="flex items-center gap-3">
-              <span className="material-symbols-outlined text-slate-700 dark:text-slate-100">settings</span>
-              <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Settings</h1>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-slate-700 dark:text-slate-100">settings</span>
+                <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Settings</h1>
+              </div>
+
+              <Link
+                href="/profile"
+                className="inline-flex items-center gap-3 rounded-xl border border-slate-200/70 dark:border-slate-700/70 bg-white/75 dark:bg-slate-800/60 px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
+              >
+                <div className="w-9 h-9 rounded-full border flex items-center justify-center text-sm font-bold" style={accentSoftStyle}>
+                  {profileInitial}
+                </div>
+                <div className="text-left leading-tight">
+                  <div className="text-sm font-semibold text-slate-900 dark:text-white">{profileDisplayName}</div>
+                  <div className="text-xs text-slate-500 dark:text-slate-300">View Profile</div>
+                </div>
+              </Link>
             </div>
           </div>
 
@@ -584,25 +639,12 @@ function SettingsPageContent() {
                 </div>
               )}
 
-              <div className="flex items-center gap-3 rounded-2xl border border-slate-200/70 dark:border-slate-700/70 bg-white/70 dark:bg-slate-800/55 px-4 py-3">
-                <div
-                  className="w-11 h-11 rounded-full border flex items-center justify-center text-lg font-bold"
-                  style={accentSoftStyle}
-                >
-                  {user?.email ? user.email.charAt(0).toUpperCase() : "U"}
-                </div>
-                <div>
-                  <div className="font-semibold text-slate-900 dark:text-white">{user?.email || "User"}</div>
-                  <div className="text-xs text-slate-500 dark:text-slate-300">Customize your 11Planner experience</div>
-                </div>
-              </div>
-
               {activePanel === "personalize" && (
                 <section className={sectionCardClass}>
                   <div className="text-xl font-bold text-slate-900 dark:text-white mb-1">Personalize</div>
                   <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Customize the look and feel of your planner.</p>
 
-                    <div className="mb-5">
+                  <div className="mb-5">
                     <p className="text-xs uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400 mb-2">Theme Mode</p>
                     <div className="flex gap-2.5">
                       {(["light", "dark"] as Theme[]).map((mode) => (
@@ -640,119 +682,6 @@ function SettingsPageContent() {
                           {option}
                         </button>
                       ))}
-                    </div>
-                  </div>
-                </section>
-              )}
-
-              {activePanel === "reminders" && (
-                <section className={sectionCardClass}>
-                  <div className="text-xl font-bold text-slate-900 dark:text-white mb-1">Reminders</div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Control reminder channels and timing.</p>
-
-                  <div className="mb-4 rounded-xl border border-slate-200/70 dark:border-slate-700/70 bg-white/70 dark:bg-slate-800/55 p-3">
-                    <p className="text-sm font-semibold text-slate-900 dark:text-white">Delivery channels</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-300 mt-1">
-                      Browser + email + weekly summary can be combined for better deadline coverage.
-                    </p>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-slate-900 dark:text-white">Push Notifications</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">Receive alerts about upcoming deadlines</p>
-                      </div>
-                      <button
-                        onClick={() => handleNotificationChange(!notificationsEnabled)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${notificationsEnabled ? "" : "bg-slate-300 dark:bg-slate-600"}`}
-                        style={notificationsEnabled ? { backgroundColor: "var(--theme-accent-strong)" } : undefined}
-                      >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${notificationsEnabled ? "translate-x-6" : "translate-x-1"}`} />
-                      </button>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-slate-900 dark:text-white">Notification Sound</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">Play a sound with reminders</p>
-                      </div>
-                      <button
-                        onClick={() => setSoundEnabled(!soundEnabled)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${soundEnabled ? "" : "bg-slate-300 dark:bg-slate-600"}`}
-                        style={soundEnabled ? { backgroundColor: "var(--theme-accent-strong)" } : undefined}
-                      >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${soundEnabled ? "translate-x-6" : "translate-x-1"}`} />
-                      </button>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-slate-900 dark:text-white">Browser Permission</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">{isMounted ? permissionLabel : "Loading..."}</p>
-                      </div>
-                      <button
-                        onClick={requestPermission}
-                        disabled={!isMounted || permission === "denied" || permission === "unsupported"}
-                        className={`px-4 py-2 rounded-lg text-xs font-semibold transition ${permissionButtonClass}`}
-                        style={isMounted && permission === "granted" ? { backgroundColor: "var(--theme-accent-strong)" } : undefined}
-                      >
-                        {isMounted ? permissionButtonLabel : "Enable"}
-                      </button>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">Reminder lead time (hours)</label>
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="range"
-                          min="1"
-                          max="168"
-                          value={reminderLeadHours}
-                          onChange={(e) => setReminderLeadHours(Math.min(168, Math.max(1, parseInt(e.target.value, 10) || 1)))}
-                          className="flex-1 h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer"
-                        />
-                        <input
-                          type="number"
-                          min={1}
-                          max={168}
-                          value={reminderLeadHours}
-                          onChange={(e) => setReminderLeadHours(Math.min(168, Math.max(1, parseInt(e.target.value, 10) || 1)))}
-                          className="w-16 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1.5 text-right text-slate-900 dark:text-white"
-                        />
-                        <span className="text-xs text-slate-500 dark:text-slate-400">hours</span>
-                      </div>
-                      <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                        How far in advance to remind about deadlines
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-slate-900 dark:text-white">Email Updates</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">Get email reminders for important tasks</p>
-                      </div>
-                      <button
-                        onClick={() => handleEmailUpdatesChange(!emailUpdates)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${emailUpdates ? "" : "bg-slate-300 dark:bg-slate-600"}`}
-                        style={emailUpdates ? { backgroundColor: "var(--theme-accent-strong)" } : undefined}
-                      >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${emailUpdates ? "translate-x-6" : "translate-x-1"}`} />
-                      </button>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-slate-900 dark:text-white">Weekly Report</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">Receive a summary of your weekly progress</p>
-                      </div>
-                      <button
-                        onClick={() => handleWeeklyReportChange(!weeklyReport)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${weeklyReport ? "" : "bg-slate-300 dark:bg-slate-600"}`}
-                        style={weeklyReport ? { backgroundColor: "var(--theme-accent-strong)" } : undefined}
-                      >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${weeklyReport ? "translate-x-6" : "translate-x-1"}`} />
-                      </button>
                     </div>
                   </div>
                 </section>
@@ -867,14 +796,120 @@ function SettingsPageContent() {
                 </section>
               )}
 
-              {activePanel === "support" && (
+              {activePanel === "notifications" && (
                 <section className={sectionCardClass}>
-                  <div className="text-xl font-bold text-slate-900 dark:text-white mb-1">Support</div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Need help? Reach support resources quickly.</p>
-                  <Link href="/support" className="flex items-center justify-between px-4 py-3 rounded-xl border border-slate-200/70 dark:border-slate-700/70 bg-white/70 dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition">
-                    <span className="flex items-center gap-2 text-slate-800 dark:text-slate-100"><span className="material-symbols-outlined text-base">support_agent</span>Open Support Page</span>
-                    <span className="material-symbols-outlined text-base text-slate-400">chevron_right</span>
-                  </Link>
+                  <div className="text-xl font-bold text-slate-900 dark:text-white mb-1">Notifications</div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Control alert channels and reminder timing for your tasks and study blocks.</p>
+
+                  <div className="mb-4 rounded-xl border border-slate-200/70 dark:border-slate-700/70 bg-white/70 dark:bg-slate-800/55 p-3">
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">Delivery channels</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-300 mt-1">
+                      Notifications feed on the Notifications page will reflect these settings.
+                    </p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-slate-900 dark:text-white">Push Notifications</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Receive alerts about upcoming deadlines.</p>
+                      </div>
+                      <button
+                        onClick={() => setNotificationsEnabled(!notificationsEnabled)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${notificationsEnabled ? "" : "bg-slate-300 dark:bg-slate-600"}`}
+                        style={notificationsEnabled ? { backgroundColor: "var(--theme-accent-strong)" } : undefined}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${notificationsEnabled ? "translate-x-6" : "translate-x-1"}`} />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-slate-900 dark:text-white">Notification Sound</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Play a sound with reminders.</p>
+                      </div>
+                      <button
+                        onClick={() => handleSoundChange(!soundEnabled)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${soundEnabled ? "" : "bg-slate-300 dark:bg-slate-600"}`}
+                        style={soundEnabled ? { backgroundColor: "var(--theme-accent-strong)" } : undefined}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${soundEnabled ? "translate-x-6" : "translate-x-1"}`} />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-slate-900 dark:text-white">Browser Permission</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          {permission === "granted"
+                            ? "Notifications enabled in your browser"
+                            : permission === "denied"
+                            ? "Blocked by your browser"
+                            : permission === "unsupported"
+                            ? "Not supported in this browser"
+                            : "Not enabled yet"}
+                        </p>
+                      </div>
+                      <button
+                        onClick={requestPermission}
+                        disabled={permission === "denied" || permission === "unsupported"}
+                        className="px-4 py-2 rounded-lg text-xs font-semibold transition bg-slate-200 text-slate-700 hover:bg-slate-300 disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {permission === "granted" ? "Enabled" : "Enable"}
+                      </button>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">Reminder lead time (hours)</label>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="range"
+                          min="1"
+                          max="168"
+                          value={reminderLeadHours}
+                          onChange={(e) => setReminderLeadHours(Math.min(168, Math.max(1, parseInt(e.target.value, 10) || 1)))}
+                          className="flex-1 h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer"
+                        />
+                        <input
+                          type="number"
+                          min={1}
+                          max={168}
+                          value={reminderLeadHours}
+                          onChange={(e) => setReminderLeadHours(Math.min(168, Math.max(1, parseInt(e.target.value, 10) || 1)))}
+                          className="w-16 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1.5 text-right text-slate-900 dark:text-white"
+                        />
+                        <span className="text-xs text-slate-500 dark:text-slate-400">hours</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-slate-900 dark:text-white">Email Updates</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Store preference for email reminders on important tasks.</p>
+                      </div>
+                      <button
+                        onClick={() => handleEmailUpdatesChange(!emailUpdates)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${emailUpdates ? "" : "bg-slate-300 dark:bg-slate-600"}`}
+                        style={emailUpdates ? { backgroundColor: "var(--theme-accent-strong)" } : undefined}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${emailUpdates ? "translate-x-6" : "translate-x-1"}`} />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-slate-900 dark:text-white">Weekly Report</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Store preference for weekly study summaries.</p>
+                      </div>
+                      <button
+                        onClick={() => handleWeeklyReportChange(!weeklyReport)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${weeklyReport ? "" : "bg-slate-300 dark:bg-slate-600"}`}
+                        style={weeklyReport ? { backgroundColor: "var(--theme-accent-strong)" } : undefined}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${weeklyReport ? "translate-x-6" : "translate-x-1"}`} />
+                      </button>
+                    </div>
+                  </div>
                 </section>
               )}
 

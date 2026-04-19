@@ -3,7 +3,6 @@
 import { ReactNode, useEffect, useState } from "react";
 import { usePlanner } from "@/contexts/PlannerContext";
 import { taskAPI } from "@/lib/api";
-import Link from "next/link";
 import Timer from "@/components/Dashboard/Timer";
 import StatCard from "@/components/Dashboard/StatCard";
 
@@ -17,15 +16,6 @@ type YouTubeTrack = {
   searchQuery: string;
 };
 
-type AppleTrack = {
-  trackName: string;
-  artistName: string;
-  previewUrl: string;
-  trackViewUrl: string;
-  artworkUrl100?: string;
-};
-
-type AppleMood = "lofi-beats" | "deep-focus" | "ambient-study";
 type YouTubeMood = "lofi" | "synthwave" | "coding";
 
 type FocusDashboardPanelProps = {
@@ -73,13 +63,7 @@ export default function FocusDashboardPanel({
   const [isMusicOpen, setIsMusicOpen] = useState(false);
   const [spotifyConnected, setSpotifyConnected] = useState(false);
   const [spotifyConnecting, setSpotifyConnecting] = useState(false);
-  const [spotifyAccessToken, setSpotifyAccessToken] = useState<string | null>(null);
   const [connectMessage, setConnectMessage] = useState("");
-  const [appleTracks, setAppleTracks] = useState<AppleTrack[]>([]);
-  const [activeAppleIndex, setActiveAppleIndex] = useState(0);
-  const [appleLoading, setAppleLoading] = useState(false);
-  const [appleError, setAppleError] = useState("");
-  const [appleMood, setAppleMood] = useState<AppleMood>("lofi-beats");
   const [youtubeMood, setYoutubeMood] = useState<YouTubeMood>("lofi");
   const [privacyPersonalizationEnabled, setPrivacyPersonalizationEnabled] = useState(true);
   const [updatingTaskIds, setUpdatingTaskIds] = useState<Set<string>>(new Set());
@@ -109,21 +93,8 @@ export default function FocusDashboardPanel({
   const [activeYoutubeIndex, setActiveYoutubeIndex] = useState(0);
   const [isYoutubePlaying, setIsYoutubePlaying] = useState(false);
 
-  const appleMoodQueryMap: Record<AppleMood, string> = {
-    "lofi-beats": "lofi beats",
-    "deep-focus": "deep focus instrumental",
-    "ambient-study": "ambient study",
-  };
-
-  const appleMoodLabelMap: Record<AppleMood, string> = {
-    "lofi-beats": "Lofi Beats",
-    "deep-focus": "Deep Focus",
-    "ambient-study": "Ambient Study",
-  };
-
   const providerSiteMap: Record<string, string> = {
     spotify: "https://accounts.spotify.com/en/login",
-    apple: "https://music.apple.com/",
     youtube: "https://music.youtube.com/",
   };
 
@@ -200,16 +171,6 @@ export default function FocusDashboardPanel({
     }
   };
 
-  const connectAppleInPopup = () => {
-    setConnectMessage("");
-    const popup = window.open("https://music.apple.com/", "apple-connect", "popup=yes,width=520,height=760");
-    if (!popup) {
-      setConnectMessage("Popup was blocked. Allow popups and try again.");
-      return;
-    }
-    popup.focus();
-  };
-
   const handleProviderConnect = () => {
     if (musicProvider === "spotify") {
       void startSpotifyPopupConnect();
@@ -217,12 +178,6 @@ export default function FocusDashboardPanel({
     }
     window.open(providerSiteMap.youtube, "youtube-connect", "popup=yes,width=520,height=760");
   };
-
-  useEffect(() => {
-    if (musicProvider === "apple") {
-      setMusicProvider("spotify");
-    }
-  }, [musicProvider]);
 
   useEffect(() => {
     if (musicProvider !== "spotify" && connectMessage) {
@@ -254,53 +209,6 @@ export default function FocusDashboardPanel({
     if (typeof window === "undefined") return;
     setPrivacyPersonalizationEnabled(localStorage.getItem("privacyPersonalizationEnabled") !== "false");
   }, []);
-
-  useEffect(() => {
-    if (musicProvider !== "apple") {
-      return;
-    }
-
-    let isMounted = true;
-    const loadApplePreviews = async () => {
-      setAppleLoading(true);
-      setAppleError("");
-      try {
-        const query = appleMoodQueryMap[appleMood];
-        const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&entity=song&limit=8`);
-        const data = await response.json();
-        const tracks = (data?.results || [])
-          .filter((item: AppleTrack) => item.previewUrl && item.trackViewUrl)
-          .map((item: AppleTrack) => ({
-            trackName: item.trackName,
-            artistName: item.artistName,
-            previewUrl: item.previewUrl,
-            trackViewUrl: item.trackViewUrl,
-            artworkUrl100: item.artworkUrl100,
-          })) as AppleTrack[];
-
-        if (isMounted) {
-          setAppleTracks(tracks);
-          setActiveAppleIndex(0);
-          if (tracks.length === 0) {
-            setAppleError("No preview tracks found right now.");
-          }
-        }
-      } catch {
-        if (isMounted) {
-          setAppleError("Could not load Apple previews. Use Open Apple Music instead.");
-        }
-      } finally {
-        if (isMounted) {
-          setAppleLoading(false);
-        }
-      }
-    };
-
-    void loadApplePreviews();
-    return () => {
-      isMounted = false;
-    };
-  }, [musicProvider, appleMood]);
 
   useEffect(() => {
     const indexMap: Record<YouTubeMood, number> = {
@@ -361,7 +269,6 @@ export default function FocusDashboardPanel({
         }
 
         const tokenData = await tokenRes.json();
-        setSpotifyAccessToken(tokenData.access_token ?? null);
         setSpotifyConnected(Boolean(tokenData.access_token));
         setConnectMessage(tokenData.access_token ? "Spotify connected." : "Spotify token missing.");
       } catch {
@@ -477,10 +384,8 @@ export default function FocusDashboardPanel({
     return deadline < now && !task.completed;
   });
 
-  const activeSpotifyPlaylistUrl = `https://open.spotify.com/playlist/${spotifyPlaylist}`;
   const isConnectedForActiveProvider = musicProvider === "spotify" ? spotifyConnected : false;
   const activeYoutubeTrack = youtubeTracks[activeYoutubeIndex];
-  const activeAppleTrack = appleTracks[activeAppleIndex];
 
   const youtubeEmbedSrc = `https://www.youtube.com/embed/${activeYoutubeTrack.youtubeId}?autoplay=${isYoutubePlaying ? 1 : 0}&controls=1&rel=0&modestbranding=1`;
   const activeYouTubeMusicUrl = `https://music.youtube.com/search?q=${encodeURIComponent(activeYoutubeTrack.searchQuery)}`;
@@ -521,28 +426,46 @@ export default function FocusDashboardPanel({
 
           {/* Music Player Panel */}
           <div className={`bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-3xl p-6 shadow-sm border border-white/40 dark:border-slate-700/40 mt-2 transition-[min-height] duration-200 ${isMusicOpen ? "" : "min-h-[110px]"}`}>
-            <div className={`mb-3 items-center px-2 py-2 ${isMusicOpen ? "grid grid-cols-[auto_1fr_auto] gap-2" : "flex justify-between"}`}>
-              <h3 className="text-sm font-semibold tracking-normal text-slate-500 dark:text-slate-300 flex items-center gap-2">
-                <span className="material-symbols-outlined text-sm">headphones</span>
-                Focus Music
-              </h3>
+            <div className="mb-3 px-2 py-2">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="shrink-0 text-sm font-semibold tracking-normal text-slate-500 dark:text-slate-300 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-sm">headphones</span>
+                  Focus Music
+                </h3>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMusicOpen((prev) => {
+                      const next = !prev;
+                      if (next) {
+                        setMusicProvider("spotify");
+                      }
+                      return next;
+                    });
+                  }}
+                  className="h-7 min-w-[64px] shrink-0 rounded-full border border-slate-300 px-3 text-[11px] font-semibold text-slate-600 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                >
+                  {isMusicOpen ? "Hide" : "Show"}
+                </button>
+              </div>
 
               {isMusicOpen ? (
-                <div className="flex items-center justify-center gap-2">
+                <div className="mt-2 flex flex-wrap items-center gap-2">
                   {musicProvider === 'spotify' && (
-                    <select 
-                      className="text-xs bg-transparent border-none text-slate-500 dark:text-slate-400 focus:ring-0 cursor-pointer outline-none font-medium p-0"
+                    <select
+                      className="h-7 rounded-full border border-slate-300 bg-white px-3 text-xs font-medium text-slate-600 outline-none transition hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
                       value={spotifyPlaylist}
                       onChange={(e) => setSpotifyPlaylist(e.target.value)}
                     >
                       <option value="0vvXsWCC9xrXsKd4FyS8kM">Lofi Beats</option>
                       <option value="37i9dQZF1DWZeKCadgRdKQ">Deep Focus</option>
-                      <option value="37i9dQZF1DX8CwnimMFF76">Ambient</option>
+                      <option value="37i9dQZF1DXdf43Md5h6cE">Ambient</option>
                     </select>
                   )}
                   {musicProvider === 'youtube' && (
                     <select
-                      className="text-xs bg-transparent border-none text-slate-500 dark:text-slate-400 focus:ring-0 cursor-pointer outline-none font-medium p-0"
+                      className="h-7 rounded-full border border-slate-300 bg-white px-3 text-xs font-medium text-slate-600 outline-none transition hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
                       value={youtubeMood}
                       onChange={(e) => setYoutubeMood(e.target.value as YouTubeMood)}
                     >
@@ -551,8 +474,8 @@ export default function FocusDashboardPanel({
                       <option value="coding">Coding Mix</option>
                     </select>
                   )}
-                  <select 
-                    className="text-xs bg-slate-100 dark:bg-slate-700 rounded-md px-2 py-1 border-none text-slate-700 dark:text-slate-200 focus:ring-0 cursor-pointer outline-none font-bold"
+                  <select
+                    className="h-7 rounded-full border border-slate-300 bg-slate-100 px-3 text-xs font-bold text-slate-700 outline-none transition hover:bg-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
                     value={musicProvider}
                     onChange={(e) => setMusicProvider(e.target.value)}
                   >
@@ -561,22 +484,6 @@ export default function FocusDashboardPanel({
                   </select>
                 </div>
               ) : null}
-
-              <button
-                type="button"
-                onClick={() => {
-                  setIsMusicOpen((prev) => {
-                    const next = !prev;
-                    if (next) {
-                      setMusicProvider("spotify");
-                    }
-                    return next;
-                  });
-                }}
-                className="h-7 min-w-[64px] rounded-full border border-slate-300 px-3 text-[11px] font-semibold text-slate-600 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
-              >
-                {isMusicOpen ? "Hide" : "Show"}
-              </button>
             </div>
 
             {isMusicOpen && musicProvider === "spotify" && connectMessage ? (
@@ -625,107 +532,6 @@ export default function FocusDashboardPanel({
                       className="inline-flex items-center rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700"
                     >
                       Open Spotify
-                    </a>
-                  </div>
-                </div>
-              )}
-              {musicProvider === 'apple' && (
-                <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-b from-[#f7f8fb] via-[#f4f2f8] to-[#fbecef] p-4 shadow-sm dark:border-slate-700 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-                  <div className="mb-3 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-black text-xs font-bold text-white">A</span>
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Apple Music</p>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400">Listen Now · {appleMoodLabelMap[appleMood]}</p>
-                      </div>
-                    </div>
-                    <span className="rounded-full border border-slate-300 bg-white/80 px-2.5 py-1 text-[10px] font-medium text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                      Preview
-                    </span>
-                  </div>
-
-                  <div className="mb-3 flex flex-wrap gap-1.5">
-                    <span className="rounded-full bg-white/80 px-2.5 py-1 text-[10px] font-semibold text-slate-700 shadow-sm dark:bg-slate-800 dark:text-slate-200">Focus</span>
-                    <span className="rounded-full bg-white/80 px-2.5 py-1 text-[10px] font-semibold text-slate-700 shadow-sm dark:bg-slate-800 dark:text-slate-200">Chill</span>
-                    <span className="rounded-full bg-white/80 px-2.5 py-1 text-[10px] font-semibold text-slate-700 shadow-sm dark:bg-slate-800 dark:text-slate-200">Instrumental</span>
-                  </div>
-
-                  {appleLoading ? (
-                    <div className="mb-4 rounded-xl border border-white/80 bg-white/80 p-4 text-xs text-slate-700 shadow-sm dark:border-slate-600 dark:bg-slate-900/40 dark:text-slate-300">
-                      Loading Apple previews...
-                    </div>
-                  ) : null}
-
-                  {!appleLoading && activeAppleTrack ? (
-                    <div className="mb-4 rounded-xl border border-white/80 bg-white/85 p-3 shadow-sm dark:border-slate-600 dark:bg-slate-900/50">
-                      <div className="mb-3 flex items-center gap-3">
-                        {activeAppleTrack.artworkUrl100 ? (
-                          <img
-                            src={activeAppleTrack.artworkUrl100}
-                            alt={activeAppleTrack.trackName}
-                            className="h-12 w-12 rounded-lg object-cover ring-1 ring-black/5"
-                          />
-                        ) : null}
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">{activeAppleTrack.trackName}</p>
-                          <p className="truncate text-xs text-slate-600 dark:text-slate-300">{activeAppleTrack.artistName}</p>
-                        </div>
-                      </div>
-                      <audio
-                        key={activeAppleTrack.previewUrl}
-                        controls
-                        preload="none"
-                        className="w-full"
-                        src={activeAppleTrack.previewUrl}
-                      />
-                    </div>
-                  ) : null}
-
-                  {!appleLoading && appleTracks.length > 0 ? (
-                    <div className="mb-4 min-h-0 flex-1 space-y-1 overflow-y-auto rounded-xl border border-white/80 bg-white/85 p-2 shadow-sm dark:border-slate-600 dark:bg-slate-900/50">
-                      {appleTracks.map((track, idx) => (
-                        <button
-                          key={`${track.trackName}-${track.artistName}-${idx}`}
-                          type="button"
-                          onClick={() => setActiveAppleIndex(idx)}
-                          className={`flex w-full items-center justify-between rounded-md px-2 py-1 text-left text-xs transition ${idx === activeAppleIndex ? "bg-rose-100 text-slate-900 dark:bg-slate-700 dark:text-white" : "hover:bg-slate-100 dark:hover:bg-slate-800"}`}
-                        >
-                          <span className="truncate">{track.trackName}</span>
-                          <span className="ml-2 truncate text-slate-500">{track.artistName}</span>
-                        </button>
-                      ))}
-                    </div>
-                  ) : null}
-
-                  {appleError ? (
-                    <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">
-                      {appleError}
-                    </div>
-                  ) : null}
-
-                  <div className="mb-4 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={connectAppleInPopup}
-                      className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white/80 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-white dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-                    >
-                      Connect Apple
-                    </button>
-                    <a
-                      href={activeAppleTrack?.trackViewUrl || `https://music.apple.com/us/search?term=${encodeURIComponent(appleMoodQueryMap[appleMood])}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-2 rounded-full bg-black px-4 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
-                    >
-                      Open Apple Music
-                    </a>
-                    <a
-                      href={`https://music.apple.com/us/search?term=${encodeURIComponent(appleMoodQueryMap[appleMood])}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white/80 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-white dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-                    >
-                      Open In Browser
                     </a>
                   </div>
                 </div>

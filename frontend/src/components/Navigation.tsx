@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useTheme } from "@/contexts/ThemeContext";
 
 export default function Navigation() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -14,7 +13,6 @@ export default function Navigation() {
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   const [userInitials, setUserInitials] = useState("");
   const router = useRouter();
-  const { setTheme, setColorTheme } = useTheme();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -40,19 +38,11 @@ export default function Navigation() {
   }, []);
 
   async function logout() {
-    try {
-      localStorage.setItem("colorTheme", "emerald");
-      localStorage.removeItem("theme");
-      document.documentElement.setAttribute("data-theme", "emerald");
-      if (document.body) {
-        document.body.setAttribute("data-theme", "emerald");
-      }
-      setTheme("light");
-      setColorTheme("emerald");
-    } catch {
-      // Ignore client storage failures and continue sign out.
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error("Failed to sign out:", error.message);
+      return;
     }
-    await supabase.auth.signOut();
     router.push("/auth");
   }
 
@@ -215,12 +205,12 @@ export default function Navigation() {
                         Settings
                       </Link>
                       <Link
-                        href="/settings?panel=reminders"
+                        href="/notifications"
                         onClick={() => setIsUserDropdownOpen(false)}
                         className="flex items-center gap-3 px-5 py-3 text-slate-800 dark:text-slate-100 hover:bg-emerald-50 dark:hover:bg-slate-700/60 text-base font-medium transition group"
                       >
                         <span className="material-symbols-outlined text-xl text-emerald-500 group-hover:scale-110 transition">notifications</span>
-                        Notifications & Reminders
+                        Notifications
                       </Link>
                     </div>
                     <div className="border-t border-slate-100 dark:border-slate-700">
@@ -355,14 +345,14 @@ export default function Navigation() {
                       Settings
                     </Link>
                     <Link
-                      href="/settings?panel=reminders"
-                      className={`block font-medium py-2 px-3 rounded transition ${pathname.startsWith("/settings")
+                      href="/notifications"
+                      className={`block font-medium py-2 px-3 rounded transition ${pathname.startsWith("/notifications")
                         ? "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20"
                         : "text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-700/30"
                         }`}
                       onClick={() => setIsMenuOpen(false)}
                     >
-                      Notifications & Reminders
+                      Notifications
                     </Link>
                     <button
                       onClick={() => {

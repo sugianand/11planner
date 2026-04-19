@@ -34,6 +34,7 @@ class ScheduleGenerateRequest(BaseModel):
 _supabase_client: Client | None = None
 
 
+# Lazily initializes and returns a shared Supabase client.
 def get_supabase() -> Client:
     global _supabase_client
     if _supabase_client is not None:
@@ -59,6 +60,7 @@ def get_supabase() -> Client:
     return _supabase_client
 
 
+# Parses datetime values from storage and normalizes timezone handling.
 def parse_dt(value: str | datetime) -> datetime:
     if isinstance(value, datetime):
         dt = value
@@ -91,6 +93,7 @@ def parse_dt(value: str | datetime) -> datetime:
     return dt
 
 
+# Maps profile worktime preference to a daily study window.
 def work_window_from_profile(worktime_value: str | None) -> tuple[time, time]:
     """
     Returns work window as tuple of (start_time, end_time).
@@ -110,6 +113,7 @@ def work_window_from_profile(worktime_value: str | None) -> tuple[time, time]:
     return time(9, 0), time(17, 0)
 
 
+# Maps workstyle preference to the default focus block duration.
 def focus_hours_from_workstyle(workstyle: str | None) -> float:
     value = (workstyle or "").strip().lower()
     if value == "short":
@@ -123,6 +127,7 @@ def focus_hours_from_workstyle(workstyle: str | None) -> float:
     return 2.0
 
 
+# Parses and clamps daily study limit to a safe scheduling range.
 def parse_study_limit(value: object, fallback: float = 4.0) -> float:
     try:
         numeric = float(value)
@@ -131,6 +136,7 @@ def parse_study_limit(value: object, fallback: float = 4.0) -> float:
     return max(1.0, min(12.0, numeric))
 
 
+# Converts local datetimes to UTC ISO strings for persistence.
 def to_storage_iso(dt: datetime) -> str:
     if dt.tzinfo is None:
         local_tz = datetime.now().astimezone().tzinfo
@@ -138,6 +144,7 @@ def to_storage_iso(dt: datetime) -> str:
     return dt.astimezone(timezone.utc).isoformat()
 
 
+# Maps stored schedule block rows to API response objects.
 def map_schedule_block_row(row: dict) -> dict:
     starts_at = parse_dt(row["starts_at"])
     ends_at = parse_dt(row["ends_at"])
@@ -155,6 +162,7 @@ def map_schedule_block_row(row: dict) -> dict:
     }
 
 
+# Converts a day label into a Python weekday index.
 def parse_course_weekday(day: str) -> int | None:
     normalized = (day or "").strip().lower()
     mapping = {
@@ -169,6 +177,7 @@ def parse_course_weekday(day: str) -> int | None:
     return mapping.get(normalized)
 
 
+# Parses compact or delimited day strings into weekday indexes.
 def parse_course_weekdays(days_value: object) -> set[int]:
     if isinstance(days_value, list):
         raw_tokens = [str(item) for item in days_value]
@@ -201,6 +210,7 @@ def parse_course_weekdays(days_value: object) -> set[int]:
     }
 
 
+# Parses course clock strings into time objects.
 def parse_clock(value: str | None) -> time | None:
     if not value:
         return None
@@ -217,6 +227,7 @@ def parse_clock(value: str | None) -> time | None:
     return None
 
 
+# Builds class busy blocks inside the active planning window.
 def build_course_busy_blocks(course_rows: list[dict], window_start: datetime, window_end: datetime) -> list[BusyBlock]:
     busy_blocks: list[BusyBlock] = []
     start_day: date = window_start.date()
@@ -256,6 +267,7 @@ def build_course_busy_blocks(course_rows: list[dict], window_start: datetime, wi
 openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY")) if (OpenAI and os.getenv("OPENAI_API_KEY")) else None
 
 
+# Uses AI to suggest task ordering, block sizes, and preferred days.
 def ai__optimizer(context: dict) -> dict:
     if openai_client is None:
         return {"task_order": [], "block_minutes_override": {}, "preferred_days": {}}
@@ -339,6 +351,7 @@ def ai__optimizer(context: dict) -> dict:
 
 # ========== TASK ENDPOINTS ==========
 # Tasks are handled via the schedule generation endpoints below
+# Estimates task duration and saves the AI-derived hours.
 @router.post("/tasks/{task_id}/estimate-time")
 async def estimate_task_time(task_id: str, request: TaskEstimateRequest):
     try:
@@ -389,6 +402,7 @@ async def estimate_task_time(task_id: str, request: TaskEstimateRequest):
 
 # ========== SCHEDULE GENERATION ENDPOINTS ==========
 
+# Generates and persists a study schedule for all pending user tasks.
 @router.post("/schedule/generate/{user_id}")
 async def generate_schedule(user_id: str, payload: ScheduleGenerateRequest | None = None):
     """
@@ -591,6 +605,7 @@ async def generate_schedule(user_id: str, payload: ScheduleGenerateRequest | Non
         print(error_msg)
         raise HTTPException(status_code=500, detail=error_msg)
 
+    # Returns summary metrics for a user's current schedule coverage.
 @router.get("/schedule/stats/{user_id}")
 async def get_schedule_stats(user_id: str):
     """Get statistics about user's schedule"""

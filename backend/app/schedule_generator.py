@@ -41,6 +41,7 @@ class ScheduleGenerator:
         self.break_minutes = 15
         self.between_block_buffer_minutes = 5  # 5-minute buffer between generated blocks to prevent overwhelm
 
+    # Normalizes workday labels for consistent comparisons.
     def normalized_day_set(self, days: Optional[List[str]]) -> set[str]:
         return {
             (day or "").strip().lower()
@@ -48,29 +49,36 @@ class ScheduleGenerator:
             if (day or "").strip()
         }
 
+    # Returns the full weekday name for a datetime value.
     def day_name(self, dt: datetime) -> str:
         return dt.strftime("%A") # returns day names like mon, tues, etc.
     
+    # Checks whether a date falls on a preferred workday.
     def is_workday(self, dt:datetime, pref: Preferences) -> bool:
         workdays = self.normalized_day_set(pref.workdays)
         if not workdays:
             return True
         return self.day_name(dt).lower() in workdays
     
+    # Replaces the time portion of a datetime.
     def set_time(self, dt: datetime, t: time) -> datetime:
         return dt.replace(hour=t.hour, minute =t.minute, second = 0, microsecond=0)
     
+    # Moves a datetime to the next valid workday start.
     def move_to_next_work_start(self, dt: datetime, pref: Preferences) -> datetime:
         while not self.is_workday(dt, pref):
             dt += timedelta(days=1)
         return self.set_time(dt, pref.work_start)
     
+    # Returns the workday end datetime for the same date.
     def work_window_end(self, dt: datetime, pref: Preferences) -> datetime:
         return self.set_time(dt, pref.work_end)
     
+    # Checks whether two intervals overlap.
     def overlaps(self, a_start: datetime, a_end: datetime, b_start: datetime, b_end: datetime) -> bool:
         return a_start < b_end and b_start < a_end #checks if time ranges overlap
     
+    # Tests whether a candidate interval collides with busy blocks.
     def overlaps_busy(self, start: datetime, end: datetime, busy_blocks: List[BusyBlock]) -> bool:
         for block in busy_blocks:
             if self.overlaps(start, end, block.start, block.end):
@@ -78,6 +86,7 @@ class ScheduleGenerator:
         return False
     #checks to see if proposed schedule block overlaps with any busy blocks 
 
+    # Advances the cursor until it is no longer inside a busy block.
     def skip_if_busy(self, dt: datetime, busy_blocks: List[BusyBlock]) -> datetime:
         moved = True
         while moved:
@@ -97,6 +106,7 @@ class ScheduleGenerator:
         delta = (5 - remainder) if remainder != 0 else 5
         return (dt + timedelta(minutes=delta)).replace(second=0, microsecond=0)
 
+    # Moves to the next workday and resets time to work start.
     def next_day_start(self, dt: datetime, pref: Preferences) -> datetime:
         dt += timedelta(days=1)
         return self.move_to_next_work_start(dt, pref)
@@ -128,6 +138,7 @@ class ScheduleGenerator:
             assignment_plan=pref.assignment_plan,
         )
 
+    # Estimates schedulable capacity before a deadline under current preferences.
     def estimated_capacity_hours_before_deadline(
         self,
         start_dt: datetime,
@@ -169,6 +180,7 @@ class ScheduleGenerator:
         return min(self.focus_block_hours, hours_remaining)
  
 
+            # Moves scheduling cursor to a preferred day when provided by AI/user preferences.
     def move_to_preferred_day(
             self,
             dt: datetime,
@@ -191,6 +203,7 @@ class ScheduleGenerator:
         return dt
 
 
+    # Reorders tasks using AI-provided ordering while preserving unknown tasks.
     def apply_ai_task_order(
             self,
             sorted_tasks: List[Task],
@@ -216,6 +229,7 @@ class ScheduleGenerator:
 
 
 
+    # Generates study blocks for pending tasks while respecting constraints and preferences.
     def generate_schedule(
         self,
         tasks: List[Task],

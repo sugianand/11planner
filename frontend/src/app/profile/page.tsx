@@ -277,8 +277,6 @@ export default function ProfilePage() {
   return (
     <div className="relative min-h-screen overflow-hidden flex flex-col">
       <div className="fixed inset-0 bg-focus-light dark:bg-focus-dark bg-cover bg-center -z-30" />
-      <div className="pointer-events-none fixed inset-0 -z-20 bg-[radial-gradient(circle_at_20%_15%,var(--theme-accent-soft),transparent_40%),radial-gradient(circle_at_80%_20%,rgba(56,189,248,0.22),transparent_35%),radial-gradient(circle_at_50%_90%,rgba(99,102,241,0.18),transparent_40%)]" />
-      <div className="pointer-events-none fixed inset-0 -z-10 bg-gradient-to-b from-white/25 via-transparent to-white/40 dark:from-slate-900/20 dark:via-transparent dark:to-slate-900/30" />
 
       <main className="mx-auto w-full max-w-5xl flex-1 p-4 pb-10 sm:p-6 sm:pb-12 lg:p-8 lg:pb-14">
         <section className="rounded-3xl border border-white/45 bg-white/50 p-5 shadow-[0_30px_120px_-50px_rgba(15,23,42,0.5)] backdrop-blur-xl transition-all duration-500 dark:border-slate-700/55 dark:bg-slate-900/45 sm:p-8">
@@ -472,7 +470,7 @@ export default function ProfilePage() {
               <div>
                 <h3 className="text-lg font-black text-slate-900 dark:text-white">Weekly Snapshot</h3>
                 <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-                  You have completed <span className="font-bold text-slate-900 dark:text-white">{completedTasks}</span> out of <span className="font-bold text-slate-900 dark:text-white">{totalTasks}</span> tasks. Keep pushing and finish strong before Prototype 3.
+                  You have completed <span className="font-bold text-slate-900 dark:text-white">{completedTasks}</span> out of <span className="font-bold text-slate-900 dark:text-white">{totalTasks}</span> tasks. Keep pushing and finish strong this week.
                 </p>
               </div>
             </div>

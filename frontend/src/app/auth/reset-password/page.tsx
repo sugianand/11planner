@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import Link from "next/link";
-import "../auth.css";
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState("");

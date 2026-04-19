@@ -14,10 +14,12 @@ except Exception:
 _ESTIMATE_CACHE: dict[str, float] = {}
 
 
+# Rounds hour estimates to 0.5 hour increments and enforces a minimum floor.
 def _round_to_half_hour(hours: float) -> float:
     return max(0.5, round(hours * 2) / 2)
 
 
+# Normalizes priority values into the supported 1-5 range.
 def _normalize_priority(priority_value: Any) -> int:
     try:
         priority = int(priority_value)
@@ -81,12 +83,14 @@ def _word_count(text: str | None) -> int:
     return len(text.split())
 
 
+# Combines title and description into normalized text for keyword scanning.
 def _normalize_task_text(task_info: dict[str, Any]) -> str:
     title = str(task_info.get("title") or "")
     description = str(task_info.get("description") or "")
     return f"{title} {description}".strip().lower()
 
 
+# Checks whether any phrase in a set appears in the provided text.
 def _contains_any(text: str, phrases: set[str]) -> bool:
     return any(phrase in text for phrase in phrases)
 
