@@ -97,15 +97,42 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     setNotifications((prev) => prev.filter((item) => item.id !== id));
   }, []);
 
+  const playSound = useCallback(() => {
+    if (typeof window === "undefined") return;
+    if (localStorage.getItem("soundEnabled") === "false") return;
+    try {
+      const ctx = new AudioContext();
+      const gain = ctx.createGain();
+      gain.connect(ctx.destination);
+
+      const play = (freq: number, start: number, duration: number) => {
+        const osc = ctx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
+        osc.connect(gain);
+        gain.gain.setValueAtTime(0, ctx.currentTime + start);
+        gain.gain.linearRampToValueAtTime(0.25, ctx.currentTime + start + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + duration);
+        osc.start(ctx.currentTime + start);
+        osc.stop(ctx.currentTime + start + duration);
+        osc.onended = () => ctx.close();
+      };
+
+      play(880, 0, 0.15);
+      play(1100, 0.15, 0.2);
+    } catch {}
+  }, []);
+
   const pushNotification = useCallback((item: NotificationItem) => {
     setNotifications((prev) => [item, ...prev].slice(0, 5));
     if (permission === "granted") {
       new Notification(item.title, { body: item.message });
     }
+    playSound();
     setTimeout(() => {
       dismissNotification(item.id);
     }, 10000);
-  }, [permission, dismissNotification]);
+  }, [permission, dismissNotification, playSound]);
 
   const requestPermission = useCallback(async () => {
     if (typeof window === "undefined" || !("Notification" in window)) {

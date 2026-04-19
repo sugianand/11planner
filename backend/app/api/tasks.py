@@ -158,22 +158,13 @@ def map_schedule_block_row(row: dict) -> dict:
 def parse_course_weekday(day: str) -> int | None:
     normalized = (day or "").strip().lower()
     mapping = {
-        "monday": 0,
-        "mon": 0,
-        "tuesday": 1,
-        "tue": 1,
-        "tues": 1,
-        "wednesday": 2,
-        "wed": 2,
-        "thursday": 3,
-        "thu": 3,
-        "thurs": 3,
-        "friday": 4,
-        "fri": 4,
-        "saturday": 5,
-        "sat": 5,
-        "sunday": 6,
-        "sun": 6,
+        "monday": 0, "mon": 0, "m": 0,
+        "tuesday": 1, "tue": 1, "tues": 1, "t": 1,
+        "wednesday": 2, "wed": 2, "w": 2,
+        "thursday": 3, "thu": 3, "thurs": 3, "r": 3,  
+        "friday": 4, "fri": 4, "f": 4,
+        "saturday": 5, "sat": 5, "s": 5,
+        "sunday": 6, "sun": 6, "u": 6,
     }
     return mapping.get(normalized)
 
