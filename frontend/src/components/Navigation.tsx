@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function Navigation() {
@@ -12,6 +12,7 @@ export default function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   const [userInitials, setUserInitials] = useState("");
+  const userDropdownRef = useRef<HTMLDivElement | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -36,6 +37,39 @@ export default function Navigation() {
       authListener?.subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (!isUserDropdownOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node | null;
+      if (!target) {
+        return;
+      }
+      if (userDropdownRef.current?.contains(target)) {
+        return;
+      }
+      setIsUserDropdownOpen(false);
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsUserDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("touchstart", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isUserDropdownOpen]);
 
   async function logout() {
     const { error } = await supabase.auth.signOut();
@@ -171,7 +205,7 @@ export default function Navigation() {
           {/* User Dropdown / Login Button - Desktop */}
           <div className="hidden lg:flex items-center absolute right-24 top-1/2 -translate-y-1/2 z-50">
             {isLoggedIn ? (
-              <div className="relative">
+              <div ref={userDropdownRef} className="relative">
                 <button
                   onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
                   className="flex items-center justify-center w-11 h-11 rounded-full border-2 bg-white dark:bg-slate-900 font-bold shadow-md hover:shadow-lg transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[var(--theme-accent)]"

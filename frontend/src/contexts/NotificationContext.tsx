@@ -96,36 +96,38 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [notificationHistory, setNotificationHistory] = useState<NotificationItem[]>([]);
   const activeNotificationIdsRef = useRef<Set<string>>(new Set());
-  const [notificationsEnabled, setNotificationsEnabledState] = useState(() => {
+  const [notificationsEnabled, setNotificationsEnabledState] = useState(true);
+  const [reminderLeadHours, setReminderLeadHoursState] = useState(DEFAULT_LEAD_HOURS);
+  const [permission, setPermission] = useState<NotificationPermission | "unsupported">("unsupported");
+  const notifiedRef = useRef<Record<string, AlertState>>({});
+
+  useEffect(() => {
     if (typeof window === "undefined") {
-      return true;
+      return;
     }
-    const savedEnabled = localStorage.getItem(STORAGE_KEYS.enabled);
-    return savedEnabled === null ? true : savedEnabled !== "false";
-  });
-  const [reminderLeadHours, setReminderLeadHoursState] = useState(() => {
-    if (typeof window === "undefined") {
-      return DEFAULT_LEAD_HOURS;
-    }
-    const savedLeadHours = Number(localStorage.getItem(STORAGE_KEYS.leadHours));
-    return Number.isNaN(savedLeadHours) ? DEFAULT_LEAD_HOURS : savedLeadHours;
-  });
-  const [permission, setPermission] = useState<NotificationPermission | "unsupported">(() =>
-    typeof window === "undefined" || !("Notification" in window) ? "unsupported" : Notification.permission
-  );
-  const notifiedRef = useRef<Record<string, AlertState>>(
-    (() => {
-      if (typeof window === "undefined") {
-        return {};
+
+    const frameId = window.requestAnimationFrame(() => {
+      const savedEnabled = localStorage.getItem(STORAGE_KEYS.enabled);
+      setNotificationsEnabledState(savedEnabled === null ? true : savedEnabled !== "false");
+
+      const savedLeadHours = Number(localStorage.getItem(STORAGE_KEYS.leadHours));
+      setReminderLeadHoursState(Number.isNaN(savedLeadHours) ? DEFAULT_LEAD_HOURS : savedLeadHours);
+
+      if ("Notification" in window) {
+        setPermission(Notification.permission);
       }
+
       const savedNotified = localStorage.getItem(STORAGE_KEYS.notified);
       if (!savedNotified) {
-        return {};
+        notifiedRef.current = {};
+        return;
       }
+
       try {
         const parsed = JSON.parse(savedNotified) || {};
         if (typeof parsed !== "object" || Array.isArray(parsed)) {
-          return {};
+          notifiedRef.current = {};
+          return;
         }
         const cleaned: Record<string, AlertState> = {};
         Object.entries(parsed).forEach(([key, value]) => {
@@ -133,12 +135,16 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             cleaned[key] = value;
           }
         });
-        return cleaned;
+        notifiedRef.current = cleaned;
       } catch {
-        return {};
+        notifiedRef.current = {};
       }
-    })()
-  );
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") {

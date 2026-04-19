@@ -7,7 +7,7 @@ import { TimerProvider } from "@/contexts/TimerContext";
 import Navigation from "@/components/Navigation";
 import NotificationToasts from "@/components/NotificationToasts";
 import GlobalTimerTicker from "@/components/GlobalTimerTicker";
-import SupportAssistantWidget from "@/components/SupportAssistantWidget";
+import SupportAssistantClient from "@/components/SupportAssistantClient";
 import "./globals.css";
 import "@material-symbols/font-400/outlined.css";
 
@@ -32,6 +32,7 @@ export const metadata: Metadata = {
   description: "An intelligent academic dashboard that transforms overwhelming syllabi into actionable 30-minute focus blocks to eliminate procrastination.",
 };
 
+// Composes all app-wide providers and shell UI for every route.
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -40,6 +41,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
+        suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} ${manrope.variable} relative antialiased bg-white dark:bg-slate-900 text-black dark:text-white transition-colors`}
       >
         <div
@@ -54,7 +56,7 @@ export default function RootLayout({
                 <NotificationToasts />
                 {children}
                 <GlobalTimerTicker />
-                <SupportAssistantWidget />
+                <SupportAssistantClient />
               </NotificationProvider>
             </TimerProvider>
           </PlannerProvider>

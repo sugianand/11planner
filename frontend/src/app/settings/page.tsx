@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useEffect, Suspense } from "react";
+import { useMemo, useState, useEffect, Suspense, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useNotification } from "@/contexts/NotificationContext";
 import Footer from "@/components/Footer";
+import AppDialog from "@/components/AppDialog";
 import { supabase } from "@/lib/supabaseClient";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -50,13 +51,13 @@ function SettingsPageContent() {
     requestPermission,
   } = useNotification();
   const [user, setUser] = useState<UserSummary | null>(null);
-  const [soundEnabled, setSoundEnabled] = useState(() => readStoredBoolean("soundEnabled", true));
-  const [emailUpdates, setEmailUpdates] = useState(() => readStoredBoolean("emailUpdates", true));
-  const [weeklyReport, setWeeklyReport] = useState(() => readStoredBoolean("weeklyReport", true));
-  const [privacyProfileVisible, setPrivacyProfileVisible] = useState(() => readStoredBoolean("privacyProfileVisible", true));
-  const [privacyAnalyticsEnabled, setPrivacyAnalyticsEnabled] = useState(() => readStoredBoolean("privacyAnalyticsEnabled", false));
-  const [privacyPersonalizationEnabled, setPrivacyPersonalizationEnabled] = useState(() => readStoredBoolean("privacyPersonalizationEnabled", true));
-  const [privacyShareProgress, setPrivacyShareProgress] = useState(() => readStoredBoolean("privacyShareProgress", false));
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [emailUpdates, setEmailUpdates] = useState(true);
+  const [weeklyReport, setWeeklyReport] = useState(true);
+  const [privacyProfileVisible, setPrivacyProfileVisible] = useState(true);
+  const [privacyAnalyticsEnabled, setPrivacyAnalyticsEnabled] = useState(false);
+  const [privacyPersonalizationEnabled, setPrivacyPersonalizationEnabled] = useState(true);
+  const [privacyShareProgress, setPrivacyShareProgress] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [isClearingAccountData, setIsClearingAccountData] = useState(false);
   const [activePanel, setActivePanel] = useState<SettingsPanel>("personalize");
@@ -66,37 +67,119 @@ function SettingsPageContent() {
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [actionMessage, setActionMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [isMounted, setIsMounted] = useState(false);
+  const [dialog, setDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText?: string;
+    cancelText?: string;
+    destructive?: boolean;
+    onConfirm?: () => void | Promise<void>;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+  });
+
+  // Loads current auth user + profile name details for settings header/account actions.
+  const syncUserSummary = useCallback(async (allowClearOnMissingUser: boolean) => {
+    const { data, error } = await supabase.auth.getUser();
+    const authUser = data?.user ?? null;
+
+    if (error || !authUser) {
+      if (allowClearOnMissingUser) {
+        setUser(null);
+      }
+      return;
+    }
+
+    const nextUser: UserSummary = {
+      id: authUser.id,
+      email: authUser.email ?? undefined,
+    };
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("firstname, lastname")
+      .eq("id", authUser.id)
+      .maybeSingle();
+
+    setUser({
+      ...nextUser,
+      firstname: profile?.firstname ?? null,
+      lastname: profile?.lastname ?? null,
+    });
+  }, []);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
   useEffect(() => {
-    supabase.auth.getUser().then(async ({ data }) => {
-      const authUser = data?.user ?? null;
-      if (!authUser) {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    setSoundEnabled(readStoredBoolean("soundEnabled", true));
+    setEmailUpdates(readStoredBoolean("emailUpdates", true));
+    setWeeklyReport(readStoredBoolean("weeklyReport", true));
+    setPrivacyProfileVisible(readStoredBoolean("privacyProfileVisible", true));
+    setPrivacyAnalyticsEnabled(readStoredBoolean("privacyAnalyticsEnabled", false));
+    setPrivacyPersonalizationEnabled(readStoredBoolean("privacyPersonalizationEnabled", true));
+    setPrivacyShareProgress(readStoredBoolean("privacyShareProgress", false));
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    // Guards user sync against state updates after unmount.
+    const safeSync = async (allowClearOnMissingUser: boolean) => {
+      try {
+        await syncUserSummary(allowClearOnMissingUser);
+      } catch {
+        if (allowClearOnMissingUser && isMounted) {
+          setUser(null);
+        }
+      }
+    };
+
+    void safeSync(true);
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!isMounted) {
+        return;
+      }
+
+      if (event === "SIGNED_OUT") {
         setUser(null);
         return;
       }
 
-      const nextUser: UserSummary = {
-        id: authUser.id,
-        email: authUser.email ?? undefined,
-      };
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("firstname, lastname")
-        .eq("id", authUser.id)
-        .maybeSingle();
-
-      setUser({
-        ...nextUser,
-        firstname: profile?.firstname ?? null,
-        lastname: profile?.lastname ?? null,
-      });
+      if (session?.user?.id || event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
+        void safeSync(false);
+      }
     });
-  }, []);
+
+    // Refreshes user summary when the page becomes active again.
+    const handleVisibilityOrFocus = () => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") {
+        return;
+      }
+      void safeSync(false);
+    };
+
+    window.addEventListener("focus", handleVisibilityOrFocus);
+    document.addEventListener("visibilitychange", handleVisibilityOrFocus);
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+      window.removeEventListener("focus", handleVisibilityOrFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityOrFocus);
+    };
+  }, [syncUserSummary]);
 
   useEffect(() => {
     const panelParam = searchParams.get("panel");
@@ -226,12 +309,16 @@ function SettingsPageContent() {
   // Clears planner data and resets saved preferences for the current account.
   const handleClearAccountData = () => {
     setActionMessage(null);
-    void (async () => {
-      const confirmed = window.confirm(
-        "Clear your account data? This will remove your courses, assignments, tasks, schedule blocks, and saved planner preferences."
-      );
-      if (!confirmed) return;
-
+    setDialog({
+      isOpen: true,
+      title: "Clear account data?",
+      message:
+        "This will remove your courses, assignments, tasks, schedule blocks, and saved planner preferences.",
+      confirmText: "Clear Data",
+      cancelText: "Cancel",
+      destructive: true,
+      onConfirm: async () => {
+        setDialog({ isOpen: false, title: "", message: "" });
       if (!user?.id) {
         setActionMessage({ type: "error", text: "Please sign in to clear account data." });
         return;
@@ -314,7 +401,8 @@ function SettingsPageContent() {
       } finally {
         setIsClearingAccountData(false);
       }
-    })();
+      },
+    });
   };
 
   // Permanently deletes the current account after confirmation.
@@ -325,40 +413,47 @@ function SettingsPageContent() {
       return;
     }
 
-    const confirmed = window.confirm(
-      "Delete your account permanently? This will remove your tasks, schedule, courses, and profile data."
-    );
-    if (!confirmed) return;
+    setDialog({
+      isOpen: true,
+      title: "Delete account permanently?",
+      message: "This will remove your tasks, schedule, courses, and profile data.",
+      confirmText: "Delete Account",
+      cancelText: "Cancel",
+      destructive: true,
+      onConfirm: async () => {
+        setDialog({ isOpen: false, title: "", message: "" });
 
-    try {
-      setIsDeletingAccount(true);
-      const response = await fetch(`${API_BASE_URL}/api/account/${user.id}`, {
-        method: "DELETE",
-      });
+        try {
+          setIsDeletingAccount(true);
+          const response = await fetch(`${API_BASE_URL}/api/account/${user.id}`, {
+            method: "DELETE",
+          });
 
-      if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || "Failed to delete account");
-      }
+          if (!response.ok) {
+            const message = await response.text();
+            throw new Error(message || "Failed to delete account");
+          }
 
-      await supabase.auth.signOut();
-      localStorage.removeItem("emailUpdates");
-      localStorage.removeItem("weeklyReport");
-      localStorage.removeItem("dailyLimit");
-      localStorage.removeItem("privacyProfileVisible");
-      localStorage.removeItem("privacyAnalyticsEnabled");
-      localStorage.removeItem("privacyPersonalizationEnabled");
-      localStorage.removeItem("privacyShareProgress");
-      localStorage.removeItem("soundEnabled");
+          await supabase.auth.signOut();
+          localStorage.removeItem("emailUpdates");
+          localStorage.removeItem("weeklyReport");
+          localStorage.removeItem("dailyLimit");
+          localStorage.removeItem("privacyProfileVisible");
+          localStorage.removeItem("privacyAnalyticsEnabled");
+          localStorage.removeItem("privacyPersonalizationEnabled");
+          localStorage.removeItem("privacyShareProgress");
+          localStorage.removeItem("soundEnabled");
 
-      setActionMessage({ type: "success", text: "Account deleted successfully." });
-      window.location.href = "/auth";
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Could not delete account.";
-      setActionMessage({ type: "error", text: message });
-    } finally {
-      setIsDeletingAccount(false);
-    }
+          setActionMessage({ type: "success", text: "Account deleted successfully." });
+          window.location.href = "/auth";
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Could not delete account.";
+          setActionMessage({ type: "error", text: message });
+        } finally {
+          setIsDeletingAccount(false);
+        }
+      },
+    });
   };
 
   const hasChanges = useMemo(() => {
@@ -928,6 +1023,17 @@ function SettingsPageContent() {
       </div>
 
       <Footer />
+
+      <AppDialog
+        isOpen={dialog.isOpen}
+        title={dialog.title}
+        message={dialog.message}
+        confirmText={dialog.confirmText}
+        cancelText={dialog.cancelText}
+        destructive={dialog.destructive}
+        onConfirm={dialog.onConfirm}
+        onClose={() => setDialog({ isOpen: false, title: "", message: "" })}
+      />
     </div>
   );
 }

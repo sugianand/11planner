@@ -101,6 +101,7 @@ type SupabaseTaskRow = {
 type TaskCategory = "assignment" | "exam" | "project";
 const TASK_CATEGORY_TAG_RE = /^\s*\[\[type:(assignment|exam|project)\]\]\s*/i;
 
+// Extracts a tagged task category from description text and returns cleaned text.
 function parseTaskCategoryFromDescription(
   description: string | null
 ): { category: TaskCategory; description: string } {
@@ -119,6 +120,7 @@ function parseTaskCategoryFromDescription(
   };
 }
 
+// Normalizes task category values to the supported enum set.
 function normalizeTaskCategory(value: string | null | undefined): TaskCategory {
   const normalized = (value || "").trim().toLowerCase();
   if (normalized === "exam" || normalized === "project") {
@@ -127,11 +129,13 @@ function normalizeTaskCategory(value: string | null | undefined): TaskCategory {
   return "assignment";
 }
 
+// Removes internal category metadata from persisted task descriptions.
 function sanitizeTaskDescription(description: string | null | undefined): string | null {
   const clean = (description || "").replace(TASK_CATEGORY_TAG_RE, "").trim();
   return clean.length > 0 ? clean : null;
 }
 
+// Splits a day list string into an array of individual weekday names.
 function parseCourseDays(value: string): string[] {
   return value
     .split(/[,\s]+/)
@@ -141,10 +145,12 @@ function parseCourseDays(value: string): string[] {
 
 const WEEK_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"] as const;
 
+// Keeps only recognized weekdays in canonical order for storage.
 function normalizeCourseDays(value: string): string[] {
   return WEEK_DAYS.filter((day) => parseCourseDays(value).includes(day));
 }
 
+// Converts user-entered time to HH:MM:SS 24-hour format.
 function normalizeTimeForDb(value: string): string {
   const trimmed = value.trim();
   const match = trimmed.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(am|pm)?$/i);
@@ -172,6 +178,7 @@ function normalizeTimeForDb(value: string): string {
   return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:${String(second).padStart(2, "0")}`;
 }
 
+// Converts optional time input to DB format while preserving empty values.
 function normalizeOptionalTimeForDb(value: string | undefined | null): string | null {
   const trimmed = (value || "").trim();
   if (!trimmed) {
@@ -180,6 +187,7 @@ function normalizeOptionalTimeForDb(value: string | undefined | null): string | 
   return normalizeTimeForDb(trimmed);
 }
 
+// Validates and converts a deadline value to an ISO timestamp.
 function normalizeDeadlineForDb(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
@@ -188,6 +196,7 @@ function normalizeDeadlineForDb(value: string): string {
   return date.toISOString();
 }
 
+// Clamps daily study limit values to a safe scheduler range.
 function clampStudyLimit(value: unknown, fallback = 4): number {
   const numeric = Number(value);
   if (Number.isNaN(numeric)) {
@@ -196,6 +205,7 @@ function clampStudyLimit(value: unknown, fallback = 4): number {
   return Math.min(12, Math.max(1, numeric));
 }
 
+// Maps raw Supabase course rows to frontend course model shape.
 function mapCourseRowToModel(row: SupabaseCourseRow): Course {
   return {
     id: row.id,
@@ -217,6 +227,7 @@ function mapCourseRowToModel(row: SupabaseCourseRow): Course {
   };
 }
 
+// Maps raw Supabase task rows to frontend task model shape.
 function mapTaskRowToModel(row: SupabaseTaskRow): Task {
   const parsed = parseTaskCategoryFromDescription(row.description);
   const category = row.task_type ? normalizeTaskCategory(row.task_type) : parsed.category;
@@ -247,6 +258,7 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
   const activeUserIdRef = useRef(userId);
 
+  // Clears all planner data when auth context resets to guest mode.
   const resetPlannerState = useCallback(() => {
     setCourses([]);
     setAssignments([]);
@@ -269,32 +281,80 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
 
   // Sync with Supabase Auth
   useEffect(() => {
-    // Check active session
-    supabase.auth.getSession()
-      .then(({ data: { session } }) => {
-        if (session?.user) {
-          setUserId(session.user.id);
-        } else {
+    let isMounted = true;
+
+    const syncUserFromAuth = async (allowGuestFallback: boolean) => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!isMounted) {
+          return;
+        }
+
+        if (user?.id) {
+          setUserId(user.id);
+          return;
+        }
+
+        if (allowGuestFallback || activeUserIdRef.current === "user_demo") {
+          resetPlannerState();
           setUserId("user_demo");
         }
-      })
-      .catch((err) => {
-        // Suppress auth session errors for guest users
-        console.debug("No active session, using guest mode:", err.message);
-        setUserId("user_demo");
-      });
+      } catch (err) {
+        if (!isMounted) {
+          return;
+        }
 
-    // Listen for changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
+        // Keep prior auth state if this is a transient error.
+        if (allowGuestFallback || activeUserIdRef.current === "user_demo") {
+          console.debug("No active session, using guest mode:", err instanceof Error ? err.message : err);
+          resetPlannerState();
+          setUserId("user_demo");
+        }
+      }
+    };
+
+    void syncUserFromAuth(activeUserIdRef.current === "user_demo");
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!isMounted) {
+        return;
+      }
+
+      if (session?.user?.id) {
         setUserId(session.user.id);
-      } else {
+        return;
+      }
+
+      if (event === "SIGNED_OUT") {
         resetPlannerState();
         setUserId("user_demo");
+        return;
+      }
+
+      if (event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
+        void syncUserFromAuth(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    const handleVisibilityOrFocus = () => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") {
+        return;
+      }
+      void syncUserFromAuth(false);
+    };
+
+    window.addEventListener("focus", handleVisibilityOrFocus);
+    document.addEventListener("visibilitychange", handleVisibilityOrFocus);
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+      window.removeEventListener("focus", handleVisibilityOrFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityOrFocus);
+    };
   }, [resetPlannerState]);
 
   // ========== Courses ==========
@@ -331,6 +391,7 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
   }, [userId]);
 
 
+  // Loads profile planning preferences used by schedule generation.
   const loadPreferences = useCallback(async () => {
     const requestUserId = userId;
     try {
@@ -415,6 +476,7 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     [userId]
   );
 
+  // Updates an existing course and mirrors the changes in local state.
   const updateCourse = useCallback(async (id: string, course: Partial<Course>) => {
     try {
       if (userId === "user_demo") {
@@ -469,6 +531,7 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     }
   }, [userId]);
 
+  // Deletes a course for the active user and removes it from local cache.
   const deleteCourse = useCallback(async (id: string) => {
     try {
       if (userId === "user_demo") {
@@ -535,6 +598,7 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  // Updates an assignment and keeps UI state synchronized.
   const updateAssignment = useCallback(
     async (id: string, assignment: Partial<Assignment>) => {
       try {
@@ -553,6 +617,7 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  // Deletes an assignment and removes it from local assignment state.
   const deleteAssignment = useCallback(async (id: string) => {
     try {
       setLoading(true);
@@ -638,6 +703,7 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     [userId]
   );
 
+  // Updates a task row and applies the same delta to local state.
   const updateTask = useCallback(async (id: string, task: Partial<Task>) => {
     try {
       if (userId === "user_demo") {
@@ -672,6 +738,7 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     }
   }, [userId]);
 
+  // Deletes a task row for the active user and updates local cache.
   const deleteTask = useCallback(async (id: string) => {
     try {
       if (userId === "user_demo") {
@@ -768,6 +835,7 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Provides typed access to planner context state and actions.
 export function usePlanner() {
   const context = useContext(PlannerContext);
   if (!context) {

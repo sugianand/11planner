@@ -2,7 +2,7 @@
 
 import { usePlanner } from "@/contexts/PlannerContext";
 import { supabase } from "@/lib/supabaseClient";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Footer from "@/components/Footer";
 import Link from "next/link";
 
@@ -12,6 +12,7 @@ type ProfileData = {
   lastname: string;
 };
 
+// Formats a date into a stable YYYY-MM-DD key for streak/grouping logic.
 function getLocalDateKey(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -19,11 +20,13 @@ function getLocalDateKey(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+// Rebuilds a Date object from a YYYY-MM-DD key.
 function getDateFromKey(key: string): Date {
   const [year, month, day] = key.split("-").map(Number);
   return new Date(year, (month || 1) - 1, day || 1);
 }
 
+// Shifts a YYYY-MM-DD key forward/backward by a number of days.
 function shiftDateKey(key: string, days: number): string {
   const date = getDateFromKey(key);
   date.setDate(date.getDate() + days);
@@ -42,57 +45,111 @@ export default function ProfilePage() {
   const [isSavingName, setIsSavingName] = useState(false);
   const [nameFeedback, setNameFeedback] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
-  const [privacyProfileVisible] = useState(() =>
-    typeof window === "undefined"
-      ? true
-      : localStorage.getItem("privacyProfileVisible") !== "false"
-  );
-  const [privacyPersonalizationEnabled] = useState(() =>
-    typeof window === "undefined"
-      ? true
-      : localStorage.getItem("privacyPersonalizationEnabled") !== "false"
-  );
+  const [privacyProfileVisible, setPrivacyProfileVisible] = useState(true);
+  const [privacyPersonalizationEnabled, setPrivacyPersonalizationEnabled] = useState(true);
   const [animatedCompletionRate, setAnimatedCompletionRate] = useState(0);
   const animatedCompletionRateRef = useRef(0);
 
-  useEffect(() => {
+  // Loads user identity and profile names, with optional guest fallback clearing.
+  const syncProfile = useCallback(async (allowClearOnMissingUser: boolean) => {
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
 
-    async function fetchProfile() {
-      try {
-        const {
-          data: { user },
-          error: authError,
-        } = await supabase.auth.getUser();
-
-        if (authError || !user) {
-          console.debug("No authenticated user, showing guest profile");
-          return;
-        }
-
-        setUserId(user.id);
-        setEmail(user.email ?? null);
-        const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("firstname, lastname")
-          .eq("id", user.id)
-          .single();
-
-        if (profileError) {
-          console.debug("No profile data found:", profileError.message);
-          return;
-        }
-
-        setProfile(profileData);
-        setFirstNameInput(profileData.firstname || "");
-        setLastNameInput(profileData.lastname || "");
-      } catch (err) {
-        console.debug("Profile fetch error (guest mode):", err);
+    if (authError || !user) {
+      if (allowClearOnMissingUser) {
+        setUserId(null);
+        setEmail(null);
+        setProfile(null);
       }
+      return;
     }
 
-    fetchProfile();
+    setUserId(user.id);
+    setEmail(user.email ?? null);
+
+    const { data: profileData, error: profileError } = await supabase
+      .from("profiles")
+      .select("firstname, lastname")
+      .eq("id", user.id)
+      .single();
+
+    if (profileError) {
+      return;
+    }
+
+    setProfile(profileData);
+    setFirstNameInput(profileData.firstname || "");
+    setLastNameInput(profileData.lastname || "");
   }, []);
 
+  useEffect(() => {
+    // Hydrates privacy flags from local storage after the client mounts.
+    if (typeof window === "undefined") {
+      return;
+    }
+    setPrivacyProfileVisible(localStorage.getItem("privacyProfileVisible") !== "false");
+    setPrivacyPersonalizationEnabled(localStorage.getItem("privacyPersonalizationEnabled") !== "false");
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    // Wraps profile sync to prevent stale updates after unmount.
+    const safeSync = async (allowClearOnMissingUser: boolean) => {
+      try {
+        await syncProfile(allowClearOnMissingUser);
+      } catch {
+        if (allowClearOnMissingUser && isMounted) {
+          setUserId(null);
+          setEmail(null);
+          setProfile(null);
+        }
+      }
+    };
+
+    void safeSync(true);
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!isMounted) {
+        return;
+      }
+
+      if (event === "SIGNED_OUT") {
+        setUserId(null);
+        setEmail(null);
+        setProfile(null);
+        return;
+      }
+
+      if (session?.user?.id || event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
+        void safeSync(false);
+      }
+    });
+
+    // Re-syncs profile when the tab regains visibility or focus.
+    const handleVisibilityOrFocus = () => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") {
+        return;
+      }
+      void safeSync(false);
+    };
+
+    window.addEventListener("focus", handleVisibilityOrFocus);
+    document.addEventListener("visibilitychange", handleVisibilityOrFocus);
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+      window.removeEventListener("focus", handleVisibilityOrFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityOrFocus);
+    };
+  }, [syncProfile]);
+
+  // Saves edited first/last name into the user's profile row.
   const handleSaveName = async () => {
     if (!userId) {
       setNameError("Please sign in to edit your profile name.");
