@@ -4,6 +4,7 @@ import Image from "next/image";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { usePlanner } from "@/contexts/PlannerContext";
+import { useTheme } from "@/contexts/ThemeContext";
 
 type ChatRole = "assistant" | "user";
 type WidgetView = "chat-list" | "chat" | "news" | "news-detail" | "help-center" | "article";
@@ -290,6 +291,7 @@ const helpArticles: HelpArticle[] = [
   },
 ];
 
+// Builds a fallback assistant response, optionally including page-specific guidance.
 const createAssistantReply = (input: string, pathname: string): string => {
   const hint = routeHints.find((entry) => entry.match.test(pathname))?.hint;
   return (
@@ -299,6 +301,7 @@ const createAssistantReply = (input: string, pathname: string): string => {
   );
 };
 
+// Sends the current prompt and recent chat history to the backend support endpoint.
 const sendSupportChatMessage = async (
   message: string,
   pathname: string,
@@ -323,6 +326,7 @@ const sendSupportChatMessage = async (
   return response.json() as Promise<SupportChatApiResponse>;
 };
 
+// Estimates reading time for help center articles from total word count.
 const getReadTimeLabel = (article: HelpArticle): string => {
   const words = [
     article.title,
@@ -343,6 +347,7 @@ const getReadTimeLabel = (article: HelpArticle): string => {
   return `${minutes} min read`;
 };
 
+// Renders the assistant avatar used in message rows.
 function ElevenAvatar({ size = "md" }: { size?: "sm" | "md" }) {
   const avatarSize = size === "sm" ? "h-8 w-8" : "h-10 w-10";
   const textSize = size === "sm" ? "text-[12px]" : "text-[13px]";
@@ -367,9 +372,11 @@ function ElevenAvatar({ size = "md" }: { size?: "sm" | "md" }) {
   );
 }
 
+// Main support assistant widget with chat history, help content, and escalation flow.
 export default function SupportAssistantWidget() {
   const pathname = usePathname();
   const { userId } = usePlanner();
+  const { effectiveTheme } = useTheme();
 
   const [isOpen, setIsOpen] = useState(false);
   const [view, setView] = useState<WidgetView>("chat-list");
@@ -388,6 +395,38 @@ export default function SupportAssistantWidget() {
 
   const listRef = useRef<HTMLDivElement | null>(null);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const panelBackgroundStyle = useMemo(() => {
+    if (effectiveTheme === "dark") {
+      return {
+        backgroundImage:
+          "linear-gradient(180deg, color-mix(in srgb, var(--theme-accent-soft) 32%, rgb(15, 23, 42)) 0%, color-mix(in srgb, var(--theme-accent-soft) 18%, rgb(15, 23, 42)) 38%, rgb(2, 6, 23) 100%)",
+        backgroundColor: "rgb(15, 23, 42)",
+      } as const;
+    }
+
+    return {
+      backgroundImage:
+        "linear-gradient(180deg, color-mix(in srgb, var(--theme-accent-soft) 78%, white) 0%, color-mix(in srgb, var(--theme-accent-soft) 46%, white) 38%, rgba(255,255,255,0.94) 100%)",
+      backgroundColor: "#fff",
+    } as const;
+  }, [effectiveTheme]);
+
+  const panelGlowStyle = useMemo(() => {
+    if (effectiveTheme === "dark") {
+      return {
+        backgroundImage:
+          "radial-gradient(circle at top right, color-mix(in srgb, var(--theme-accent) 26%, transparent), transparent 32%), radial-gradient(circle at bottom left, color-mix(in srgb, var(--theme-accent-strong) 18%, transparent), transparent 36%)",
+      } as const;
+    }
+
+    return {
+      backgroundImage:
+        "radial-gradient(circle at top right, color-mix(in srgb, var(--theme-accent) 38%, transparent), transparent 32%), radial-gradient(circle at bottom left, color-mix(in srgb, var(--theme-accent-strong) 26%, transparent), transparent 36%)",
+    } as const;
+  }, [effectiveTheme]);
+
+  // Creates stable IDs for sessions/messages without depending on backend identifiers.
   const makeUniqueId = (prefix: string) => {
     const randomPart =
       typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -396,6 +435,7 @@ export default function SupportAssistantWidget() {
     return `${prefix}-${randomPart}`;
   };
 
+  // Derives a readable session title from the first user-authored message.
   const nextMessageId = (prefix: string) => makeUniqueId(prefix);
   const createSessionTitle = (sessionMessages: ChatMessage[]) => {
     const firstUserMessage = sessionMessages.find((message) => message.role === "user")?.text.trim();
@@ -405,6 +445,7 @@ export default function SupportAssistantWidget() {
     return firstUserMessage.length > 44 ? `${firstUserMessage.slice(0, 44)}...` : firstUserMessage;
   };
 
+  // Creates the initial assistant greeting for new conversations.
   const createInitialMessages = (): ChatMessage[] => [
     {
       id: nextMessageId("assistant"),
@@ -413,6 +454,7 @@ export default function SupportAssistantWidget() {
     },
   ];
 
+  // Creates a fresh chat session object with timestamps and welcome message.
   const createInitialSession = (): ChatSession => {
     const now = Date.now();
     const initialMessages = createInitialMessages();
@@ -558,6 +600,7 @@ export default function SupportAssistantWidget() {
     );
   }, [activeSession, chatSessions, storageKey]);
 
+  // Applies message changes to the active session and updates title/timestamp.
   const updateMessages = (updater: (prevMessages: ChatMessage[]) => ChatMessage[]) => {
     if (!activeSession) return;
     setChatSessions((prevSessions) =>
@@ -576,6 +619,7 @@ export default function SupportAssistantWidget() {
     );
   };
 
+  // Starts a new chat and resets transient UI state.
   const startNewChat = () => {
     const newSession = createInitialSession();
     setChatSessions((prevSessions) => [newSession, ...prevSessions]);
@@ -589,6 +633,7 @@ export default function SupportAssistantWidget() {
     setDidCreateSupportEmail(false);
   };
 
+  // Opens an existing session and resets in-chat prompt/escalation UI.
   const openChatSession = (sessionId: string) => {
     setActiveChatId(sessionId);
     setView("chat");
@@ -599,28 +644,30 @@ export default function SupportAssistantWidget() {
     setDidCreateSupportEmail(false);
   };
 
+  // Toggles the end-chat confirmation panel.
   const handleCloseChatPrompt = () => {
     setIsCloseFlowOpen((prev) => !prev);
     setCloseFlowStep("prompt");
     setDidCreateSupportEmail(false);
   };
 
+  // Marks the active chat as ended without creating a new session.
   const handleSatisfiedClose = () => {
     if (activeSession) {
       endChat(activeSession.id);
     }
     setIsCloseFlowOpen(false);
     setCloseFlowStep("prompt");
-    setIsOpen(false);
-    startNewChat();
   };
 
+  // Moves the close flow from confirmation to escalation details.
   const handleEscalation = () => {
     setCloseFlowStep("escalate");
     setEscalationNotes("");
     setDidCreateSupportEmail(false);
   };
 
+  // Ends the current chat then starts a fresh conversation after escalation.
   const handleEndAndStartNewAfterEscalation = () => {
     if (activeSession) {
       endChat(activeSession.id);
@@ -628,6 +675,7 @@ export default function SupportAssistantWidget() {
     startNewChat();
   };
 
+  // Builds and opens a prefilled support email containing metadata and transcript.
   const handleCreateSupportEmail = () => {
     const transcript = messages
       .map((message, index) => {
@@ -665,6 +713,7 @@ export default function SupportAssistantWidget() {
     setDidCreateSupportEmail(true);
   };
 
+  // Keeps the latest chat messages visible as conversation content grows.
   const scrollChatToBottom = () => {
     requestAnimationFrame(() => {
       if (!listRef.current) return;
@@ -672,6 +721,7 @@ export default function SupportAssistantWidget() {
     });
   };
 
+  // Auto-resizes the composer textarea based on content height.
   const adjustComposerHeight = () => {
     const composer = composerRef.current;
     if (!composer) return;
@@ -732,6 +782,7 @@ export default function SupportAssistantWidget() {
     [messages]
   );
 
+  // Handles user text submission, calls support API, and appends assistant reply.
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const trimmed = inputValue.trim();
@@ -771,6 +822,7 @@ export default function SupportAssistantWidget() {
     scrollChatToBottom();
   };
 
+  // Sends one-tap quick prompts through the same message pipeline as typed input.
   const handleQuickQuestion = async (question: string) => {
     if (isThinking) return;
 
@@ -799,31 +851,37 @@ export default function SupportAssistantWidget() {
     scrollChatToBottom();
   };
 
+  // Opens a help article and records where to return when navigating back.
   const openArticle = (articleId: string, origin: "help-center") => {
     setSelectedArticleId(articleId);
     setArticleBackView(origin);
     setView("article");
   };
 
+  // Opens the full view for a selected news item.
   const openNewsDetail = (newsId: string) => {
     setSelectedNewsId(newsId);
     setView("news-detail");
   };
 
+  // Returns to chat list and clears detail selections.
   const closeToHome = () => {
     setView("chat-list");
     setSelectedNewsId(null);
     setSelectedArticleId(null);
   };
 
+  // Returns from an article to its origin view.
   const handleArticleBack = () => {
     setView(articleBackView);
   };
 
+  // Returns from a news detail page to the news list.
   const handleNewsBack = () => {
     setView("news");
   };
 
+  // Deletes a chat session and safely resets selection if it was active.
   const deleteChat = (sessionId: string) => {
     setChatSessions((prev) => prev.filter((s) => s.id !== sessionId));
     if (activeChatId === sessionId) {
@@ -832,12 +890,14 @@ export default function SupportAssistantWidget() {
     }
   };
 
+  // Marks a chat session as ended to disable additional messages.
   const endChat = (sessionId: string) => {
     setChatSessions((prev) =>
       prev.map((s) => (s.id === sessionId ? { ...s, ended: true } : s))
     );
   };
 
+  // Shared back handler for section views that should return to the chat list.
   const handleBackFromSection = () => {
     setView("chat-list");
   };
@@ -849,45 +909,60 @@ export default function SupportAssistantWidget() {
   return (
     <div className="fixed bottom-6 right-6 z-[60] flex flex-col items-end">
       {isOpen && (
-        <section className={`font-[var(--font-manrope)] rounded-[28px] border border-slate-200/90 dark:border-slate-700/80 bg-white dark:bg-slate-900 shadow-[0_32px_75px_-30px_rgba(15,23,42,0.9)] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 transition-all duration-300 ease-out ${view === "article" || view === "news-detail" ? "w-[min(96vw,760px)] h-[min(86vh,760px)]" : "w-[min(92vw,420px)] h-[min(80vh,680px)]"}`}>
-          <header
-            className={`relative px-5 border-b border-slate-200/85 dark:border-slate-700/80 bg-white dark:bg-slate-900 text-slate-900 dark:text-white pt-3 pb-2`}
-          >
+        <section
+          className={`relative overflow-hidden font-[var(--font-manrope)] rounded-[32px] border border-white/70 dark:border-slate-700/80 shadow-[0_40px_90px_-35px_rgba(15,23,42,0.92)] flex flex-col animate-in fade-in zoom-in-95 transition-all duration-300 ease-out ${view === "article" || view === "news-detail" ? "w-[min(96vw,760px)] h-[min(86vh,760px)]" : "w-[min(92vw,420px)] h-[min(80vh,680px)]"}`}
+          style={panelBackgroundStyle}
+        >
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={panelGlowStyle}
+          />
+          <header className="relative overflow-hidden px-5 pt-4 pb-3 border-b border-slate-200/75 dark:border-slate-700/80 bg-white/85 dark:bg-slate-950/80 text-slate-900 dark:text-white backdrop-blur-xl">
+            <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[var(--theme-accent)]/50 to-transparent" />
             <div className="relative z-10">
               <div className="flex items-center justify-between gap-3 mb-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="h-8 w-8 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-[18px]">school</span>
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-2xl bg-[var(--theme-accent-strong)] text-white shadow-[0_14px_26px_-16px_rgba(15,23,42,0.45)] flex items-center justify-center ring-1 ring-white/60">
+                    <span className="material-symbols-outlined text-[20px]">school</span>
                   </div>
-                  <h2 className="text-[24px] font-extrabold leading-none tracking-tight">11Planner</h2>
+                  <div>
+                    <h2 className="text-[24px] font-extrabold leading-none tracking-tight">11Planner</h2>
+                    <p className="mt-1 text-[12px] uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">Chat Support Assistant</p>
+                  </div>
                 </div>
               </div>
 
-              <p className="text-[18px] leading-none font-semibold text-slate-700 dark:text-slate-200">Chat Support Assistant</p>
+              <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 dark:border-slate-700/80 bg-white/70 dark:bg-slate-900/70 px-3 py-1 text-[12px] font-medium text-slate-600 dark:text-slate-300 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.55)]">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                Fast answers, saved history, and escalation when needed
+              </div>
             </div>
           </header>
 
-          <div className={view === "chat" ? "flex-1 min-h-0 px-4 pt-3 pb-3" : "flex-1 overflow-y-auto px-4 pt-3 pb-3 space-y-3.5"}>
+          <div className={view === "chat" ? "relative flex-1 min-h-0 px-4 pt-3 pb-3" : "relative flex-1 overflow-y-auto px-4 pt-3 pb-3 space-y-3.5"}>
             {view === "chat-list" && (
               <div className="px-1 py-1">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-200/80 dark:border-slate-700/80">
+                <div className="flex items-end justify-between pb-3 border-b border-slate-200/70 dark:border-slate-700/80">
                   <div>
                     <p className="font-semibold text-[15px] text-slate-900 dark:text-white">Your chats</p>
                     <p className="text-xs text-slate-500 dark:text-slate-300">Open a previous conversation or start a new one.</p>
                   </div>
+                  <span className="inline-flex items-center rounded-full border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/70 px-2.5 py-1 text-[11px] font-semibold text-slate-500 dark:text-slate-300">
+                    {sortedChatSessions.length} total
+                  </span>
                 </div>
 
                 <button
                   type="button"
                   onClick={startNewChat}
-                  className="mt-3 w-full inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold text-white"
+                  className="mt-3 w-full inline-flex items-center justify-center gap-2 rounded-2xl px-3.5 py-3 text-sm font-semibold text-white shadow-[0_16px_30px_-18px_rgba(15,23,42,0.35)] transition hover:brightness-105"
                   style={{ backgroundColor: "var(--theme-accent-strong)" }}
                 >
-                  <span className="material-symbols-outlined text-[18px]">add</span>
+                  <span className="material-symbols-outlined text-[18px]">add_circle</span>
                   Start new chat
                 </button>
 
-                <div className="mt-3 space-y-2 max-h-[430px] overflow-y-auto pr-1">
+                <div className="mt-4 space-y-3 max-h-[430px] overflow-y-auto pr-1 pb-1">
                   {sortedChatSessions.map((session) => {
                     const previewMessage =
                       [...session.messages]
@@ -898,45 +973,41 @@ export default function SupportAssistantWidget() {
                     return (
                       <div
                         key={session.id}
-                        className={`rounded-xl border px-3 py-3 transition ${
+                        className={`group rounded-[22px] border px-3 py-3 shadow-[0_16px_30px_-26px_rgba(15,23,42,0.55)] transition-all duration-200 ${
                           activeSession?.id === session.id
-                            ? "border-[var(--theme-accent)] bg-[var(--theme-accent-soft)]/70"
-                            : "border-slate-200 dark:border-slate-700 bg-white/75 dark:bg-slate-900/45"
+                            ? "border-[var(--theme-accent)] bg-[var(--theme-accent-soft)]/35 dark:bg-slate-900"
+                            : "border-slate-200/80 dark:border-slate-700 bg-white/88 dark:bg-slate-900/55 hover:-translate-y-0.5 hover:shadow-[0_20px_36px_-26px_rgba(15,23,42,0.75)]"
                         }`}
                       >
-                        <button
-                          type="button"
-                          onClick={() => openChatSession(session.id)}
-                          className="w-full text-left"
-                        >
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <p className="font-semibold text-[14px] text-slate-900 dark:text-white truncate">{session.title}</p>
-                                {session.ended && (
-                                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-300 dark:bg-slate-700 text-slate-700 dark:text-slate-200 whitespace-nowrap">ended</span>
-                                )}
-                              </div>
-                              <p className="mt-1 text-xs text-slate-600 dark:text-slate-300 line-clamp-2">{preview}</p>
+                        <div className="flex items-start justify-between gap-4">
+                          <button
+                            type="button"
+                            onClick={() => openChatSession(session.id)}
+                            className="flex-1 min-w-0 text-left"
+                          >
+                            <div className="flex min-w-0 items-center gap-2">
+                              <p className="font-semibold text-[14px] text-slate-900 dark:text-white truncate">{session.title}</p>
+                              {session.ended && (
+                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-200 whitespace-nowrap">ended</span>
+                              )}
                             </div>
-                            <div className="flex flex-col items-end">
-                              <p className="text-[11px] text-slate-500 dark:text-slate-300 whitespace-nowrap">
-                                {new Date(session.updatedAt).toLocaleDateString()}
-                              </p>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  deleteChat(session.id);
-                                }}
-                                className="mt-1 p-1 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 transition"
-                                aria-label="Delete chat"
-                              >
-                                <span className="material-symbols-outlined text-[16px]">delete</span>
-                              </button>
-                            </div>
+                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-300 line-clamp-2">{preview}</p>
+                          </button>
+
+                          <div className="flex flex-none flex-col items-end">
+                            <p className="max-w-[92px] truncate text-[11px] font-medium text-slate-500 dark:text-slate-300 whitespace-nowrap text-right">
+                              {new Date(session.updatedAt).toLocaleDateString()}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => deleteChat(session.id)}
+                              className="mt-1 inline-flex h-8 w-8 items-center justify-center rounded-full text-red-600 dark:text-red-400 hover:bg-red-100/80 dark:hover:bg-red-900/30 transition"
+                              aria-label="Delete chat"
+                            >
+                              <span className="material-symbols-outlined text-[17px]">delete</span>
+                            </button>
                           </div>
-                        </button>
+                        </div>
                       </div>
                     );
                   })}
@@ -946,33 +1017,33 @@ export default function SupportAssistantWidget() {
 
             {view === "chat" && (
               <div className="flex-1 min-h-0 h-full flex flex-col">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-200/80 dark:border-slate-700/80">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-200/75 dark:border-slate-700/80">
                   <button
                     type="button"
                     onClick={() => setView("chat-list")}
-                    className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200"
+                    className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-semibold border border-slate-200/80 dark:border-slate-700 bg-white/90 dark:bg-slate-900/70 text-slate-700 dark:text-slate-200 shadow-[0_10px_24px_-20px_rgba(15,23,42,0.7)]"
                   >
                     <span className="material-symbols-outlined text-[16px]">arrow_back</span>
                     Back
                   </button>
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold text-slate-900 dark:text-white truncate max-w-[82%] text-right">
+                  <div className="flex flex-1 min-w-0 items-center justify-end gap-2 pl-3">
+                    <p className="min-w-0 text-sm font-semibold text-slate-900 dark:text-white truncate text-right">
                       {activeSession?.title || "Chat"}
                     </p>
                     {activeSession?.ended && (
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-300 dark:bg-slate-700 text-slate-700 dark:text-slate-200 whitespace-nowrap">ended</span>
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-200 whitespace-nowrap">ended</span>
                     )}
                   </div>
                 </div>
 
-                <div ref={listRef} className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1 pt-1 pb-2">
+                <div ref={listRef} className="relative flex-1 min-h-0 overflow-y-auto space-y-3 pr-1 pt-3 pb-2">
                   {messages.map((message) => (
                     <div key={message.id} className={`flex gap-2 ${message.role === "assistant" ? "justify-start" : "justify-end"}`}>
                       {message.role === "assistant" && <ElevenAvatar size="sm" />}
                       <div
-                        className={`max-w-[82%] rounded-2xl px-3 py-2 text-sm leading-relaxed whitespace-pre-line break-words ${
+                        className={`max-w-[82%] rounded-[22px] px-3.5 py-3 text-sm leading-relaxed whitespace-pre-line break-words shadow-[0_14px_30px_-24px_rgba(15,23,42,0.55)] ${
                           message.role === "assistant"
-                            ? "border border-slate-200/80 dark:border-slate-700/80 bg-slate-50/90 dark:bg-slate-900/75 text-slate-800 dark:text-slate-100"
+                            ? "border border-slate-200/80 dark:border-slate-700/80 bg-white/90 dark:bg-slate-900/75 text-slate-800 dark:text-slate-100 backdrop-blur"
                             : "text-white"
                         }`}
                         style={message.role === "user" ? { backgroundColor: "var(--theme-accent-strong)" } : undefined}
@@ -985,7 +1056,7 @@ export default function SupportAssistantWidget() {
                   {isThinking && (
                     <div className="flex gap-2 justify-start">
                       <ElevenAvatar size="sm" />
-                      <div className="border border-slate-200/80 dark:border-slate-700/80 bg-slate-50/90 dark:bg-slate-900/75 rounded-2xl px-3 py-2 inline-flex items-center gap-1.5">
+                      <div className="border border-slate-200/80 dark:border-slate-700/80 bg-white/90 dark:bg-slate-900/75 rounded-[22px] px-3.5 py-2.5 inline-flex items-center gap-1.5 shadow-[0_14px_30px_-24px_rgba(15,23,42,0.55)]">
                         <span className="h-1.5 w-1.5 rounded-full bg-slate-500 dark:bg-slate-300 animate-bounce" style={{ animationDelay: "0ms" }} />
                         <span className="h-1.5 w-1.5 rounded-full bg-slate-500 dark:bg-slate-300 animate-bounce" style={{ animationDelay: "120ms" }} />
                         <span className="h-1.5 w-1.5 rounded-full bg-slate-500 dark:bg-slate-300 animate-bounce" style={{ animationDelay: "240ms" }} />
@@ -995,14 +1066,14 @@ export default function SupportAssistantWidget() {
                 </div>
 
                 {!activeSession?.ended && (
-                  <div className="sticky bottom-0 z-10 mt-auto pt-3 space-y-2 border-t border-slate-200/80 dark:border-slate-700/80 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm">
+                  <div className="sticky bottom-0 z-10 mt-auto pt-3 space-y-2 border-t border-slate-200/70 dark:border-slate-700/80 bg-transparent backdrop-blur-xl">
                     {!hasUserSentMessage && (
                       <div className="flex flex-wrap gap-2 pr-1">
                         {quickQuestions.map((question) => (
                           <button
                             key={question}
                             onClick={() => handleQuickQuestion(question)}
-                            className="rounded-full px-3 py-1.5 text-left text-[12px] border border-slate-200 dark:border-slate-700/80 bg-slate-100 dark:bg-slate-800/70 text-slate-700 dark:text-slate-200"
+                            className="rounded-full px-3 py-1.5 text-left text-[12px] border border-slate-200/80 dark:border-slate-700/80 bg-white/70 dark:bg-slate-900/65 text-slate-700 dark:text-slate-200 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.45)] transition hover:-translate-y-0.5 hover:border-[var(--theme-accent)]"
                           >
                             {question}
                           </button>
@@ -1013,14 +1084,14 @@ export default function SupportAssistantWidget() {
                     <button
                       type="button"
                       onClick={handleCloseChatPrompt}
-                      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/70 text-slate-700 dark:text-slate-200"
+                      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold border border-slate-200/80 dark:border-slate-700 bg-white/80 dark:bg-slate-900/65 text-slate-700 dark:text-slate-200 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.45)]"
                     >
                       <span className="material-symbols-outlined text-[16px]">close</span>
                       End chat
                     </button>
 
                     {isCloseFlowOpen && (
-                      <div className="rounded-xl border border-slate-200/85 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-900/80 p-3 space-y-2">
+                      <div className="rounded-[22px] border border-slate-200/85 dark:border-slate-700/80 bg-white/75 dark:bg-slate-900/78 p-3 space-y-2 shadow-[0_18px_34px_-26px_rgba(15,23,42,0.7)] backdrop-blur-md">
                         {closeFlowStep === "prompt" ? (
                           <>
                             <p className="text-sm font-semibold text-slate-900 dark:text-white">Are you satisfied with this chat?</p>
@@ -1028,7 +1099,7 @@ export default function SupportAssistantWidget() {
                               <button
                                 type="button"
                                 onClick={handleSatisfiedClose}
-                                className="rounded-full px-3 py-1.5 text-xs font-semibold text-white"
+                                className="rounded-full px-3 py-1.5 text-xs font-semibold text-white shadow-[0_12px_22px_-18px_rgba(15,23,42,0.32)]"
                                 style={{ backgroundColor: "var(--theme-accent-strong)" }}
                               >
                                 Yes, close and end chat
@@ -1036,7 +1107,7 @@ export default function SupportAssistantWidget() {
                               <button
                                 type="button"
                                 onClick={handleEscalation}
-                                className="rounded-full px-3 py-1.5 text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200"
+                                className="rounded-full px-3 py-1.5 text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/65 text-slate-700 dark:text-slate-200"
                               >
                                 I need human support
                               </button>
@@ -1054,13 +1125,13 @@ export default function SupportAssistantWidget() {
                               rows={3}
                               placeholder="Describe your issue or what you want support to know..."
                               maxLength={escalationNotesMaxLength}
-                              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 outline-none"
+                              className="w-full rounded-2xl border border-slate-200/80 dark:border-slate-700 bg-white/30 dark:bg-slate-950/20 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 outline-none backdrop-blur-md"
                             />
                             <div className="flex flex-wrap gap-2">
                               <button
                                 type="button"
                                 onClick={handleCreateSupportEmail}
-                                className="rounded-full px-3 py-1.5 text-xs font-semibold text-white"
+                                className="rounded-full px-3 py-1.5 text-xs font-semibold text-white shadow-[0_12px_22px_-18px_rgba(15,23,42,0.32)]"
                                 style={{ backgroundColor: "var(--theme-accent-strong)" }}
                               >
                                 Create support email
@@ -1069,7 +1140,7 @@ export default function SupportAssistantWidget() {
                                 <button
                                   type="button"
                                   onClick={handleEndAndStartNewAfterEscalation}
-                                  className="rounded-full px-3 py-1.5 text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200"
+                                  className="rounded-full px-3 py-1.5 text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/65 text-slate-700 dark:text-slate-200"
                                 >
                                   End and start new chat
                                 </button>
@@ -1077,7 +1148,7 @@ export default function SupportAssistantWidget() {
                               <button
                                 type="button"
                                 onClick={() => setCloseFlowStep("prompt")}
-                                className="rounded-full px-3 py-1.5 text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200"
+                                className="rounded-full px-3 py-1.5 text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/65 text-slate-700 dark:text-slate-200"
                               >
                                 Back
                               </button>
@@ -1096,11 +1167,11 @@ export default function SupportAssistantWidget() {
                         maxLength={chatMessageMaxLength}
                           rows={1}
                           disabled={activeSession?.ended}
-                          className="flex-1 min-h-10 max-h-28 resize-none overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm leading-5 text-slate-900 dark:text-slate-100 outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="flex-1 min-h-11 max-h-28 resize-none overflow-y-auto rounded-2xl border border-slate-200/75 dark:border-slate-700 bg-white/18 dark:bg-slate-950/12 px-3.5 py-2.5 text-sm leading-5 text-slate-900 dark:text-slate-100 outline-none shadow-[0_16px_30px_-26px_rgba(15,23,42,0.35)] backdrop-blur-md placeholder:text-slate-400/80 disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                       <button
                         type="submit"
-                        className="h-10 px-4 rounded-xl text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+                        className="h-11 px-4 rounded-2xl text-sm font-semibold text-white transition hover:brightness-105 disabled:opacity-60 shadow-[0_16px_30px_-20px_rgba(15,23,42,0.32)]"
                         style={{ backgroundColor: "var(--theme-accent-strong)" }}
                         disabled={isThinking || activeSession?.ended}
                       >
@@ -1337,21 +1408,23 @@ export default function SupportAssistantWidget() {
             )}
           </div>
 
-          <div className="h-3 border-t border-slate-200/80 dark:border-slate-700/80 bg-white/96 dark:bg-slate-900/96" />
+          <div className="h-3 border-t border-slate-200/75 dark:border-slate-700/80 bg-transparent" />
         </section>
       )}
 
       <button
         onClick={() => setIsOpen((prev) => !prev)}
-        className="group relative h-14 w-14 rounded-full shadow-[0_16px_30px_-16px_rgba(15,23,42,0.9)] transition-transform duration-200 hover:scale-[1.04] flex items-center justify-center"
+        className="group relative h-14 w-14 rounded-full shadow-[0_20px_40px_-18px_rgba(15,23,42,0.9)] transition-transform duration-200 hover:scale-[1.05] flex items-center justify-center"
         aria-label={isOpen ? "Hide support assistant" : "Open support assistant"}
         title="Support Assistant"
       >
-        <span className="absolute inset-0 rounded-full border-2 border-white/85 dark:border-slate-200/80" />
+        <span className="absolute inset-0 rounded-full border-2 border-white/90 dark:border-slate-200/80" />
         <span
           className="absolute inset-[3px] rounded-full border"
           style={{
-            backgroundColor: isOpen ? "#0f172a" : "#0ea5e9",
+            backgroundImage: isOpen
+              ? "linear-gradient(135deg, #0f172a, #334155)"
+              : "linear-gradient(135deg, var(--theme-accent-strong), var(--theme-accent), var(--theme-accent-soft))",
             borderColor: isOpen ? "#1e293b" : "#0284c7",
           }}
         />
