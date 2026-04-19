@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: 11planner-api
+    runtime: docker
+    region: us-east
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: OPENAI_API_KEY
+        scope: run
+      - key: GOOGLE_GENERATIVE_AI_API_KEY
+        scope: run
+      - key: SUPABASE_URL
+        scope: run
+      - key: SUPABASE_KEY
+        scope: run
