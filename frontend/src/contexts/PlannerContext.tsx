@@ -247,6 +247,25 @@ function mapTaskRowToModel(row: SupabaseTaskRow): Task {
   };
 }
 
+// Reads and writes local completion timestamps used for insights-history filtering.
+const TASK_COMPLETION_TIMESTAMPS_KEY = "taskCompletionTimestamps";
+
+function readTaskCompletionTimestamps(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(TASK_COMPLETION_TIMESTAMPS_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === "object" ? parsed as Record<string, string> : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeTaskCompletionTimestamps(map: Record<string, string>): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(TASK_COMPLETION_TIMESTAMPS_KEY, JSON.stringify(map));
+}
+
 export function PlannerProvider({ children }: { children: React.ReactNode }) {
   const [userId, setUserId] = useState<string>("user_demo");
   const [courses, setCourses] = useState<Course[]>([]);
@@ -727,6 +746,17 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
         .eq("user_id", userId);
 
       if (updateError) throw updateError;
+
+      if (task.completed !== undefined && typeof window !== "undefined") {
+        const completionTimestamps = readTaskCompletionTimestamps();
+        if (task.completed) {
+          completionTimestamps[id] = new Date().toISOString();
+        } else {
+          delete completionTimestamps[id];
+        }
+        writeTaskCompletionTimestamps(completionTimestamps);
+      }
+
       setTasks((prev) =>
         prev.map((t) => (t.id === id ? { ...t, ...task } : t))
       );

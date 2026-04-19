@@ -57,7 +57,7 @@ const routeHints: Array<{ match: RegExp; hint: string }> = [
   { match: /^\/terms/, hint: "The Terms page explains acceptable use, content ownership, availability, account actions, and the limits of scheduling guidance." },
   { match: /^\/logo-story/, hint: "The Logo Story page explains the inspiration behind the logo and the student-centered brand story." },
   { match: /^\/demo/, hint: "The Demo page plays a product tour video that showcases the main features of 11Planner." },
-  { match: /^\/settings/, hint: "Settings has three panels: Personalize, Notifications, and Account. Use Search settings to filter them, and manage Theme Mode, Accent Theme, Push Notifications, Notification Sound, Browser Permission, Reminder lead time, Email Updates, Weekly Report, privacy toggles, password reset, export PDF, clear data, delete account, and Reset This Section." },
+  { match: /^\/settings/, hint: "Settings has five panels: Appearance, Notifications, Privacy, Account, and Data. Use Search settings to filter them, and manage Theme Mode, Accent Theme, Push Notifications, Notification Sound, Browser Permission, Reminder lead time, Email Updates, Weekly Report, privacy controls (personalization, insights history, anonymous analytics, export identity), password reset, export PDF, delete learning insights history, clear data, delete account, and Reset This Section." },
   { match: /^\/notifications/, hint: "Notifications page shows live reminder status, Task Alerts for overdue and due-soon tasks, a Mark Complete button for overdue tasks, and Study Block Alerts for current and upcoming blocks." },
 ];
 

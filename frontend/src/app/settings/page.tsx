@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useMemo, useState, useEffect, Suspense, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useNotification } from "@/contexts/NotificationContext";
 import Footer from "@/components/Footer";
@@ -13,7 +15,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 type Theme = "light" | "dark" | "auto";
 type ColorTheme = "emerald" | "ocean" | "rose" | "slate" | "amber" | "violet";
-type SettingsPanel = "personalize" | "notifications" | "account";
+type SettingsPanel = "appearance" | "notifications" | "privacy" | "account" | "data";
 
 type UserSummary = {
   id?: string;
@@ -54,13 +56,14 @@ function SettingsPageContent() {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [emailUpdates, setEmailUpdates] = useState(true);
   const [weeklyReport, setWeeklyReport] = useState(true);
-  const [privacyProfileVisible, setPrivacyProfileVisible] = useState(true);
+  const [privacyIncludePersonalInfo, setPrivacyIncludePersonalInfo] = useState(true);
   const [privacyAnalyticsEnabled, setPrivacyAnalyticsEnabled] = useState(false);
   const [privacyPersonalizationEnabled, setPrivacyPersonalizationEnabled] = useState(true);
-  const [privacyShareProgress, setPrivacyShareProgress] = useState(false);
+  const [privacyInsightsHistoryEnabled, setPrivacyInsightsHistoryEnabled] = useState(true);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [isClearingAccountData, setIsClearingAccountData] = useState(false);
-  const [activePanel, setActivePanel] = useState<SettingsPanel>("personalize");
+  const [isDeletingInsightsHistory, setIsDeletingInsightsHistory] = useState(false);
+  const [activePanel, setActivePanel] = useState<SettingsPanel>("appearance");
   const [settingsSearch, setSettingsSearch] = useState("");
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [isSendingPasswordReset, setIsSendingPasswordReset] = useState(false);
@@ -120,13 +123,23 @@ function SettingsPageContent() {
       return;
     }
 
+    const includePersonalInfoValue = localStorage.getItem("privacyIncludePersonalInfo");
+    const legacyProfileVisibleValue = localStorage.getItem("privacyProfileVisible");
+    const insightsHistoryValue = localStorage.getItem("privacyInsightsHistoryEnabled");
+
     setSoundEnabled(readStoredBoolean("soundEnabled", true));
     setEmailUpdates(readStoredBoolean("emailUpdates", true));
     setWeeklyReport(readStoredBoolean("weeklyReport", true));
-    setPrivacyProfileVisible(readStoredBoolean("privacyProfileVisible", true));
+    setPrivacyIncludePersonalInfo(
+      includePersonalInfoValue === null
+        ? legacyProfileVisibleValue === null
+          ? true
+          : legacyProfileVisibleValue !== "false"
+        : includePersonalInfoValue !== "false"
+    );
     setPrivacyAnalyticsEnabled(readStoredBoolean("privacyAnalyticsEnabled", false));
     setPrivacyPersonalizationEnabled(readStoredBoolean("privacyPersonalizationEnabled", true));
-    setPrivacyShareProgress(readStoredBoolean("privacyShareProgress", false));
+    setPrivacyInsightsHistoryEnabled(insightsHistoryValue === null ? true : insightsHistoryValue !== "false");
   }, []);
 
   useEffect(() => {
@@ -183,11 +196,30 @@ function SettingsPageContent() {
 
   useEffect(() => {
     const panelParam = searchParams.get("panel");
-    const validPanels: SettingsPanel[] = ["personalize", "notifications", "account"];
-    if (panelParam && validPanels.includes(panelParam as SettingsPanel)) {
-      setActivePanel(panelParam as SettingsPanel);
+    const normalizedPanel = panelParam === "personalize" ? "appearance" : panelParam;
+    const validPanels: SettingsPanel[] = ["appearance", "notifications", "privacy", "account", "data"];
+    if (normalizedPanel && validPanels.includes(normalizedPanel as SettingsPanel)) {
+      setActivePanel(normalizedPanel as SettingsPanel);
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    if (activePanel === "data") {
+      return;
+    }
+
+    const dismissOnLeaveData = new Set([
+      "Learning insights history deleted. New insights start now.",
+      "Schedule PDF downloaded.",
+      "Schedule opened in a new tab. Use your browser print dialog to save as PDF.",
+      "Please allow pop-ups to export schedule as PDF.",
+      "Print-ready schedule export opened with explicit time rows.",
+    ]);
+
+    if (actionMessage?.text && (dismissOnLeaveData.has(actionMessage.text) || actionMessage.text.startsWith("Failed to export schedule:"))) {
+      setActionMessage(null);
+    }
+  }, [activePanel, actionMessage]);
 
   const [savedSettings, setSavedSettings] = useState({
     theme: theme as Theme,
@@ -197,10 +229,10 @@ function SettingsPageContent() {
     soundEnabled,
     emailUpdates,
     weeklyReport,
-    privacyProfileVisible,
+    privacyIncludePersonalInfo,
     privacyAnalyticsEnabled,
     privacyPersonalizationEnabled,
-    privacyShareProgress,
+    privacyInsightsHistoryEnabled,
   });
 
   // Updates the light/dark theme mode.
@@ -226,16 +258,19 @@ function SettingsPageContent() {
     localStorage.setItem("weeklyReport", String(value));
   };
 
-  // Stores whether the profile is visible in shared views.
-  const handlePrivacyProfileVisibleChange = (value: boolean) => {
-    setPrivacyProfileVisible(value);
-    localStorage.setItem("privacyProfileVisible", String(value));
+  // Stores whether exports/print views include personal identity details.
+  const handlePrivacyIncludePersonalInfoChange = (value: boolean) => {
+    setPrivacyIncludePersonalInfo(value);
+    localStorage.setItem("privacyIncludePersonalInfo", String(value));
   };
 
   // Stores the analytics opt-in preference.
   const handlePrivacyAnalyticsChange = (value: boolean) => {
     setPrivacyAnalyticsEnabled(value);
     localStorage.setItem("privacyAnalyticsEnabled", String(value));
+    if (!value) {
+      localStorage.removeItem("anonymousAnalyticsEvents");
+    }
   };
 
   // Stores whether personalized insights are enabled.
@@ -244,11 +279,27 @@ function SettingsPageContent() {
     localStorage.setItem("privacyPersonalizationEnabled", String(value));
   };
 
-  // Stores whether planner progress can be shared with integrations.
-  const handlePrivacyShareProgressChange = (value: boolean) => {
-    setPrivacyShareProgress(value);
-    localStorage.setItem("privacyShareProgress", String(value));
+  // Stores whether learning insights history is retained for trend analytics.
+  const handlePrivacyInsightsHistoryChange = (value: boolean) => {
+    setPrivacyInsightsHistoryEnabled(value);
+    localStorage.setItem("privacyInsightsHistoryEnabled", String(value));
   };
+
+  // Adds lightweight anonymous product analytics events when analytics sharing is enabled.
+  const trackAnonymousEvent = useCallback((event: string) => {
+    if (typeof window === "undefined") return;
+    if (localStorage.getItem("privacyAnalyticsEnabled") === "false") return;
+
+    try {
+      const raw = localStorage.getItem("anonymousAnalyticsEvents");
+      const parsed = raw ? JSON.parse(raw) : [];
+      const events: Array<{ event: string; ts: string }> = Array.isArray(parsed) ? parsed : [];
+      events.push({ event, ts: new Date().toISOString() });
+      localStorage.setItem("anonymousAnalyticsEvents", JSON.stringify(events.slice(-100)));
+    } catch {
+      // Ignore storage issues so settings interactions stay resilient.
+    }
+  }, []);
 
   // Sends a password reset email to the signed-in account.
   const handleChangePassword = async () => {
@@ -287,23 +338,255 @@ function SettingsPageContent() {
     }
   };
 
-  // Opens the schedule in a print-ready tab so the user can save it as PDF.
-  const handleExportScheduleAsPdf = () => {
+  // Downloads a dedicated PDF from Settings without opening a new tab.
+  const handleExportScheduleAsPdf = async () => {
     setActionMessage(null);
     setIsExportingPdf(true);
-    const scheduleWindow = window.open("/schedule", "_blank");
-    if (!scheduleWindow) {
-      setActionMessage({ type: "error", text: "Please allow pop-ups to export schedule as PDF." });
+    trackAnonymousEvent("settings_export_schedule_pdf");
+
+    if (!user?.id) {
+      setActionMessage({ type: "error", text: "Please sign in to export your schedule." });
       setIsExportingPdf(false);
       return;
     }
 
-    setTimeout(() => {
-      scheduleWindow.focus();
-      scheduleWindow.print();
-      setActionMessage({ type: "success", text: "Schedule opened in a new tab. Use your browser print dialog to save as PDF." });
+    try {
+      const { data: rawBlocks, error: blocksError } = await supabase
+        .from("schedule_blocks")
+        .select("id, source_task_id, starts_at, ends_at, created_at, user_id")
+        .eq("user_id", user.id)
+        .order("starts_at", { ascending: true });
+
+      if (blocksError) {
+        throw blocksError;
+      }
+
+      const blocks = (rawBlocks || []) as Array<{
+        id: string;
+        source_task_id: string | null;
+        starts_at: string;
+        ends_at: string;
+      }>;
+
+      const uniqueTaskIds = [...new Set(blocks.map((block) => block.source_task_id).filter(Boolean))] as string[];
+      const taskTitleById = new Map<string, string>();
+      const taskCourseById = new Map<string, string | null>();
+      const courseNameById = new Map<string, string>();
+
+      if (uniqueTaskIds.length > 0) {
+        const { data: taskRows, error: tasksError } = await supabase
+          .from("tasks")
+          .select("id, task_title, course_id")
+          .in("id", uniqueTaskIds);
+
+        if (tasksError) {
+          throw tasksError;
+        }
+
+        (taskRows || []).forEach((task) => {
+          taskTitleById.set(task.id as string, (task.task_title as string) || "Study Block");
+          taskCourseById.set(task.id as string, (task.course_id as string | null) || null);
+        });
+
+        const uniqueCourseIds = [...new Set((taskRows || []).map((task) => task.course_id).filter(Boolean))] as string[];
+
+        if (uniqueCourseIds.length > 0) {
+          const { data: courseRows, error: coursesError } = await supabase
+            .from("courses")
+            .select("id, course_name")
+            .in("id", uniqueCourseIds);
+
+          if (coursesError) {
+            throw coursesError;
+          }
+
+          (courseRows || []).forEach((course) => {
+            courseNameById.set(course.id as string, (course.course_name as string) || "");
+          });
+        }
+      }
+
+      const groupedByDate = new Map<string, Array<{ timeRange: string; title: string; course: string; duration: string }>>();
+
+      blocks.forEach((block) => {
+        const start = new Date(block.starts_at);
+        const end = new Date(block.ends_at);
+        if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+          return;
+        }
+
+        const dateKey = start.toLocaleDateString("en-US", {
+          weekday: "long",
+          month: "long",
+          day: "numeric",
+          year: "numeric",
+        });
+        const timeRange = `${start.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} - ${end.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
+        const rawDuration = Math.max(0, Math.round((end.getTime() - start.getTime()) / 60000));
+        const durationText = `${rawDuration} min`;
+        const taskId = block.source_task_id || "";
+        const taskTitle = taskTitleById.get(taskId) || "Study Block";
+        const courseId = taskCourseById.get(taskId) || null;
+        const courseName = courseId ? courseNameById.get(courseId) || "" : "";
+
+        if (!groupedByDate.has(dateKey)) {
+          groupedByDate.set(dateKey, []);
+        }
+        groupedByDate.get(dateKey)?.push({
+          timeRange,
+          title: taskTitle,
+          course: courseName,
+          duration: durationText,
+        });
+      });
+
+      const generatedAt = new Date().toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      });
+
+      const doc = new jsPDF({ unit: "pt", format: "a4" });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      let cursorY = 44;
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(20);
+      doc.text("11Planner Schedule Export", 40, cursorY);
+      cursorY += 20;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(71, 85, 105);
+      doc.text(`Generated ${generatedAt}`, 40, cursorY);
+      cursorY += 16;
+
+      if (privacyIncludePersonalInfo) {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        doc.setTextColor(15, 23, 42);
+        doc.text(profileDisplayName, 40, cursorY);
+        cursorY += 12;
+        if (user.email) {
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(10);
+          doc.setTextColor(71, 85, 105);
+          doc.text(user.email, 40, cursorY);
+          cursorY += 14;
+        }
+      } else {
+        doc.setFont("helvetica", "italic");
+        doc.setFontSize(10);
+        doc.setTextColor(71, 85, 105);
+        doc.text("Anonymous export mode enabled", 40, cursorY);
+        cursorY += 14;
+      }
+
+      doc.setDrawColor(203, 213, 225);
+      doc.line(40, cursorY, pageWidth - 40, cursorY);
+      cursorY += 16;
+
+      if (groupedByDate.size === 0) {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(11);
+        doc.setTextColor(71, 85, 105);
+        doc.text("No schedule blocks found to export yet.", 40, cursorY);
+      } else {
+        [...groupedByDate.entries()].forEach(([dateLabel, rows], index) => {
+          if (cursorY > pageHeight - 120) {
+            doc.addPage();
+            cursorY = 44;
+          }
+
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(12);
+          doc.setTextColor(15, 23, 42);
+          doc.text(dateLabel, 40, cursorY);
+          cursorY += 8;
+
+          autoTable(doc, {
+            startY: cursorY + 6,
+            margin: { left: 40, right: 40 },
+            tableWidth: pageWidth - 80,
+            head: [["Time", "Task", "Course", "Duration"]],
+            body: rows.map((row) => [row.timeRange, row.title, row.course || "-", row.duration]),
+            theme: "grid",
+            styles: {
+              font: "helvetica",
+              fontSize: 9,
+              cellPadding: 6,
+              textColor: [15, 23, 42],
+              lineColor: [203, 213, 225],
+              lineWidth: 0.5,
+              overflow: "linebreak",
+            },
+            columnStyles: {
+              0: { cellWidth: 120 },
+              1: { cellWidth: 190 },
+              2: { cellWidth: 145 },
+              3: { cellWidth: 60, halign: "left" },
+            },
+            headStyles: {
+              fillColor: [248, 250, 252],
+              textColor: [15, 23, 42],
+              lineColor: [203, 213, 225],
+              lineWidth: 0.5,
+              fontStyle: "bold",
+            },
+            bodyStyles: {
+              fillColor: [255, 255, 255],
+            },
+          });
+
+          const lastTable = (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable;
+          cursorY = (lastTable?.finalY ?? cursorY + 24) + 14;
+
+          if (index < groupedByDate.size - 1 && cursorY > pageHeight - 90) {
+            doc.addPage();
+            cursorY = 44;
+          }
+        });
+      }
+
+      const fileDate = new Date().toISOString().slice(0, 10);
+      doc.save(`11planner-schedule-${fileDate}.pdf`);
+      setActionMessage({ type: "success", text: "Schedule PDF downloaded." });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to export schedule.";
+      setActionMessage({ type: "error", text: `Failed to export schedule: ${message}` });
+    } finally {
       setIsExportingPdf(false);
-    }, 1200);
+    }
+  };
+
+  // Resets insights history timeline so trend/streak analytics begin from now.
+  const handleDeleteInsightsHistory = () => {
+    setActionMessage(null);
+    setDialog({
+      isOpen: true,
+      title: "Delete learning insights history?",
+      message: "This resets trend and streak analytics so insights begin from now.",
+      confirmText: "Delete History",
+      cancelText: "Cancel",
+      destructive: true,
+      onConfirm: async () => {
+        setDialog({ isOpen: false, title: "", message: "" });
+        try {
+          setIsDeletingInsightsHistory(true);
+          localStorage.setItem("learningInsightsHistoryStartDate", new Date().toISOString());
+          localStorage.removeItem("taskCompletionTimestamps");
+          trackAnonymousEvent("settings_delete_learning_insights_history");
+          setActionMessage({ type: "success", text: "Learning insights history deleted. New insights start now." });
+        } catch {
+          setActionMessage({ type: "error", text: "Failed to delete learning insights history." });
+        } finally {
+          setIsDeletingInsightsHistory(false);
+        }
+      },
+    });
   };
 
   // Clears planner data and resets saved preferences for the current account.
@@ -330,10 +613,15 @@ function SettingsPageContent() {
           "emailUpdates",
           "weeklyReport",
           "dailyLimit",
+          "privacyIncludePersonalInfo",
           "privacyProfileVisible",
           "privacyAnalyticsEnabled",
           "privacyPersonalizationEnabled",
+          "privacyInsightsHistoryEnabled",
           "privacyShareProgress",
+          "learningInsightsHistoryStartDate",
+          "taskCompletionTimestamps",
+          "anonymousAnalyticsEvents",
           "soundEnabled",
           "notifications",
           "reminderLeadHours",
@@ -387,10 +675,10 @@ function SettingsPageContent() {
         handleSoundChange(true);
         handleEmailUpdatesChange(true);
         handleWeeklyReportChange(true);
-        handlePrivacyProfileVisibleChange(true);
+        handlePrivacyIncludePersonalInfoChange(true);
         handlePrivacyAnalyticsChange(false);
         handlePrivacyPersonalizationChange(true);
-        handlePrivacyShareProgressChange(false);
+        handlePrivacyInsightsHistoryChange(true);
 
         setActionMessage({ type: "success", text: "Account data cleared." });
       } catch (err) {
@@ -438,10 +726,15 @@ function SettingsPageContent() {
           localStorage.removeItem("emailUpdates");
           localStorage.removeItem("weeklyReport");
           localStorage.removeItem("dailyLimit");
+          localStorage.removeItem("privacyIncludePersonalInfo");
           localStorage.removeItem("privacyProfileVisible");
           localStorage.removeItem("privacyAnalyticsEnabled");
           localStorage.removeItem("privacyPersonalizationEnabled");
+          localStorage.removeItem("privacyInsightsHistoryEnabled");
           localStorage.removeItem("privacyShareProgress");
+          localStorage.removeItem("learningInsightsHistoryStartDate");
+          localStorage.removeItem("taskCompletionTimestamps");
+          localStorage.removeItem("anonymousAnalyticsEvents");
           localStorage.removeItem("soundEnabled");
 
           setActionMessage({ type: "success", text: "Account deleted successfully." });
@@ -465,10 +758,10 @@ function SettingsPageContent() {
       soundEnabled !== savedSettings.soundEnabled ||
       emailUpdates !== savedSettings.emailUpdates ||
       weeklyReport !== savedSettings.weeklyReport ||
-      privacyProfileVisible !== savedSettings.privacyProfileVisible ||
+      privacyIncludePersonalInfo !== savedSettings.privacyIncludePersonalInfo ||
       privacyAnalyticsEnabled !== savedSettings.privacyAnalyticsEnabled ||
       privacyPersonalizationEnabled !== savedSettings.privacyPersonalizationEnabled ||
-      privacyShareProgress !== savedSettings.privacyShareProgress
+      privacyInsightsHistoryEnabled !== savedSettings.privacyInsightsHistoryEnabled
     );
   }, [
     theme,
@@ -478,10 +771,10 @@ function SettingsPageContent() {
     soundEnabled,
     emailUpdates,
     weeklyReport,
-    privacyProfileVisible,
+    privacyIncludePersonalInfo,
     privacyAnalyticsEnabled,
     privacyPersonalizationEnabled,
-    privacyShareProgress,
+    privacyInsightsHistoryEnabled,
     savedSettings,
   ]);
 
@@ -497,10 +790,10 @@ function SettingsPageContent() {
         soundEnabled,
         emailUpdates,
         weeklyReport,
-        privacyProfileVisible,
+        privacyIncludePersonalInfo,
         privacyAnalyticsEnabled,
         privacyPersonalizationEnabled,
-        privacyShareProgress,
+        privacyInsightsHistoryEnabled,
       });
       setLastSavedAt(
         new Date().toLocaleTimeString("en-US", {
@@ -520,10 +813,10 @@ function SettingsPageContent() {
     soundEnabled,
     emailUpdates,
     weeklyReport,
-    privacyProfileVisible,
+    privacyIncludePersonalInfo,
     privacyAnalyticsEnabled,
     privacyPersonalizationEnabled,
-    privacyShareProgress,
+    privacyInsightsHistoryEnabled,
   ]);
 
   const accentSoftStyle = {
@@ -541,7 +834,7 @@ function SettingsPageContent() {
   // Restores the defaults for whichever settings section is currently open.
   const handleResetDefaults = () => {
     switch (activePanel) {
-      case "personalize":
+      case "appearance":
         handleThemeChange("light");
         handleColorThemeChange("emerald");
         break;
@@ -552,11 +845,11 @@ function SettingsPageContent() {
         handleEmailUpdatesChange(true);
         handleWeeklyReportChange(true);
         break;
-      case "account":
-        handlePrivacyProfileVisibleChange(true);
+      case "privacy":
+        handlePrivacyIncludePersonalInfoChange(true);
         handlePrivacyAnalyticsChange(false);
         handlePrivacyPersonalizationChange(true);
-        handlePrivacyShareProgressChange(false);
+        handlePrivacyInsightsHistoryChange(true);
         break;
       default:
         break;
@@ -566,8 +859,8 @@ function SettingsPageContent() {
   const navItems: Array<{ id: SettingsPanel; label: string; icon: string; keywords: string[] }> = useMemo(
     () => [
       {
-        id: "personalize",
-        label: "Personalize",
+        id: "appearance",
+        label: "Appearance",
         icon: "palette",
         keywords: ["theme", "color", "accent", "appearance", "dark", "light"],
       },
@@ -578,10 +871,22 @@ function SettingsPageContent() {
         keywords: ["push", "sound", "email", "weekly", "reports", "alerts", "reminders"],
       },
       {
+        id: "privacy",
+        label: "Privacy",
+        icon: "lock",
+        keywords: ["privacy", "analytics", "history", "export", "personalization", "personal info"],
+      },
+      {
         id: "account",
         label: "Account",
         icon: "person",
-        keywords: ["account", "privacy", "security", "password", "export", "delete"],
+        keywords: ["account", "security", "password", "profile", "login"],
+      },
+      {
+        id: "data",
+        label: "Data",
+        icon: "database",
+        keywords: ["export", "delete", "clear", "backup", "data"],
       },
     ],
     []
@@ -676,7 +981,7 @@ function SettingsPageContent() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] min-h-[700px]">
+          <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] min-h-[600px]">
             <aside className="border-r border-slate-200/70 dark:border-slate-700/70 bg-white/55 dark:bg-slate-900/45 p-4 md:p-5">
               <div className="mb-4 rounded-xl border border-slate-200/80 dark:border-slate-700/70 bg-white/75 dark:bg-slate-800/65 px-3 py-2.5 flex items-center gap-2">
                 <span className="material-symbols-outlined text-base text-slate-500 dark:text-slate-300">search</span>
@@ -734,9 +1039,9 @@ function SettingsPageContent() {
                 </div>
               )}
 
-              {activePanel === "personalize" && (
+              {activePanel === "appearance" && (
                 <section className={sectionCardClass}>
-                  <div className="text-xl font-bold text-slate-900 dark:text-white mb-1">Personalize</div>
+                  <div className="text-xl font-bold text-slate-900 dark:text-white mb-1">Appearance</div>
                   <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Customize the look and feel of your planner.</p>
 
                   <div className="mb-5">
@@ -782,55 +1087,16 @@ function SettingsPageContent() {
                 </section>
               )}
 
-              {activePanel === "account" && (
+              {activePanel === "privacy" && (
                 <section className={sectionCardClass}>
-                  <div className="text-xl font-bold text-slate-900 dark:text-white mb-1">Account & Privacy</div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Manage login and privacy controls.</p>
+                  <div className="text-xl font-bold text-slate-900 dark:text-white mb-1">Privacy</div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Control personalization, insights history, analytics sharing, and export identity details.</p>
 
-                  <button
-                    onClick={handleChangePassword}
-                    disabled={isSendingPasswordReset}
-                    className="w-full text-left px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/75 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-700 transition mb-4 disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
-                    <p className="font-medium text-slate-900 dark:text-white">{isSendingPasswordReset ? "Sending reset link..." : "Change Password"}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Send a reset link to your email</p>
-                  </button>
-
-                  <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white/75 dark:bg-slate-800/60 p-4 space-y-3">
-                    <p className="font-medium text-slate-900 dark:text-white">Privacy & Security</p>
-
+                  <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Public Profile Visibility</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">Allow profile details in shared views.</p>
-                      </div>
-                      <button
-                        onClick={() => handlePrivacyProfileVisibleChange(!privacyProfileVisible)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${privacyProfileVisible ? "" : "bg-slate-300 dark:bg-slate-600"}`}
-                        style={privacyProfileVisible ? { backgroundColor: "var(--theme-accent-strong)" } : undefined}
-                      >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${privacyProfileVisible ? "translate-x-6" : "translate-x-1"}`} />
-                      </button>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Usage Analytics</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">Share anonymous product metrics.</p>
-                      </div>
-                      <button
-                        onClick={() => handlePrivacyAnalyticsChange(!privacyAnalyticsEnabled)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${privacyAnalyticsEnabled ? "" : "bg-slate-300 dark:bg-slate-600"}`}
-                        style={privacyAnalyticsEnabled ? { backgroundColor: "var(--theme-accent-strong)" } : undefined}
-                      >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${privacyAnalyticsEnabled ? "translate-x-6" : "translate-x-1"}`} />
-                      </button>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Personalized Insights</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">Use planner activity for smart recommendations.</p>
+                        <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Personalized Planner Recommendations</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Use your study activity to tailor focus recommendations.</p>
                       </div>
                       <button
                         onClick={() => handlePrivacyPersonalizationChange(!privacyPersonalizationEnabled)}
@@ -843,45 +1109,67 @@ function SettingsPageContent() {
 
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Share Progress with Integrations</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">Allow connected tools to read progress status.</p>
+                        <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Learning Insights History</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Keep progress history for trends and streak analytics.</p>
                       </div>
                       <button
-                        onClick={() => handlePrivacyShareProgressChange(!privacyShareProgress)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${privacyShareProgress ? "" : "bg-slate-300 dark:bg-slate-600"}`}
-                        style={privacyShareProgress ? { backgroundColor: "var(--theme-accent-strong)" } : undefined}
+                        onClick={() => handlePrivacyInsightsHistoryChange(!privacyInsightsHistoryEnabled)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${privacyInsightsHistoryEnabled ? "" : "bg-slate-300 dark:bg-slate-600"}`}
+                        style={privacyInsightsHistoryEnabled ? { backgroundColor: "var(--theme-accent-strong)" } : undefined}
                       >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${privacyShareProgress ? "translate-x-6" : "translate-x-1"}`} />
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${privacyInsightsHistoryEnabled ? "translate-x-6" : "translate-x-1"}`} />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Anonymous Product Analytics</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Share anonymous usage metrics to help improve 11Planner.</p>
+                      </div>
+                      <button
+                        onClick={() => handlePrivacyAnalyticsChange(!privacyAnalyticsEnabled)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${privacyAnalyticsEnabled ? "" : "bg-slate-300 dark:bg-slate-600"}`}
+                        style={privacyAnalyticsEnabled ? { backgroundColor: "var(--theme-accent-strong)" } : undefined}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${privacyAnalyticsEnabled ? "translate-x-6" : "translate-x-1"}`} />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Include Personal Info in Exports</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Show your name/email in print-ready schedule exports.</p>
+                      </div>
+                      <button
+                        onClick={() => handlePrivacyIncludePersonalInfoChange(!privacyIncludePersonalInfo)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${privacyIncludePersonalInfo ? "" : "bg-slate-300 dark:bg-slate-600"}`}
+                        style={privacyIncludePersonalInfo ? { backgroundColor: "var(--theme-accent-strong)" } : undefined}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${privacyIncludePersonalInfo ? "translate-x-6" : "translate-x-1"}`} />
                       </button>
                     </div>
                   </div>
+                </section>
+              )}
 
-                  <div className="space-y-3 mt-4">
-                    <button
-                      onClick={handleExportScheduleAsPdf}
-                      disabled={isExportingPdf}
-                      className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-slate-200/70 dark:border-slate-700/70 bg-white/70 dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      <span className="flex items-center gap-2 text-slate-800 dark:text-slate-100"><span className="material-symbols-outlined text-base">picture_as_pdf</span>{isExportingPdf ? "Preparing PDF export..." : "Export Schedule as PDF"}</span>
-                      <span className="material-symbols-outlined text-base text-slate-400">chevron_right</span>
-                    </button>
-                    <button
-                      onClick={handleClearAccountData}
-                      disabled={isClearingAccountData}
-                      className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-red-200/70 dark:border-red-800/50 bg-red-50/70 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 transition disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      <span className="flex items-center gap-2 text-red-700 dark:text-red-300">
-                        <span className="material-symbols-outlined text-base">delete</span>
-                        {isClearingAccountData ? "Clearing Account Data..." : "Clear Account Data"}
-                      </span>
-                      <span className="material-symbols-outlined text-base text-red-300">chevron_right</span>
-                    </button>
-                  </div>
+              {activePanel === "account" && (
+                <section className={sectionCardClass}>
+                  <div className="text-xl font-bold text-slate-900 dark:text-white mb-1">Account</div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Manage account access and sensitive account actions.</p>
+
+                  <button
+                    onClick={handleChangePassword}
+                    disabled={isSendingPasswordReset}
+                    className="w-full text-left px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/75 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-700 transition mb-4 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    <p className="font-medium text-slate-900 dark:text-white">{isSendingPasswordReset ? "Sending reset link..." : "Change Password"}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Send a reset link to your email</p>
+                  </button>
 
                   <button
                     onClick={handleDeleteAccount}
                     disabled={isDeletingAccount}
-                    className="w-full text-left mt-4 px-4 py-3 rounded-xl border border-red-300 dark:border-red-700 bg-red-50/80 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="w-full text-left px-4 py-3 rounded-xl border border-red-300 dark:border-red-700 bg-red-50/80 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 transition disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     <p className="font-medium text-red-700 dark:text-red-300">
                       {isDeletingAccount ? "Deleting Account..." : "Delete Account"}
@@ -891,17 +1179,50 @@ function SettingsPageContent() {
                 </section>
               )}
 
+              {activePanel === "data" && (
+                <section className={sectionCardClass}>
+                  <div className="text-xl font-bold text-slate-900 dark:text-white mb-1">Data</div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Export or clear your planner data.</p>
+
+                  <button
+                    onClick={handleExportScheduleAsPdf}
+                    disabled={isExportingPdf}
+                    className="w-full text-left px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/75 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-700 transition mb-4 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    <p className="font-medium text-slate-900 dark:text-white">
+                      {isExportingPdf ? "Preparing PDF export..." : "Export Schedule as PDF"}
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Open your schedule in a print-ready view for PDF save.</p>
+                  </button>
+
+                  <button
+                    onClick={handleDeleteInsightsHistory}
+                    disabled={isDeletingInsightsHistory}
+                    className="w-full text-left px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/75 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-700 transition mb-4 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    <p className="font-medium text-slate-900 dark:text-white">
+                      {isDeletingInsightsHistory ? "Deleting Insights History..." : "Delete Learning Insights History"}
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Reset trend and streak analytics so new insights begin now.</p>
+                  </button>
+
+                  <button
+                    onClick={handleClearAccountData}
+                    disabled={isClearingAccountData}
+                    className="w-full text-left px-4 py-3 rounded-xl border border-red-300 dark:border-red-700 bg-red-50/80 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    <p className="font-medium text-red-700 dark:text-red-300">
+                      {isClearingAccountData ? "Clearing Account Data..." : "Clear Account Data"}
+                    </p>
+                    <p className="text-xs text-red-400 dark:text-red-300">Remove planner records and reset saved preferences.</p>
+                  </button>
+                </section>
+              )}
+
               {activePanel === "notifications" && (
                 <section className={sectionCardClass}>
                   <div className="text-xl font-bold text-slate-900 dark:text-white mb-1">Notifications</div>
                   <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Control alert channels and reminder timing for your tasks and study blocks.</p>
-
-                  <div className="mb-4 rounded-xl border border-slate-200/70 dark:border-slate-700/70 bg-white/70 dark:bg-slate-800/55 p-3">
-                    <p className="text-sm font-semibold text-slate-900 dark:text-white">Delivery channels</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-300 mt-1">
-                      Notifications feed on the Notifications page will reflect these settings.
-                    </p>
-                  </div>
 
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
@@ -1008,15 +1329,17 @@ function SettingsPageContent() {
                 </section>
               )}
 
-              <div className="rounded-2xl border border-slate-200/70 dark:border-slate-700/70 bg-white/70 dark:bg-slate-800/55 px-4 py-3 flex items-center justify-between gap-3">
-                <span className="text-xs text-slate-700 dark:text-slate-200">
-                  {hasChanges ? "Saving..." : "All changes saved"}
-                  {lastSavedAt && <span className="ml-2 text-slate-500 dark:text-slate-300">Last saved at {lastSavedAt}</span>}
-                </span>
-                <button onClick={handleResetDefaults} className="bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-900 dark:text-white text-sm font-semibold py-2 px-4 rounded-lg transition border border-slate-300 dark:border-slate-600">
-                  Reset This Section
-                </button>
-              </div>
+              {(activePanel === "appearance" || activePanel === "notifications" || activePanel === "privacy") && (
+                <div className="rounded-2xl border border-slate-200/70 dark:border-slate-700/70 bg-white/70 dark:bg-slate-800/55 px-4 py-3 flex items-center justify-between gap-3">
+                  <span className="text-xs text-slate-700 dark:text-slate-200">
+                    {hasChanges ? "Saving..." : "All changes saved"}
+                    {lastSavedAt && <span className="ml-2 text-slate-500 dark:text-slate-300">Last saved at {lastSavedAt}</span>}
+                  </span>
+                  <button onClick={handleResetDefaults} className="bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-900 dark:text-white text-sm font-semibold py-2 px-4 rounded-lg transition border border-slate-300 dark:border-slate-600">
+                    Reset This Section
+                  </button>
+                </div>
+              )}
             </main>
           </div>
         </div>

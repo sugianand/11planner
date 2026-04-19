@@ -1,10 +1,12 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { usePlanner } from "@/contexts/PlannerContext";
 import { ScheduleView } from "@/components/ScheduleView";
 import { Event } from "@/types/schedule";
 import Footer from "@/components/Footer";
+import { supabase } from "@/lib/supabaseClient";
 
 interface ScheduleStats {
   total_hours: number;
@@ -12,6 +14,7 @@ interface ScheduleStats {
 }
 
 export default function SchedulePage() {
+  const searchParams = useSearchParams();
   const {
     userId,
     tasks,
@@ -26,7 +29,12 @@ export default function SchedulePage() {
   const [scheduleStats, setScheduleStats] = useState<ScheduleStats | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [colorBy, setColorBy] = useState<"priority" | "course">("priority");
+  const [exportIdentity, setExportIdentity] = useState<{ name: string; email: string } | null>(null);
 
+  const isPrintMode = searchParams.get("printMode") === "1";
+  const includePersonalInfoInExport = searchParams.get("includePersonalInfo") !== "0";
+
+  // Reads the saved daily study limit from local storage for export and generation.
   const getStoredDailyLimit = () => {
     if (typeof window === "undefined") {
       return undefined;
@@ -41,6 +49,47 @@ export default function SchedulePage() {
   }, [loadTasks, loadScheduleBlocks]);
 
   useEffect(() => {
+    if (!isPrintMode || !includePersonalInfoInExport) {
+      setExportIdentity(null);
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadExportIdentity = async () => {
+      const { data } = await supabase.auth.getUser();
+      const authUser = data?.user;
+      if (!authUser || !isMounted) {
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("firstname, lastname")
+        .eq("id", authUser.id)
+        .maybeSingle();
+
+      if (!isMounted) {
+        return;
+      }
+
+      const first = profile?.firstname?.trim() || "";
+      const last = profile?.lastname?.trim() || "";
+      const fullName = `${first} ${last}`.trim() || "11Planner User";
+      setExportIdentity({
+        name: fullName,
+        email: authUser.email || "",
+      });
+    };
+
+    void loadExportIdentity();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isPrintMode, includePersonalInfoInExport]);
+
+  useEffect(() => {
     if (!error) {
       return;
     }
@@ -50,6 +99,7 @@ export default function SchedulePage() {
     return () => clearTimeout(timeoutId);
   }, [error]);
 
+  // Requests a fresh schedule from the backend and refreshes local block state.
   const generateSchedule = async () => {
     setLoading(true);
     setError(null);
@@ -115,6 +165,7 @@ export default function SchedulePage() {
   }, [scheduleStats, scheduleBlocks]);
 
   const scheduleEvents = useMemo(() => {
+    // Maps blocks to calendar events with a consistent color scheme.
     const getColorForBlock = (
       task: (typeof tasks)[0] | undefined,
       colorScheme: "priority" | "course"
@@ -174,6 +225,7 @@ export default function SchedulePage() {
     });
   }, [scheduleBlocks, tasks, colorBy]);
 
+  // Persists a dragged block's new time while preventing overlap conflicts.
   const handleEventMove = async (eventId: string, newStart: Date) => {
     const block = scheduleBlocks.find((item) => item.id === eventId);
     if (!block) {
@@ -226,6 +278,20 @@ export default function SchedulePage() {
       <div className="max-w-7xl w-full mx-auto p-6 md:p-10 flex-1">
         <div className="bg-white/65 dark:bg-slate-800/65 backdrop-blur-xl rounded-3xl p-6 md:p-8 shadow-sm border border-white/40 dark:border-slate-700/40">
           <div className="mb-8 rounded-2xl border border-white/50 dark:border-slate-700/50 theme-header-gradient p-5 md:p-6">
+            {isPrintMode && (
+              <div className="mb-4 rounded-xl border border-slate-200/70 dark:border-slate-700/70 bg-white/85 dark:bg-slate-900/60 px-4 py-3">
+                {includePersonalInfoInExport ? (
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.08em] text-slate-500 dark:text-slate-300">Schedule Export Identity</p>
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">{exportIdentity?.name || "Loading name..."}</p>
+                    <p className="text-xs text-slate-600 dark:text-slate-300">{exportIdentity?.email || ""}</p>
+                  </div>
+                ) : (
+                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Anonymous export mode is enabled. Personal identity details are excluded from this printable view.</p>
+                )}
+              </div>
+            )}
+
             <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
               <div>
                 <h1 className="text-4xl font-bold text-slate-900 dark:text-white">

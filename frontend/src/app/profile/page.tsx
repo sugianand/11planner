@@ -45,8 +45,11 @@ export default function ProfilePage() {
   const [isSavingName, setIsSavingName] = useState(false);
   const [nameFeedback, setNameFeedback] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
-  const [privacyProfileVisible, setPrivacyProfileVisible] = useState(true);
   const [privacyPersonalizationEnabled, setPrivacyPersonalizationEnabled] = useState(true);
+  const [privacyInsightsHistoryEnabled, setPrivacyInsightsHistoryEnabled] = useState(true);
+  const [privacyAnalyticsEnabled, setPrivacyAnalyticsEnabled] = useState(false);
+  const [insightsHistoryStartDate, setInsightsHistoryStartDate] = useState<Date | null>(null);
+  const [taskCompletionTimestamps, setTaskCompletionTimestamps] = useState<Record<string, string>>({});
   const [animatedCompletionRate, setAnimatedCompletionRate] = useState(0);
   const animatedCompletionRateRef = useRef(0);
 
@@ -89,8 +92,26 @@ export default function ProfilePage() {
     if (typeof window === "undefined") {
       return;
     }
-    setPrivacyProfileVisible(localStorage.getItem("privacyProfileVisible") !== "false");
     setPrivacyPersonalizationEnabled(localStorage.getItem("privacyPersonalizationEnabled") !== "false");
+    setPrivacyInsightsHistoryEnabled(localStorage.getItem("privacyInsightsHistoryEnabled") !== "false");
+    setPrivacyAnalyticsEnabled(localStorage.getItem("privacyAnalyticsEnabled") === "true");
+
+    const cutoffRaw = localStorage.getItem("learningInsightsHistoryStartDate");
+    if (!cutoffRaw) {
+      setInsightsHistoryStartDate(null);
+      return;
+    }
+
+    const cutoffDate = new Date(cutoffRaw);
+    setInsightsHistoryStartDate(Number.isNaN(cutoffDate.getTime()) ? null : cutoffDate);
+
+    try {
+      const completionTimesRaw = localStorage.getItem("taskCompletionTimestamps");
+      const parsed = completionTimesRaw ? JSON.parse(completionTimesRaw) : {};
+      setTaskCompletionTimestamps(parsed && typeof parsed === "object" ? (parsed as Record<string, string>) : {});
+    } catch {
+      setTaskCompletionTimestamps({});
+    }
   }, []);
 
   useEffect(() => {
@@ -205,10 +226,45 @@ export default function ProfilePage() {
     loadPreferences();
   }, [loadPreferences]);
 
-  const completedTasks = tasks.filter((t) => t.completed).length;
+  // Filters tasks to the insight window used for charts and streaks.
+  const analyticsTasks = useMemo(() => {
+    if (!privacyInsightsHistoryEnabled) {
+      return [] as typeof tasks;
+    }
+
+    return tasks;
+  }, [tasks, privacyInsightsHistoryEnabled]);
+
+  // Keeps only completed tasks that belong to the current insights timeline.
+  const completedInsightTasks = useMemo(() => {
+    return analyticsTasks.filter((task) => {
+      if (!task.completed) {
+        return false;
+      }
+
+      if (!insightsHistoryStartDate) {
+        return true;
+      }
+
+      const completedAtRaw = taskCompletionTimestamps[task.id];
+      if (!completedAtRaw) {
+        return false;
+      }
+
+      const completedAt = new Date(completedAtRaw);
+      if (Number.isNaN(completedAt.getTime())) {
+        return false;
+      }
+
+      return completedAt >= insightsHistoryStartDate;
+    });
+  }, [analyticsTasks, insightsHistoryStartDate, taskCompletionTimestamps]);
+
+  const completedTasks = completedInsightTasks.length;
   const totalTasks = tasks.length;
-  const completionRate = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
-  const inProgressTasks = totalTasks - completedTasks;
+  const analyticsTotalTasks = analyticsTasks.length;
+  const completionRate = analyticsTotalTasks === 0 ? 0 : Math.round((completedTasks / analyticsTotalTasks) * 100);
+  const inProgressTasks = Math.max(0, analyticsTotalTasks - completedTasks);
   const hasTakenQuiz = Boolean(
     preferences?.worktime &&
     preferences?.workdays?.length &&
@@ -216,12 +272,8 @@ export default function ProfilePage() {
     preferences?.assignmentplan
   );
 
-  const fullName = privacyProfileVisible
-    ? (profile ? `${profile.firstname} ${profile.lastname}` : "Guest User")
-    : "Private Profile";
-  const initials = privacyProfileVisible
-    ? `${profile?.firstname?.[0] ?? "G"}${profile?.lastname?.[0] ?? "U"}`.toUpperCase()
-    : "PP";
+  const fullName = profile ? `${profile.firstname} ${profile.lastname}` : "Guest User";
+  const initials = `${profile?.firstname?.[0] ?? "G"}${profile?.lastname?.[0] ?? "U"}`.toUpperCase();
 
   const focusTier = privacyPersonalizationEnabled
     ? completionRate >= 80
@@ -258,12 +310,14 @@ export default function ProfilePage() {
     return () => window.cancelAnimationFrame(animationFrame);
   }, [completionRate]);
 
+  // Builds the seven-day completion chart from the filtered completion history.
   const weeklyCompletionData = useMemo(() => {
     const countsByDay = new Map<string, number>();
 
-    tasks.forEach((task) => {
-      if (!task.completed) return;
-      const date = new Date(task.deadline);
+    completedInsightTasks.forEach((task) => {
+      const completedAtRaw = taskCompletionTimestamps[task.id];
+      if (!completedAtRaw) return;
+      const date = new Date(completedAtRaw);
       if (Number.isNaN(date.getTime())) return;
       const key = getLocalDateKey(date);
       countsByDay.set(key, (countsByDay.get(key) || 0) + 1);
@@ -282,19 +336,21 @@ export default function ProfilePage() {
     });
 
     return days;
-  }, [tasks]);
+  }, [completedInsightTasks, taskCompletionTimestamps]);
 
   const maxDailyCompletion = useMemo(
     () => Math.max(1, ...weeklyCompletionData.map((day) => day.count)),
     [weeklyCompletionData]
   );
 
+  // Computes streak metrics from the same reset-aware completion set.
   const { currentStreak, bestStreak } = useMemo(() => {
     const completedDateKeys = new Set<string>();
 
-    tasks.forEach((task) => {
-      if (!task.completed) return;
-      const date = new Date(task.deadline);
+    completedInsightTasks.forEach((task) => {
+      const completedAtRaw = taskCompletionTimestamps[task.id];
+      if (!completedAtRaw) return;
+      const date = new Date(completedAtRaw);
       if (Number.isNaN(date.getTime())) return;
       completedDateKeys.add(getLocalDateKey(date));
     });
@@ -329,7 +385,28 @@ export default function ProfilePage() {
       currentStreak: runningCurrent,
       bestStreak: runningBest,
     };
-  }, [tasks]);
+  }, [completedInsightTasks, taskCompletionTimestamps]);
+
+  // Logs an anonymous profile-view event when analytics sharing is enabled.
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (!privacyAnalyticsEnabled) {
+      return;
+    }
+
+    try {
+      const raw = localStorage.getItem("anonymousAnalyticsEvents");
+      const parsed = raw ? JSON.parse(raw) : [];
+      const events: Array<{ event: string; ts: string }> = Array.isArray(parsed) ? parsed : [];
+      events.push({ event: "profile_page_view", ts: new Date().toISOString() });
+      localStorage.setItem("anonymousAnalyticsEvents", JSON.stringify(events.slice(-100)));
+    } catch {
+      // Keep profile usable even if analytics storage is unavailable.
+    }
+  }, [privacyAnalyticsEnabled]);
 
   return (
     <div className="relative min-h-screen overflow-hidden flex flex-col">
@@ -364,9 +441,7 @@ export default function ProfilePage() {
                     {fullName}
                   </h1>
                   <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
-                    {privacyProfileVisible
-                      ? (email || "Signed out currently - login to sync profile details")
-                      : "Email hidden by privacy setting"}
+                    {email || "Signed out currently - login to sync profile details"}
                   </p>
                 </div>
               </div>
@@ -469,32 +544,48 @@ export default function ProfilePage() {
               className="card-reveal rounded-3xl border border-white/50 bg-white/70 p-6 shadow-sm transition-all duration-300 hover:shadow-md motion-reduce:transition-none dark:border-slate-700/55 dark:bg-slate-800/55 sm:p-7"
               style={{ animationDelay: "150ms" }}
             >
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">Current Momentum</p>
-              <div className="mt-3 flex items-end gap-2">
-                <h2 className="text-4xl font-black leading-none text-slate-900 dark:text-white">{animatedCompletionRate}%</h2>
-                <span className="pb-1 text-sm font-semibold" style={{ color: "var(--theme-accent-strong)" }}>{focusTier}</span>
-              </div>
+              {privacyInsightsHistoryEnabled ? (
+                <>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">Current Momentum</p>
+                  <div className="mt-3 flex items-end gap-2">
+                    <h2 className="text-4xl font-black leading-none text-slate-900 dark:text-white">{animatedCompletionRate}%</h2>
+                    <span className="pb-1 text-sm font-semibold" style={{ color: "var(--theme-accent-strong)" }}>{focusTier}</span>
+                  </div>
 
-              <div className="mt-5 h-3 w-full overflow-hidden rounded-full bg-slate-200/85 dark:bg-slate-700/60">
+                  <div className="mt-5 h-3 w-full overflow-hidden rounded-full bg-slate-200/85 dark:bg-slate-700/60">
+                    <div
+                      className="h-3 rounded-full transition-all duration-700 ease-out"
+                      style={{
+                        width: `${completionRate}%`,
+                        backgroundColor: "var(--theme-accent-strong)",
+                      }}
+                    />
+                  </div>
+
+                  <div className="mt-5 grid grid-cols-2 gap-3">
+                    <div className="rounded-xl border border-white/60 bg-white/70 p-3 dark:border-slate-700/60 dark:bg-slate-900/35">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-300">Done</p>
+                      <p className="mt-1 text-xl font-black text-slate-900 dark:text-white">{completedTasks}</p>
+                    </div>
+                    <div className="rounded-xl border border-white/60 bg-white/70 p-3 dark:border-slate-700/60 dark:bg-slate-900/35">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-300">Remaining</p>
+                      <p className="mt-1 text-xl font-black text-slate-900 dark:text-white">{inProgressTasks}</p>
+                    </div>
+                  </div>
+                </>
+              ) : (
                 <div
-                  className="h-3 rounded-full transition-all duration-700 ease-out"
+                  className="rounded-2xl border p-4"
                   style={{
-                    width: `${completionRate}%`,
-                    backgroundColor: "var(--theme-accent-strong)",
+                    borderColor: "var(--theme-accent)",
+                    backgroundColor: "var(--theme-accent-soft)",
                   }}
-                />
-              </div>
-
-              <div className="mt-5 grid grid-cols-2 gap-3">
-                <div className="rounded-xl border border-white/60 bg-white/70 p-3 dark:border-slate-700/60 dark:bg-slate-900/35">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-300">Done</p>
-                  <p className="mt-1 text-xl font-black text-slate-900 dark:text-white">{completedTasks}</p>
+                >
+                  <p className="text-sm font-semibold" style={{ color: "var(--theme-accent-strong)" }}>
+                    Learning insights history is turned off. Trend and streak analytics are hidden.
+                  </p>
                 </div>
-                <div className="rounded-xl border border-white/60 bg-white/70 p-3 dark:border-slate-700/60 dark:bg-slate-900/35">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-300">Remaining</p>
-                  <p className="mt-1 text-xl font-black text-slate-900 dark:text-white">{inProgressTasks}</p>
-                </div>
-              </div>
+              )}
 
               <div
                 className="mt-6 rounded-2xl border p-4"
@@ -519,67 +610,69 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <div
-            className="card-reveal mt-5 rounded-2xl border border-white/55 bg-white/70 p-5 shadow-sm dark:border-slate-700/55 dark:bg-slate-800/55 sm:p-6"
-            style={{ animationDelay: "230ms" }}
-          >
-            <div className="flex flex-col gap-4">
-              <div>
-                <h3 className="text-lg font-black text-slate-900 dark:text-white">Weekly Snapshot</h3>
-                <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-                  You have completed <span className="font-bold text-slate-900 dark:text-white">{completedTasks}</span> out of <span className="font-bold text-slate-900 dark:text-white">{totalTasks}</span> tasks. Keep pushing and finish strong this week.
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-6 grid gap-4 lg:grid-cols-[1.45fr_0.55fr]">
-              <div>
-                <div className="mb-3 flex items-center justify-between">
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-300">7-Day Completed Trend</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-300">Based on completed task deadlines</p>
-                </div>
-                <div className="h-44 rounded-2xl border border-white/60 bg-white/75 p-4 dark:border-slate-700/60 dark:bg-slate-900/35">
-                  <div className="flex h-full items-end justify-between gap-2">
-                    {weeklyCompletionData.map((day) => {
-                      const barHeight = `${Math.max(10, (day.count / maxDailyCompletion) * 100)}%`;
-                      return (
-                        <div key={day.key} className="flex h-full w-full flex-col items-center justify-end gap-2">
-                          <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-300">{day.count}</span>
-                          <div className="relative flex h-full w-full items-end">
-                            <div
-                              className="w-full rounded-t-lg transition-all duration-700 ease-out motion-reduce:transition-none"
-                              style={{ height: barHeight, backgroundColor: "var(--theme-accent-strong)" }}
-                            />
-                          </div>
-                          <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">{day.shortLabel}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid gap-3">
-                <div className="rounded-2xl border border-white/60 bg-white/75 p-4 dark:border-slate-700/60 dark:bg-slate-900/35">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-300">Current Streak</p>
-                  <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{currentStreak} day{currentStreak === 1 ? "" : "s"}</p>
-                </div>
-                <div className="rounded-2xl border border-white/60 bg-white/75 p-4 dark:border-slate-700/60 dark:bg-slate-900/35">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-300">Best Streak</p>
-                  <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{bestStreak} day{bestStreak === 1 ? "" : "s"}</p>
-                </div>
-                <div
-                  className="rounded-2xl border p-4"
-                  style={{ borderColor: "var(--theme-accent)", backgroundColor: "var(--theme-accent-soft)" }}
-                >
-                  <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--theme-accent-strong)" }}>Next Goal</p>
-                  <p className="mt-1 text-sm font-semibold" style={{ color: "var(--theme-accent-strong)" }}>
-                    Complete {Math.max(1, Math.ceil((60 * totalTasks) / 100) - completedTasks)} more task{Math.max(1, Math.ceil((60 * totalTasks) / 100) - completedTasks) === 1 ? "" : "s"} to reach 60% momentum.
+          {privacyInsightsHistoryEnabled && (
+            <div
+              className="card-reveal mt-5 rounded-2xl border border-white/55 bg-white/70 p-5 shadow-sm dark:border-slate-700/55 dark:bg-slate-800/55 sm:p-6"
+              style={{ animationDelay: "230ms" }}
+            >
+              <div className="flex flex-col gap-4">
+                <div>
+                  <h3 className="text-lg font-black text-slate-900 dark:text-white">Weekly Snapshot</h3>
+                  <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                    You have completed <span className="font-bold text-slate-900 dark:text-white">{completedTasks}</span> out of <span className="font-bold text-slate-900 dark:text-white">{analyticsTotalTasks}</span> tasks since your current insights timeline started.
                   </p>
                 </div>
               </div>
+
+              <div className="mt-6 grid gap-4 lg:grid-cols-[1.45fr_0.55fr]">
+                <div>
+                  <div className="mb-3 flex items-center justify-between">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-300">7-Day Completed Trend</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-300">Based on completed task timestamps</p>
+                  </div>
+                  <div className="h-44 rounded-2xl border border-white/60 bg-white/75 p-4 dark:border-slate-700/60 dark:bg-slate-900/35">
+                    <div className="flex h-full items-end justify-between gap-2">
+                      {weeklyCompletionData.map((day) => {
+                        const barHeight = `${Math.max(10, (day.count / maxDailyCompletion) * 100)}%`;
+                        return (
+                          <div key={day.key} className="flex h-full w-full flex-col items-center justify-end gap-2">
+                            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-300">{day.count}</span>
+                            <div className="relative flex h-full w-full items-end">
+                              <div
+                                className="w-full rounded-t-lg transition-all duration-700 ease-out motion-reduce:transition-none"
+                                style={{ height: barHeight, backgroundColor: "var(--theme-accent-strong)" }}
+                              />
+                            </div>
+                            <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">{day.shortLabel}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-3">
+                  <div className="rounded-2xl border border-white/60 bg-white/75 p-4 dark:border-slate-700/60 dark:bg-slate-900/35">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-300">Current Streak</p>
+                    <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{currentStreak} day{currentStreak === 1 ? "" : "s"}</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/60 bg-white/75 p-4 dark:border-slate-700/60 dark:bg-slate-900/35">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-300">Best Streak</p>
+                    <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{bestStreak} day{bestStreak === 1 ? "" : "s"}</p>
+                  </div>
+                  <div
+                    className="rounded-2xl border p-4"
+                    style={{ borderColor: "var(--theme-accent)", backgroundColor: "var(--theme-accent-soft)" }}
+                  >
+                    <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--theme-accent-strong)" }}>Next Goal</p>
+                    <p className="mt-1 text-sm font-semibold" style={{ color: "var(--theme-accent-strong)" }}>
+                      Complete {Math.max(1, Math.ceil((60 * analyticsTotalTasks) / 100) - completedTasks)} more task{Math.max(1, Math.ceil((60 * analyticsTotalTasks) / 100) - completedTasks) === 1 ? "" : "s"} to reach 60% momentum.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </section>
       </main>
       <div className="mt-auto">
