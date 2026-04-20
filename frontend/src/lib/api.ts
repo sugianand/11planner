@@ -7,7 +7,6 @@ import {
   TaskCreate,
   ScheduleBlock,
   ScheduleBlockCreate,
-  WeeklyScheduleSummary,
 } from "@/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -29,7 +28,17 @@ async function fetchAPI<T>(
   });
 
   if (!response.ok) {
-    throw new Error(`API Error: ${response.statusText}`);
+    let detailMessage = response.statusText;
+    try {
+      const errorPayload = await response.json();
+      detailMessage =
+        errorPayload?.detail ||
+        errorPayload?.message ||
+        response.statusText;
+    } catch {
+      // Fallback to status text when response body is not JSON
+    }
+    throw new Error(detailMessage || `API Error (${response.status})`);
   }
 
   return response.json();
@@ -126,6 +135,15 @@ export const scheduleAPI = {
       method: "POST",
       body: JSON.stringify(block),
     }),
+
+  generate: (userId: string, studyLimitHours?: number) =>
+    fetchAPI<{ message: string; blocks: ScheduleBlock[]; stats: Record<string, unknown> | null }>(
+      `/api/schedule/generate/${userId}`,
+      {
+        method: "POST",
+        body: JSON.stringify({ study_limit_hours: studyLimitHours }),
+      }
+    ),
 
   getByUser: (userId: string) =>
     fetchAPI<ScheduleBlock[]>(`/api/schedule-blocks/${userId}`, {

@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
 from datetime import datetime
 
@@ -9,38 +9,68 @@ class CourseBase(BaseModel):
     code: str
     professor: Optional[str] = None
     description: Optional[str] = None
+    course_days: Optional[list] = None
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    isOnline: bool = False
+    hasLab: bool = False
+    labDay: Optional[str] = None
+    labStartTime: Optional[str] = None
+    labEndTime: Optional[str] = None
+    labIsOnline: bool = False
 
 class CourseCreate(CourseBase):
     user_id: str
+
+class CourseUpdate(BaseModel):
+    name: Optional[str] = None
+    code: Optional[str] = None
+    professor: Optional[str] = None
+    description: Optional[str] = None
 
 class Course(CourseBase):
     id: str
     user_id: str
     created_at: datetime
-    
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)
 
 # ========== Assignment Models ==========
 
 class AssignmentBase(BaseModel):
     title: str
-    course_id: str
+    course_id: Optional[str] = None
     deadline: datetime
     description: Optional[str] = None
     priority: int = 2  # 1-5 scale
+    estimated_hours: float = 1.0
+    status: str = "pending"
+    points: Optional[float] = None
+    url: Optional[str] = None
+    source: Optional[str] = "manual"
 
 class AssignmentCreate(AssignmentBase):
     user_id: str
+
+class AssignmentUpdate(BaseModel):
+    title: Optional[str] = None
+    course_id: Optional[str] = None
+    deadline: Optional[datetime] = None
+    description: Optional[str] = None
+    priority: Optional[int] = None
+    estimated_hours: Optional[float] = None
+    status: Optional[str] = None
+    points: Optional[float] = None
+    url: Optional[str] = None
+    completed: Optional[bool] = None
 
 class Assignment(AssignmentBase):
     id: str
     user_id: str
     created_at: datetime
     completed: bool = False
-    
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)
 
 # ========== Task Models ==========
 
@@ -56,14 +86,23 @@ class TaskBase(BaseModel):
 class TaskCreate(TaskBase):
     user_id: str
 
+class TaskUpdate(BaseModel):
+    title: Optional[str] = None
+    assignment_id: Optional[str] = None
+    course_id: Optional[str] = None
+    deadline: Optional[datetime] = None
+    estimated_hours: Optional[float] = None
+    priority: Optional[int] = None
+    description: Optional[str] = None
+    completed: Optional[bool] = None
+
 class Task(TaskBase):
     id: str
     user_id: str
     created_at: datetime
     completed: bool = False
-    
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)
 
 # ========== Schedule Block Models ==========
 
@@ -77,14 +116,21 @@ class ScheduleBlockBase(BaseModel):
 class ScheduleBlockCreate(ScheduleBlockBase):
     user_id: str
 
+class ScheduleBlockUpdate(BaseModel):
+    task_id: Optional[str] = None
+    date: Optional[datetime] = None
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
+    duration_minutes: Optional[int] = None
+    completed: Optional[bool] = None
+
 class ScheduleBlock(ScheduleBlockBase):
     id: str
     user_id: str
     created_at: datetime
     completed: bool = False
-    
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)
 
 # ========== Schedule Summary Models ==========
 
@@ -95,6 +141,5 @@ class WeeklyScheduleSummary(BaseModel):
     completed_tasks: int
     total_hours: float
     schedule_blocks: list[ScheduleBlock]
-    
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)

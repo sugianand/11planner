@@ -7,6 +7,15 @@ export interface Course {
   description?: string;
   user_id: string;
   created_at: string;
+  courseDate: string;
+  startTime: string;
+  endTime: string;
+  isOnline?: boolean;
+  hasLab?: boolean;
+  labDay?: string;
+  labStartTime?: string;
+  labEndTime?: string;
+  labIsOnline?: boolean;
 }
 
 export interface CourseCreate {
@@ -15,34 +24,54 @@ export interface CourseCreate {
   professor?: string;
   description?: string;
   user_id: string;
+  courseDate: string;
+  startTime: string;
+  endTime: string;
+  isOnline?: boolean;
+  hasLab?: boolean;
+  labDay?: string;
+  labStartTime?: string;
+  labEndTime?: string;
+  labIsOnline?: boolean;
 }
 
 // ========== Assignment Types ==========
 export interface Assignment {
   id: string;
   title: string;
-  course_id: string;
+  course_id?: string;
   deadline: string;
   description?: string;
   priority: number;
+  estimated_hours: number;
   user_id: string;
   created_at: string;
+  status?: string;
+  points?: number;
+  url?: string;
+  source?: string;
   completed: boolean;
 }
 
 export interface AssignmentCreate {
   title: string;
-  course_id: string;
+  course_id?: string;
   deadline: string;
   description?: string;
   priority: number;
+  estimated_hours: number;
   user_id: string;
+  status?: string;
+  points?: number;
+  url?: string;
+  source?: string;
 }
 
 // ========== Task Types ==========
 export interface Task {
   id: string;
   title: string;
+  category?: "assignment" | "exam" | "project";
   assignment_id?: string;
   course_id?: string;
   deadline: string;
@@ -56,6 +85,7 @@ export interface Task {
 
 export interface TaskCreate {
   title: string;
+  category?: "assignment" | "exam" | "project";
   assignment_id?: string;
   course_id?: string;
   deadline: string;
@@ -110,4 +140,13 @@ export interface PlannerState {
   tasks: Task[];
   scheduleBlocks: ScheduleBlock[];
   ui: UIState;
+}
+
+export interface UserPreferences {
+  worktime: string;
+  workdays: string[];
+  workstyle: string;
+  assignmentplan: string;
+  additionalInfo: string;
+  dailyLimit: number;
 }

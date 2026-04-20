@@ -23,6 +23,7 @@ node_modules
 # misc
 .DS_Store
 *.pem
+.vscode/
 
 # debug
 npm-debug.log*
@@ -50,3 +51,15 @@ __pycache__/
 venv/
 ENV/
 env/
+
+# video files
+*.mp4
+*.mov
+*.avi
+
+# allow tracked dashboard background videos
+!frontend/public/nature/*.mp4
+!frontend/public/cafe/*.mp4
+!frontend/public/city/*.mp4
+!frontend/public/anime/*.mp4
+!frontend/public/abstract/*.mp4

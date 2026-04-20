@@ -3,9 +3,13 @@ import { Geist, Geist_Mono, Manrope } from "next/font/google";
 import { PlannerProvider } from "@/contexts/PlannerContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
+import { TimerProvider } from "@/contexts/TimerContext";
 import Navigation from "@/components/Navigation";
 import NotificationToasts from "@/components/NotificationToasts";
+import GlobalTimerTicker from "@/components/GlobalTimerTicker";
+import SupportAssistantWidget from "@/components/SupportAssistantWidget";
 import "./globals.css";
+import "@material-symbols/font-400/outlined.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,22 +39,24 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <link
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
-          rel="stylesheet"
-        />
-      </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${manrope.variable} antialiased bg-white dark:bg-slate-900 text-black dark:text-white transition-colors`}
+        className={`${geistSans.variable} ${geistMono.variable} ${manrope.variable} relative antialiased bg-white dark:bg-slate-900 text-black dark:text-white transition-colors`}
       >
+        <div
+          aria-hidden="true"
+          className="pointer-events-none fixed inset-0 -z-[9] bg-transparent dark:bg-slate-950/55"
+        />
         <ThemeProvider>
           <PlannerProvider>
-            <NotificationProvider>
-              <Navigation />
-              <NotificationToasts />
-              {children}
-            </NotificationProvider>
+            <TimerProvider>
+              <NotificationProvider>
+                <Navigation />
+                <NotificationToasts />
+                {children}
+                <GlobalTimerTicker />
+                <SupportAssistantWidget />
+              </NotificationProvider>
+            </TimerProvider>
           </PlannerProvider>
         </ThemeProvider>
       </body>

@@ -1,0 +1,90 @@
+{
+  "required": [
+    "id",
+    "user_id",
+    "task_title",
+    "course_id",
+    "deadline_at",
+    "status",
+    "created_at"
+  ],
+  "properties": {
+    "id": {
+      "default": "gen_random_uuid()",
+      "description": "Note:\nThis is a Primary Key.<pk/>",
+      "format": "uuid",
+      "type": "string"
+    },
+    "user_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "task_title": {
+      "format": "text",
+      "type": "string"
+    },
+    "course_id": {
+      "description": "Note:\nThis is a Foreign Key to `courses.id`.<fk table='courses' column='id'/>",
+      "format": "uuid",
+      "type": "string"
+    },
+    "deadline_at": {
+      "format": "timestamp with time zone",
+      "type": "string"
+    },
+    "estimated_hours": {
+      "format": "numeric",
+      "type": "number"
+    },
+    "priority_level": {
+      "format": "integer",
+      "type": "integer"
+    },
+    "description": {
+      "format": "text",
+      "type": "string"
+    },
+    "task_type": {
+      "default": "assignment",
+      "format": "text",
+      "type": "string"
+    },
+    "status": {
+      "default": "todo",
+      "format": "text",
+      "type": "string"
+    },
+    "created_at": {
+      "default": "now()",
+      "format": "timestamp with time zone",
+      "type": "string"
+    },
+    "title": {
+      "format": "text",
+      "type": "string"
+    },
+    "deadline": {
+      "format": "timestamp with time zone",
+      "type": "string"
+    },
+    "priority": {
+      "default": 2,
+      "format": "integer",
+      "type": "integer"
+    },
+    "completed": {
+      "default": false,
+      "format": "boolean",
+      "type": "boolean"
+    },
+    "assignment_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "source": {
+      "format": "text",
+      "type": "string"
+    }
+  },
+  "type": "object"
+}

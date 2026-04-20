@@ -1,6 +1,18 @@
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
 from app.api.tasks import router as tasks_router
+from app.api.courses import router as courses_router
+from app.api.assignments import router as assignments_router
+from app.api.schedule_blocks import router as schedule_blocks_router
+from app.api.syllabus import router as syllabus_router
+from app.api.music import router as music_router
+from app.api.support import router as support_router
+from app.api.account import router as account_router
+
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 app = FastAPI(
     title="11Planner API",
@@ -11,7 +23,7 @@ app = FastAPI(
 # Enable CORS for frontend communication
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify exact origins
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -19,14 +31,37 @@ app.add_middleware(
 
 # Include routers
 app.include_router(tasks_router)
+app.include_router(courses_router)
+app.include_router(assignments_router)
+app.include_router(schedule_blocks_router)
+app.include_router(syllabus_router)
+app.include_router(music_router)
+app.include_router(support_router)
+app.include_router(account_router)
+
+# --- Fallback routes to catch Chrome Extension URL typos ---
+from app.api.assignments import sync_assignments, SyncRequest
+
+@app.post("//api/assignments/sync")
+@app.post("/api/api/assignments/sync")
+@app.post("/api/assignments/sync/")
+@app.post("/api/tasks/sync")
+@app.post("/sync")
+# Catches legacy/typo sync paths and forwards to the canonical sync handler.
+async def fallback_sync_route(sync_request: SyncRequest):
+    return await sync_assignments(sync_request)
+# -----------------------------------------------------------
+
 
 # Health check endpoint
 @app.get("/health")
+# Reports basic API health for uptime checks.
 async def health_check():
     return {"status": "healthy", "service": "11Planner API"}
 
 # Root endpoint
 @app.get("/")
+# Returns basic API metadata and docs link.
 async def root():
     return {
         "message": "Welcome to 11Planner API",
@@ -36,5 +71,6 @@ async def root():
 
 # API ping endpoint
 @app.get("/api/ping")
+# Lightweight ping endpoint used by clients for connectivity checks.
 async def api_ping():
     return {"message": "pong"}

@@ -15,29 +15,27 @@ export const YearView: React.FC<YearViewProps> = ({ year, monthsData, events }) 
   const getEventsForDay = (date: Date) => {
     return events.filter((e) => {
       const eventDate = new Date(e.start);
-      return eventDate.toDateString() === date.toDateString();
+      return eventDate.toDateString() === date.toDateString() && e.kind !== 'class';
     });
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="sticky top-0 bg-white border-b border-gray-200 p-4">
-        <h2 className="text-2xl font-bold text-gray-900">Year View</h2>
-        <p className="text-lg text-gray-600">{year}</p>
+    <div className="flex flex-col h-full bg-white/40 dark:bg-slate-900/30">
+      <div className="sticky top-0 z-10 border-b border-white/70 dark:border-slate-700/70 bg-white/85 dark:bg-slate-900/85 backdrop-blur px-4 py-3">
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Year View</h2>
+        <p className="text-base text-slate-600 dark:text-slate-300">{year}</p>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {monthsData.map((monthData) => {
-            const firstDayOfMonth = monthData.daysInMonth.find(day => day.isCurrentMonth);
-            
             return (
               <div
                 key={monthData.month}
-                className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm"
+                className="bg-white/85 dark:bg-slate-800/80 border border-slate-200/70 dark:border-slate-700/70 rounded-2xl p-3 shadow-sm"
               >
                 {/* Month header */}
-                <h3 className="text-center font-semibold text-gray-900 mb-2">
+                <h3 className="text-center font-semibold text-slate-900 dark:text-white mb-2">
                   {monthData.name}
                 </h3>
 
@@ -46,7 +44,7 @@ export const YearView: React.FC<YearViewProps> = ({ year, monthsData, events }) 
                   {weekDays.map((day, idx) => (
                     <div
                       key={idx}
-                      className="text-center text-xs font-medium text-gray-500"
+                      className="text-center text-xs font-medium text-slate-500 dark:text-slate-400"
                     >
                       {day}
                     </div>
@@ -65,14 +63,32 @@ export const YearView: React.FC<YearViewProps> = ({ year, monthsData, events }) 
                         className={`aspect-square flex items-center justify-center text-xs relative ${
                           day.isCurrentMonth
                             ? day.isToday
-                              ? 'bg-blue-600 text-white rounded-full font-bold'
-                              : 'text-gray-900'
-                            : 'text-gray-300'
+                              ? 'text-white rounded-full font-bold'
+                              : 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-md'
+                            : 'bg-slate-50 dark:bg-slate-900 text-slate-300 dark:text-slate-500 rounded-md'
                         }`}
+                        style={day.isCurrentMonth && day.isToday ? { backgroundColor: 'var(--theme-accent-strong)' } : undefined}
                       >
                         {day.dayNumber}
                         {hasEvents && day.isCurrentMonth && !day.isToday && (
-                          <div className="absolute bottom-0.5 w-1 h-1 bg-blue-500 rounded-full"></div>
+                          <>
+                            <div
+                              className="absolute bottom-0.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full"
+                              style={{ backgroundColor: 'var(--theme-accent-strong)' }}
+                            ></div>
+                            {dayEvents.length > 1 && (
+                              <div
+                                className="absolute -top-1 -right-1 min-w-[14px] h-[14px] rounded-full px-1 text-[9px] leading-[14px] text-center font-semibold"
+                                style={{
+                                  color: 'var(--theme-accent-strong)',
+                                  backgroundColor: 'var(--theme-accent-soft)',
+                                }}
+                                title={`${dayEvents.length} tasks`}
+                              >
+                                {dayEvents.length > 9 ? '9+' : dayEvents.length}
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                     );
