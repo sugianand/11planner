@@ -1,4 +1,7 @@
 from pathlib import Path
+import os
+from contextlib import asynccontextmanager
+import asyncio
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,13 +14,34 @@ from app.api.syllabus import router as syllabus_router
 from app.api.music import router as music_router
 from app.api.support import router as support_router
 from app.api.account import router as account_router
+from app.api.email import router as email_router, weekly_email_worker
 
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    worker_task: asyncio.Task | None = None
+    run_worker = os.getenv("RUN_WEEKLY_EMAIL_WORKER", "true").lower() not in {"0", "false", "no", "off"}
+
+    if run_worker:
+        worker_task = asyncio.create_task(weekly_email_worker())
+
+    try:
+        yield
+    finally:
+        if worker_task:
+            worker_task.cancel()
+            try:
+                await worker_task
+            except asyncio.CancelledError:
+                pass
 
 app = FastAPI(
     title="11Planner API",
     description="Backend API for 11Planner - AI-assisted schedule generation",
-    version="0.1.0"
+    version="0.1.0",
+    lifespan=lifespan,
 )
 
 # Enable CORS for frontend communication
@@ -38,6 +62,7 @@ app.include_router(syllabus_router)
 app.include_router(music_router)
 app.include_router(support_router)
 app.include_router(account_router)
+app.include_router(email_router)
 
 # --- Fallback routes to catch Chrome Extension URL typos ---
 from app.api.assignments import sync_assignments, SyncRequest

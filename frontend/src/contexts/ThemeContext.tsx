@@ -27,6 +27,16 @@ interface ThemeContextType {
   colorThemes: ColorTheme[];
 }
 
+type UserSettingsThemeRow = {
+  theme_mode?: Theme | null;
+  color_theme?: ColorTheme | null;
+};
+
+type ProfileThemeFallbackRow = {
+  theme_preference?: Theme | null;
+  color_theme_preference?: ColorTheme | null;
+};
+
 function ThemeAuthSync({
   setColorThemeState,
 }: {
@@ -35,7 +45,7 @@ function ThemeAuthSync({
   const { setTheme: setNextTheme } = useNextTheme();
 
   useEffect(() => {
-    // Loads persisted theme preferences from profile data when auth is available.
+    // Loads persisted theme preferences from user_settings, with legacy profile fallback.
     const syncThemeFromProfile = async (allowResetOnMissingUser: boolean) => {
       try {
         const {
@@ -50,19 +60,36 @@ function ThemeAuthSync({
           return;
         }
 
-        const { data: profile } = await supabase
+        const { data: cloudTheme } = await supabase
+          .from('user_settings')
+          .select('theme_mode, color_theme')
+          .eq('user_id', user.id)
+          .maybeSingle<UserSettingsThemeRow>();
+
+        const cloudColorTheme = cloudTheme?.color_theme ?? null;
+        if (cloudColorTheme && COLOR_THEMES.includes(cloudColorTheme)) {
+          setColorThemeState(cloudColorTheme);
+        }
+
+        if (cloudTheme?.theme_mode) {
+          const themeToSet = cloudTheme.theme_mode === 'auto' ? 'system' : cloudTheme.theme_mode;
+          setNextTheme(themeToSet);
+          return;
+        }
+
+        const { data: profileFallback } = await supabase
           .from('profiles')
           .select('theme_preference, color_theme_preference')
           .eq('id', user.id)
-          .maybeSingle();
+          .maybeSingle<ProfileThemeFallbackRow>();
 
-        const profileColorTheme = profile?.color_theme_preference as ColorTheme | null;
+        const profileColorTheme = profileFallback?.color_theme_preference ?? null;
         if (profileColorTheme && COLOR_THEMES.includes(profileColorTheme)) {
           setColorThemeState(profileColorTheme);
         }
 
-        if (profile?.theme_preference) {
-          const themeToSet = profile.theme_preference === 'auto' ? 'system' : profile.theme_preference;
+        if (profileFallback?.theme_preference) {
+          const themeToSet = profileFallback.theme_preference === 'auto' ? 'system' : profileFallback.theme_preference;
           setNextTheme(themeToSet);
         }
       } catch {
@@ -111,7 +138,7 @@ function ThemeAuthSync({
   return null;
 }
 
-// Provides theme + accent state and persists updates to local/profile storage.
+// Provides theme + accent state and persists updates to local/cloud storage.
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [colorTheme, setColorThemeState] = useState<ColorTheme>('emerald');
 
@@ -140,7 +167,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(COLOR_THEME_STORAGE_KEY, colorTheme);
   }, [colorTheme]);
 
-  // Persists accent color changes both locally and to the user's profile row.
+  // Persists accent color changes both locally and to cloud settings.
   const setColorTheme = useCallback((newColorTheme: ColorTheme) => {
     setColorThemeState(newColorTheme);
 
@@ -151,8 +178,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         } = await supabase.auth.getUser();
         if (user?.id) {
           await supabase
-            .from('profiles')
-            .upsert({ id: user.id, color_theme_preference: newColorTheme }, { onConflict: 'id' });
+            .from('user_settings')
+            .upsert({ user_id: user.id, color_theme: newColorTheme }, { onConflict: 'user_id' });
         }
       } catch {
         // Preference still persists locally.
@@ -204,8 +231,8 @@ export function useTheme(): ThemeContextType {
         } = await supabase.auth.getUser();
         if (user?.id) {
           await supabase
-            .from('profiles')
-            .upsert({ id: user.id, theme_preference: newTheme }, { onConflict: 'id' });
+            .from('user_settings')
+            .upsert({ user_id: user.id, theme_mode: newTheme }, { onConflict: 'user_id' });
         }
       } catch {
         // Theme still persists locally via next-themes.

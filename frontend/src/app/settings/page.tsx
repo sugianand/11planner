@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useEffect, Suspense, useCallback } from "react";
+import { useMemo, useState, useEffect, Suspense, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -24,6 +24,21 @@ type UserSummary = {
   lastname?: string | null;
 };
 
+type UserSettingsRow = {
+  user_id: string;
+  theme_mode: Theme;
+  color_theme: ColorTheme;
+  notifications_enabled: boolean;
+  reminder_lead_hours: number;
+  sound_enabled: boolean;
+  email_updates_enabled: boolean;
+  weekly_report_enabled: boolean;
+  privacy_include_personal_info: boolean;
+  privacy_analytics_enabled: boolean;
+  privacy_personalization_enabled: boolean;
+  privacy_insights_history_enabled: boolean;
+};
+
 const colorThemeSwatches: Record<ColorTheme, string> = {
   emerald: "linear-gradient(135deg, #10b981, #059669)",
   ocean: "linear-gradient(135deg, #0ea5e9, #0284c7)",
@@ -38,6 +53,35 @@ const readStoredBoolean = (key: string, fallback: boolean): boolean => {
   if (typeof window === "undefined") return fallback;
   const value = localStorage.getItem(key);
   return value === null ? fallback : value !== "false";
+};
+
+// Mirrors cloud-backed preference values into localStorage for compatibility with existing UI logic.
+const applyLocalSettingsMirror = (settings: Partial<UserSettingsRow>) => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  if (typeof settings.sound_enabled === "boolean") {
+    localStorage.setItem("soundEnabled", String(settings.sound_enabled));
+  }
+  if (typeof settings.email_updates_enabled === "boolean") {
+    localStorage.setItem("emailUpdates", String(settings.email_updates_enabled));
+  }
+  if (typeof settings.weekly_report_enabled === "boolean") {
+    localStorage.setItem("weeklyReport", String(settings.weekly_report_enabled));
+  }
+  if (typeof settings.privacy_include_personal_info === "boolean") {
+    localStorage.setItem("privacyIncludePersonalInfo", String(settings.privacy_include_personal_info));
+  }
+  if (typeof settings.privacy_analytics_enabled === "boolean") {
+    localStorage.setItem("privacyAnalyticsEnabled", String(settings.privacy_analytics_enabled));
+  }
+  if (typeof settings.privacy_personalization_enabled === "boolean") {
+    localStorage.setItem("privacyPersonalizationEnabled", String(settings.privacy_personalization_enabled));
+  }
+  if (typeof settings.privacy_insights_history_enabled === "boolean") {
+    localStorage.setItem("privacyInsightsHistoryEnabled", String(settings.privacy_insights_history_enabled));
+  }
 };
 
 // Hosts the full settings dashboard, including appearance, notifications, and account controls.
@@ -68,7 +112,11 @@ function SettingsPageContent() {
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [isSendingPasswordReset, setIsSendingPasswordReset] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [loadedServerNotificationPreferences, setLoadedServerNotificationPreferences] = useState(false);
+  const [loadedSupabaseSettings, setLoadedSupabaseSettings] = useState(false);
+  const hydratedSupabaseUserIdRef = useRef<string | null>(null);
   const [actionMessage, setActionMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const previousPanelRef = useRef<SettingsPanel>("appearance");
   const [isMounted, setIsMounted] = useState(false);
   const [dialog, setDialog] = useState<{
     isOpen: boolean;
@@ -195,6 +243,239 @@ function SettingsPageContent() {
   }, [syncUserSummary]);
 
   useEffect(() => {
+    if (!user?.id) {
+      setLoadedServerNotificationPreferences(false);
+      setLoadedSupabaseSettings(false);
+      hydratedSupabaseUserIdRef.current = null;
+      return;
+    }
+
+    let isActive = true;
+
+    // Loads saved server-side notification email preferences for cross-device consistency.
+    const loadServerPreferences = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/email/preferences/${user.id}`);
+        if (!response.ok) {
+          setLoadedServerNotificationPreferences(true);
+          return;
+        }
+
+        const data = (await response.json()) as {
+          email_updates_enabled?: boolean;
+          weekly_report_enabled?: boolean;
+        };
+
+        if (!isActive) {
+          return;
+        }
+
+        if (typeof data.email_updates_enabled === "boolean") {
+          setEmailUpdates(data.email_updates_enabled);
+          localStorage.setItem("emailUpdates", String(data.email_updates_enabled));
+        }
+        if (typeof data.weekly_report_enabled === "boolean") {
+          setWeeklyReport(data.weekly_report_enabled);
+          localStorage.setItem("weeklyReport", String(data.weekly_report_enabled));
+        }
+      } catch {
+        // Keep local settings if the backend preference endpoint is unavailable.
+      } finally {
+        if (isActive) {
+          setLoadedServerNotificationPreferences(true);
+        }
+      }
+    };
+
+    void loadServerPreferences();
+
+    return () => {
+      isActive = false;
+    };
+  }, [user?.id]);
+
+  useEffect(() => {
+    const userId = user?.id;
+    if (!userId) {
+      return;
+    }
+
+    if (hydratedSupabaseUserIdRef.current === userId) {
+      if (!loadedSupabaseSettings) {
+        setLoadedSupabaseSettings(true);
+      }
+      return;
+    }
+
+    let isActive = true;
+
+    // Loads cloud-synced settings so preferences follow the user across devices.
+    const loadSupabaseSettings = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("user_settings")
+          .select(
+            "user_id, theme_mode, color_theme, notifications_enabled, reminder_lead_hours, sound_enabled, email_updates_enabled, weekly_report_enabled, privacy_include_personal_info, privacy_analytics_enabled, privacy_personalization_enabled, privacy_insights_history_enabled"
+          )
+          .eq("user_id", userId)
+          .maybeSingle<UserSettingsRow>();
+
+        if (!isActive || error || !data) {
+          return;
+        }
+
+        if (data.theme_mode && ["light", "dark", "auto"].includes(data.theme_mode)) {
+          setTheme(data.theme_mode);
+        }
+        if (data.color_theme && ["emerald", "ocean", "rose", "slate", "amber", "violet"].includes(data.color_theme)) {
+          setColorTheme(data.color_theme);
+        }
+        if (typeof data.notifications_enabled === "boolean") {
+          setNotificationsEnabled(data.notifications_enabled);
+          localStorage.setItem("notifications", String(data.notifications_enabled));
+        }
+        if (typeof data.reminder_lead_hours === "number" && Number.isFinite(data.reminder_lead_hours)) {
+          setReminderLeadHours(data.reminder_lead_hours);
+          localStorage.setItem("reminderLeadHours", String(data.reminder_lead_hours));
+        }
+        if (typeof data.sound_enabled === "boolean") {
+          setSoundEnabled(data.sound_enabled);
+        }
+        if (typeof data.email_updates_enabled === "boolean") {
+          setEmailUpdates(data.email_updates_enabled);
+        }
+        if (typeof data.weekly_report_enabled === "boolean") {
+          setWeeklyReport(data.weekly_report_enabled);
+        }
+        if (typeof data.privacy_include_personal_info === "boolean") {
+          setPrivacyIncludePersonalInfo(data.privacy_include_personal_info);
+        }
+        if (typeof data.privacy_analytics_enabled === "boolean") {
+          setPrivacyAnalyticsEnabled(data.privacy_analytics_enabled);
+        }
+        if (typeof data.privacy_personalization_enabled === "boolean") {
+          setPrivacyPersonalizationEnabled(data.privacy_personalization_enabled);
+        }
+        if (typeof data.privacy_insights_history_enabled === "boolean") {
+          setPrivacyInsightsHistoryEnabled(data.privacy_insights_history_enabled);
+        }
+
+        applyLocalSettingsMirror(data);
+      } finally {
+        if (isActive) {
+          hydratedSupabaseUserIdRef.current = userId;
+          setLoadedSupabaseSettings(true);
+        }
+      }
+    };
+
+    void loadSupabaseSettings();
+
+    return () => {
+      isActive = false;
+    };
+  }, [
+    user?.id,
+    loadedSupabaseSettings,
+    setTheme,
+    setColorTheme,
+    setNotificationsEnabled,
+    setReminderLeadHours,
+  ]);
+
+  useEffect(() => {
+    if (!user?.id || !user.email || !loadedServerNotificationPreferences) {
+      return;
+    }
+
+    // Persists email update + weekly report settings for backend-driven notifications.
+    const syncServerPreferences = async () => {
+      try {
+        await fetch(`${API_BASE_URL}/api/email/preferences/${user.id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            user_email: user.email,
+            user_name: `${(user.firstname || "").trim()} ${(user.lastname || "").trim()}`.trim() || null,
+            email_updates_enabled: emailUpdates,
+            weekly_report_enabled: weeklyReport,
+          }),
+        });
+      } catch {
+        // Keep local behavior working even when preference sync cannot reach backend.
+      }
+    };
+
+    void syncServerPreferences();
+  }, [
+    user?.id,
+    user?.email,
+    user?.firstname,
+    user?.lastname,
+    emailUpdates,
+    weeklyReport,
+    loadedServerNotificationPreferences,
+  ]);
+
+  useEffect(() => {
+    const userId = user?.id;
+    if (!userId || !loadedSupabaseSettings) {
+      return;
+    }
+
+    // Persists full settings state so user preferences remain consistent across devices.
+    const syncCloudSettings = async () => {
+      const payload: UserSettingsRow = {
+        user_id: userId,
+        theme_mode: theme as Theme,
+        color_theme: colorTheme as ColorTheme,
+        notifications_enabled: notificationsEnabled,
+        reminder_lead_hours: reminderLeadHours,
+        sound_enabled: soundEnabled,
+        email_updates_enabled: emailUpdates,
+        weekly_report_enabled: weeklyReport,
+        privacy_include_personal_info: privacyIncludePersonalInfo,
+        privacy_analytics_enabled: privacyAnalyticsEnabled,
+        privacy_personalization_enabled: privacyPersonalizationEnabled,
+        privacy_insights_history_enabled: privacyInsightsHistoryEnabled,
+      };
+
+      try {
+        const { error } = await supabase.from("user_settings").upsert(payload, { onConflict: "user_id" });
+        if (!error) {
+          applyLocalSettingsMirror(payload);
+        }
+      } catch {
+        // Keep local behavior even if Supabase sync is unavailable.
+      }
+    };
+
+    const timer = window.setTimeout(() => {
+      void syncCloudSettings();
+    }, 350);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [
+    user?.id,
+    loadedSupabaseSettings,
+    theme,
+    colorTheme,
+    notificationsEnabled,
+    reminderLeadHours,
+    soundEnabled,
+    emailUpdates,
+    weeklyReport,
+    privacyIncludePersonalInfo,
+    privacyAnalyticsEnabled,
+    privacyPersonalizationEnabled,
+    privacyInsightsHistoryEnabled,
+  ]);
+
+  useEffect(() => {
     const panelParam = searchParams.get("panel");
     const normalizedPanel = panelParam === "personalize" ? "appearance" : panelParam;
     const validPanels: SettingsPanel[] = ["appearance", "notifications", "privacy", "account", "data"];
@@ -204,6 +485,22 @@ function SettingsPageContent() {
   }, [searchParams]);
 
   useEffect(() => {
+    if (previousPanelRef.current === activePanel) {
+      return;
+    }
+
+    previousPanelRef.current = activePanel;
+
+    if (!actionMessage) {
+      return;
+    }
+
+    // Clear error banners when switching tabs so stale failures do not linger out of context.
+    if (actionMessage.type === "error") {
+      setActionMessage(null);
+      return;
+    }
+
     if (activePanel === "data") {
       return;
     }
@@ -256,6 +553,48 @@ function SettingsPageContent() {
   const handleWeeklyReportChange = (value: boolean) => {
     setWeeklyReport(value);
     localStorage.setItem("weeklyReport", String(value));
+  };
+
+  // Weekly reports require learning insights history to remain enabled.
+  useEffect(() => {
+    if (!privacyInsightsHistoryEnabled && weeklyReport) {
+      setWeeklyReport(false);
+      localStorage.setItem("weeklyReport", "false");
+    }
+  }, [privacyInsightsHistoryEnabled, weeklyReport]);
+
+  // Explains how browser notification permissions work when the permission is already granted.
+  const handleBrowserPermissionClick = async () => {
+    setActionMessage(null);
+
+    if (permission === "granted") {
+      setDialog({
+        isOpen: true,
+        title: "Browser notifications are already enabled",
+        message:
+          "To change browser notification permissions, open your browser's site settings for 11Planner.",
+      });
+      return;
+    }
+
+    const result = await requestPermission();
+    if (result === "granted") {
+      setActionMessage({ type: "success", text: "Browser notifications are now enabled." });
+    } else if (result === "denied") {
+      setActionMessage({ type: "error", text: "Browser notifications were blocked by your browser." });
+    } else {
+      const isSecure = typeof window !== "undefined" ? window.isSecureContext : false;
+      const host = typeof window !== "undefined" ? window.location.hostname : "";
+      const secureContextHint = !isSecure && host !== "localhost" && host !== "127.0.0.1"
+        ? "Open 11Planner on HTTPS (or localhost) and try again."
+        : "Check Chrome site permissions, then reload this page.";
+
+      setDialog({
+        isOpen: true,
+        title: "Browser notifications unavailable",
+        message: `This browser session cannot request notifications right now. ${secureContextHint}`,
+      });
+    }
   };
 
   // Stores whether exports/print views include personal identity details.
@@ -668,6 +1007,12 @@ function SettingsPageContent() {
           .eq("id", user.id);
         if (clearProfilePreferences.error) throw clearProfilePreferences.error;
 
+        const clearCloudSettings = await supabase
+          .from("user_settings")
+          .delete()
+          .eq("user_id", user.id);
+        if (clearCloudSettings.error) throw clearCloudSettings.error;
+
         handleThemeChange("light");
         handleColorThemeChange("emerald");
         setNotificationsEnabled(true);
@@ -721,6 +1066,11 @@ function SettingsPageContent() {
             const message = await response.text();
             throw new Error(message || "Failed to delete account");
           }
+
+          await supabase
+            .from("user_settings")
+            .delete()
+            .eq("user_id", user.id);
 
           await supabase.auth.signOut();
           localStorage.removeItem("emailUpdates");
@@ -830,6 +1180,11 @@ function SettingsPageContent() {
     borderColor: "var(--theme-accent-strong)",
     color: "#ffffff",
   } as const;
+
+  const browserPermissionButtonClass =
+    permission === "granted"
+      ? "px-4 py-2 rounded-lg text-xs font-semibold transition bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-500 dark:text-slate-900 dark:hover:bg-emerald-400"
+      : "px-4 py-2 rounded-lg text-xs font-semibold transition bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600";
 
   // Restores the defaults for whichever settings section is currently open.
   const handleResetDefaults = () => {
@@ -1267,9 +1622,9 @@ function SettingsPageContent() {
                         </p>
                       </div>
                       <button
-                        onClick={requestPermission}
+                        onClick={handleBrowserPermissionClick}
                         disabled={permission === "denied" || permission === "unsupported"}
-                        className="px-4 py-2 rounded-lg text-xs font-semibold transition bg-slate-200 text-slate-700 hover:bg-slate-300 disabled:opacity-60 disabled:cursor-not-allowed"
+                        className={`${browserPermissionButtonClass} disabled:opacity-60 disabled:cursor-not-allowed`}
                       >
                         {permission === "granted" ? "Enabled" : "Enable"}
                       </button>
@@ -1301,7 +1656,7 @@ function SettingsPageContent() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-medium text-slate-900 dark:text-white">Email Updates</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">Store preference for email reminders on important tasks.</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Send email copies of new task alerts from Notifications.</p>
                       </div>
                       <button
                         onClick={() => handleEmailUpdatesChange(!emailUpdates)}
@@ -1315,16 +1670,23 @@ function SettingsPageContent() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-medium text-slate-900 dark:text-white">Weekly Report</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">Store preference for weekly study summaries.</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Enable a weekly summary email for your current task load.</p>
                       </div>
                       <button
                         onClick={() => handleWeeklyReportChange(!weeklyReport)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${weeklyReport ? "" : "bg-slate-300 dark:bg-slate-600"}`}
+                        disabled={!privacyInsightsHistoryEnabled}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${weeklyReport ? "" : "bg-slate-300 dark:bg-slate-600"} ${!privacyInsightsHistoryEnabled ? "opacity-60 cursor-not-allowed" : ""}`}
                         style={weeklyReport ? { backgroundColor: "var(--theme-accent-strong)" } : undefined}
                       >
                         <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${weeklyReport ? "translate-x-6" : "translate-x-1"}`} />
                       </button>
                     </div>
+
+                    {!privacyInsightsHistoryEnabled && (
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        Weekly reports are unavailable while Learning Insights History is off. Turn it on in Privacy to enable this.
+                      </p>
+                    )}
                   </div>
                 </section>
               )}

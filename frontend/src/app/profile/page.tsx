@@ -92,6 +92,7 @@ export default function ProfilePage() {
     if (typeof window === "undefined") {
       return;
     }
+
     setPrivacyPersonalizationEnabled(localStorage.getItem("privacyPersonalizationEnabled") !== "false");
     setPrivacyInsightsHistoryEnabled(localStorage.getItem("privacyInsightsHistoryEnabled") !== "false");
     setPrivacyAnalyticsEnabled(localStorage.getItem("privacyAnalyticsEnabled") === "true");
@@ -296,6 +297,7 @@ export default function ProfilePage() {
     const startValue = animatedCompletionRateRef.current;
     const delta = completionRate - startValue;
 
+    // Interpolates completion-rate text updates for a smooth counter transition.
     const animate = (now: number) => {
       const progress = Math.min((now - start) / duration, 1);
       const nextValue = Math.round(startValue + delta * progress);
