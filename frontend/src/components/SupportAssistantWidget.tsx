@@ -350,25 +350,39 @@ const getReadTimeLabel = (article: HelpArticle): string => {
 };
 
 // Renders the assistant avatar used in message rows.
-function ElevenAvatar({ size = "md" }: { size?: "sm" | "md" }) {
+function ElevenAvatar({
+  size = "md",
+  effectiveTheme,
+}: {
+  size?: "sm" | "md";
+  effectiveTheme: "light" | "dark";
+}) {
   const avatarSize = size === "sm" ? "h-8 w-8" : "h-10 w-10";
-  const textSize = size === "sm" ? "text-[12px]" : "text-[13px]";
+  const iconSize = size === "sm" ? "text-[13px]" : "text-[16px]";
+  const innerBadgeClass =
+    effectiveTheme === "dark"
+      ? "inline-flex h-[72%] w-[72%] items-center justify-center rounded-full border border-white/20 bg-slate-950/55 text-slate-100 shadow-[0_6px_14px_-10px_rgba(15,23,42,0.8)] backdrop-blur"
+      : "inline-flex h-[72%] w-[72%] items-center justify-center rounded-full border border-white/85 bg-white/88 text-slate-700 shadow-sm backdrop-blur";
+  const avatarShellStyle =
+    effectiveTheme === "dark"
+      ? {
+          borderColor: "color-mix(in srgb, var(--theme-accent) 52%, #94a3b8)",
+          backgroundImage:
+            "linear-gradient(140deg, color-mix(in srgb, var(--theme-accent-soft) 24%, #0b1220) 0%, color-mix(in srgb, var(--theme-accent) 36%, #111827) 45%, color-mix(in srgb, var(--theme-accent-strong) 30%, #0f172a) 100%)",
+        }
+      : {
+          borderColor: "color-mix(in srgb, var(--theme-accent) 42%, #ffffff)",
+          backgroundImage:
+            "linear-gradient(140deg, color-mix(in srgb, var(--theme-accent-soft) 62%, white) 0%, color-mix(in srgb, var(--theme-accent) 50%, white) 52%, color-mix(in srgb, var(--theme-accent-strong) 40%, white) 100%)",
+        };
 
   return (
     <div
       className={`relative ${avatarSize} rounded-full border text-white flex items-center justify-center shadow-[0_8px_18px_-10px_rgba(15,23,42,0.9)]`}
-      style={{
-        borderColor: "var(--theme-accent)",
-        backgroundImage:
-          "linear-gradient(135deg, var(--theme-accent-strong), var(--theme-accent))",
-      }}
+      style={avatarShellStyle}
     >
-      <span className={`font-extrabold tracking-tight leading-none ${textSize}`}>11</span>
-      <span
-        className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-white/90 text-[8px] text-slate-800 border flex items-center justify-center"
-        style={{ borderColor: "var(--theme-accent)" }}
-      >
-        AI
+      <span className={innerBadgeClass}>
+        <span className={`material-symbols-outlined leading-none ${iconSize}`}>support_agent</span>
       </span>
     </div>
   );
@@ -427,6 +441,37 @@ export default function SupportAssistantWidget() {
         "radial-gradient(circle at top right, color-mix(in srgb, var(--theme-accent) 38%, transparent), transparent 32%), radial-gradient(circle at bottom left, color-mix(in srgb, var(--theme-accent-strong) 26%, transparent), transparent 36%)",
     } as const;
   }, [effectiveTheme]);
+
+  const launcherSurfaceStyle = useMemo(() => {
+    if (isOpen) {
+      return {
+        backgroundImage:
+          effectiveTheme === "dark"
+            ? "linear-gradient(140deg, color-mix(in srgb, var(--theme-accent-soft) 20%, #0f172a), color-mix(in srgb, var(--theme-accent) 26%, #111827) 55%, #0f172a)"
+            : "linear-gradient(140deg, color-mix(in srgb, var(--theme-accent-soft) 45%, #e2e8f0), color-mix(in srgb, var(--theme-accent) 36%, #cbd5e1) 55%, color-mix(in srgb, var(--theme-accent-strong) 28%, #e2e8f0))",
+        borderColor: "color-mix(in srgb, var(--theme-accent) 38%, #64748b)",
+      } as const;
+    }
+
+    if (effectiveTheme === "dark") {
+      return {
+        backgroundImage:
+          "linear-gradient(140deg, color-mix(in srgb, var(--theme-accent-soft) 26%, #0f172a) 0%, color-mix(in srgb, var(--theme-accent) 34%, #111827) 52%, color-mix(in srgb, var(--theme-accent-strong) 28%, #0f172a) 100%)",
+        borderColor: "color-mix(in srgb, var(--theme-accent) 42%, #334155)",
+      } as const;
+    }
+
+    return {
+      backgroundImage:
+        "linear-gradient(140deg, color-mix(in srgb, var(--theme-accent-soft) 66%, white) 0%, color-mix(in srgb, var(--theme-accent) 56%, white) 52%, color-mix(in srgb, var(--theme-accent-strong) 45%, white) 100%)",
+      borderColor: "color-mix(in srgb, var(--theme-accent) 40%, #ffffff)",
+    } as const;
+  }, [effectiveTheme, isOpen]);
+
+  const launcherIconPlateClass =
+    effectiveTheme === "dark"
+      ? "inline-flex h-full w-full items-center justify-center rounded-full border border-white/20 bg-slate-950/52 text-slate-100 shadow-[0_10px_20px_-16px_rgba(15,23,42,0.8)] backdrop-blur"
+      : "inline-flex h-full w-full items-center justify-center rounded-full border border-white/85 bg-white/88 text-slate-700 shadow-sm backdrop-blur";
 
   // Creates stable IDs for sessions/messages without depending on backend identifiers.
   const makeUniqueId = (prefix: string) => {
@@ -924,9 +969,7 @@ export default function SupportAssistantWidget() {
             <div className="relative z-10">
               <div className="flex items-center justify-between gap-3 mb-3">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-2xl bg-[var(--theme-accent-strong)] text-white shadow-[0_14px_26px_-16px_rgba(15,23,42,0.45)] flex items-center justify-center ring-1 ring-white/60">
-                    <span className="material-symbols-outlined text-[20px]">school</span>
-                  </div>
+                  <ElevenAvatar size="md" effectiveTheme={effectiveTheme} />
                   <div>
                     <h2 className="text-[24px] font-extrabold leading-none tracking-tight">11Planner</h2>
                     <p className="mt-1 text-[12px] uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">Chat Support Assistant</p>
@@ -1041,7 +1084,7 @@ export default function SupportAssistantWidget() {
                 <div ref={listRef} className="relative flex-1 min-h-0 overflow-y-auto space-y-3 pr-1 pt-3 pb-2">
                   {messages.map((message) => (
                     <div key={message.id} className={`flex gap-2 ${message.role === "assistant" ? "justify-start" : "justify-end"}`}>
-                      {message.role === "assistant" && <ElevenAvatar size="sm" />}
+                      {message.role === "assistant" && <ElevenAvatar size="sm" effectiveTheme={effectiveTheme} />}
                       <div
                         className={`max-w-[82%] rounded-[22px] px-3.5 py-3 text-sm leading-relaxed whitespace-pre-line break-words shadow-[0_14px_30px_-24px_rgba(15,23,42,0.55)] ${
                           message.role === "assistant"
@@ -1057,7 +1100,7 @@ export default function SupportAssistantWidget() {
 
                   {isThinking && (
                     <div className="flex gap-2 justify-start">
-                      <ElevenAvatar size="sm" />
+                      <ElevenAvatar size="sm" effectiveTheme={effectiveTheme} />
                       <div className="border border-slate-200/80 dark:border-slate-700/80 bg-white/90 dark:bg-slate-900/75 rounded-[22px] px-3.5 py-2.5 inline-flex items-center gap-1.5 shadow-[0_14px_30px_-24px_rgba(15,23,42,0.55)]">
                         <span className="h-1.5 w-1.5 rounded-full bg-slate-500 dark:bg-slate-300 animate-bounce" style={{ animationDelay: "0ms" }} />
                         <span className="h-1.5 w-1.5 rounded-full bg-slate-500 dark:bg-slate-300 animate-bounce" style={{ animationDelay: "120ms" }} />
@@ -1423,20 +1466,17 @@ export default function SupportAssistantWidget() {
         <span className="absolute inset-0 rounded-full border-2 border-white/90 dark:border-slate-200/80" />
         <span
           className="absolute inset-[3px] rounded-full border"
-          style={{
-            backgroundImage: isOpen
-              ? "linear-gradient(135deg, #0f172a, #334155)"
-              : "linear-gradient(135deg, var(--theme-accent-strong), var(--theme-accent), var(--theme-accent-soft))",
-            borderColor: isOpen ? "#1e293b" : "#0284c7",
-          }}
+          style={launcherSurfaceStyle}
         />
-        <span className="relative z-10 h-6 w-6">
+        <span className="relative z-10 h-7 w-7">
           <span
-            className={`absolute inset-0 material-symbols-outlined text-[23px] text-white leading-none transition-all duration-250 ease-out ${
+            className={`absolute inset-0 transition-all duration-250 ease-out ${
               isOpen ? "opacity-0 scale-75 rotate-45" : "opacity-100 scale-100 rotate-0"
             }`}
           >
-            assistant
+            <span className={launcherIconPlateClass}>
+              <span className="material-symbols-outlined text-[17px] leading-none">support_agent</span>
+            </span>
           </span>
           <span
             className={`absolute inset-0 material-symbols-outlined text-[23px] text-white leading-none transition-all duration-250 ease-out ${

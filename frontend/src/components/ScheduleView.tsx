@@ -286,13 +286,19 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
       return;
     }
 
-    const link = document.createElement('a');
-    link.href = webcalUrl;
-    link.target = '_blank';
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const opened = window.open(webcalUrl, '_blank', 'noopener,noreferrer');
+
+    // Fallback for browsers that block window.open from this context.
+    if (!opened) {
+      const link = document.createElement('a');
+      link.href = webcalUrl;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   }, [eventList, userId, onShowDialog]);
 
   // Switches the active calendar view mode.
