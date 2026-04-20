@@ -1,6 +1,8 @@
+// Displays the global site footer with navigation links and branding.
 import Link from 'next/link';
 import Image from 'next/image';
 
+// Renders the global footer links and brand section.
 export default function Footer() {
   return (
     <footer className="w-full bg-white/60 dark:bg-slate-800/60 backdrop-blur-3xl py-7 px-6 border-t border-white/40 dark:border-slate-700/40">

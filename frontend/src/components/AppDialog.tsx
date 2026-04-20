@@ -1,5 +1,7 @@
 "use client";
 
+// Reusable modal dialog for confirmations and one-off alerts.
+
 type AppDialogProps = {
   isOpen: boolean;
   title: string;
@@ -21,6 +23,7 @@ export default function AppDialog({
   cancelText = "Cancel",
   destructive = false,
 }: AppDialogProps) {
+  // Hides the modal container entirely when closed.
   if (!isOpen) return null;
 
   return (

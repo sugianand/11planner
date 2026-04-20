@@ -1,5 +1,7 @@
 'use client';
 
+// Renders the weekly timeline calendar with draggable study events.
+
 import React from 'react';
 import { DayData, Event } from '@/types/schedule';
 import { formatDateRange, getColorClass } from '@/utils/dateUtils';
@@ -28,6 +30,7 @@ export const WeekView: React.FC<WeekViewProps> = ({ weekDays, events, onEventMov
   const startDate = weekDays[0]?.date || new Date();
   const endDate = weekDays[6]?.date || new Date();
 
+  // Starts dragging for movable study events.
   const handleDragStart = (
     event: React.DragEvent<HTMLDivElement>,
     eventItem: Event
@@ -43,12 +46,14 @@ export const WeekView: React.FC<WeekViewProps> = ({ weekDays, events, onEventMov
     });
   };
 
+  // Clears drag UI state after dropping or canceling a drag.
   const handleDragEnd = () => {
     setDraggingEventId(null);
     setActiveSlot(null);
     setActiveDropLabel(null);
   };
 
+  // Drops an event into a weekly slot and snaps to 5-minute precision.
   const handleDrop = (
     event: React.DragEvent<HTMLDivElement>,
     day: DayData,
@@ -76,6 +81,7 @@ export const WeekView: React.FC<WeekViewProps> = ({ weekDays, events, onEventMov
     setDraggingEventId(null);
   };
 
+  // Updates the highlighted drop slot and preview time during drag.
   const handleDragOver = (event: React.DragEvent<HTMLDivElement>, slotKey: string, hour: number, minute: number) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
@@ -97,6 +103,7 @@ export const WeekView: React.FC<WeekViewProps> = ({ weekDays, events, onEventMov
     );
   };
 
+  // Removes active slot styling when dragging leaves a slot.
   const handleDragLeave = (slotKey: string) => {
     setActiveSlot((prev) => (prev === slotKey ? null : prev));
     setActiveDropLabel(null);
@@ -114,12 +121,14 @@ export const WeekView: React.FC<WeekViewProps> = ({ weekDays, events, onEventMov
     return () => clearTimeout(fadeTimer);
   }, [errorMessage]);
 
+  // Computes event duration in minutes with a minimum visible height.
   const getEventDurationMinutes = (eventItem: Event) => {
     const start = new Date(eventItem.start).getTime();
     const end = new Date(eventItem.end).getTime();
     return Math.max(Math.round((end - start) / 60000), 15);
   };
 
+  // Formats event start/end times for chip labels and tooltips.
   const getEventTimeLabel = (eventItem: Event) => {
     const start = new Date(eventItem.start);
     const end = new Date(eventItem.end);

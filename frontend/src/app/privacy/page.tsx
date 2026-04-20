@@ -84,9 +84,19 @@ export default function PrivacyPage() {
                 diagnostics such as browser type, performance logs, and reliability events.
               </li>
               <li className="rounded-xl bg-white/55 dark:bg-slate-800/45 border border-white/60 dark:border-slate-700/45 p-4">
-                <span className="font-semibold text-slate-900 dark:text-white">Usage data:</span> feature
-                interactions used to improve quality and user experience.
+                <span className="font-semibold text-slate-900 dark:text-white">Usage data (optional):</span> anonymous
+                product analytics events are collected only when Anonymous Product Analytics is enabled in Settings.
               </li>
+            </ul>
+          </section>
+
+          <section className="space-y-4">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Privacy controls in Settings</h2>
+            <ul className="space-y-2 text-slate-700 dark:text-slate-300">
+              <li><span className="font-semibold text-slate-900 dark:text-white">Anonymous Product Analytics:</span> opt in or out of anonymous usage metrics.</li>
+              <li><span className="font-semibold text-slate-900 dark:text-white">Personalized Insights:</span> control whether personalization features are enabled.</li>
+              <li><span className="font-semibold text-slate-900 dark:text-white">Learning Insights History:</span> keep or disable trend/streak history data.</li>
+              <li><span className="font-semibold text-slate-900 dark:text-white">Include Personal Info in Exports:</span> control whether name/email appear in exported views.</li>
             </ul>
           </section>
 
@@ -134,6 +144,9 @@ export default function PrivacyPage() {
             <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
               We use administrative and technical safeguards designed to reduce unauthorized
               access, misuse, and data loss.
+            </p>
+            <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
+              You can also clear planner data or delete learning insights history from Settings at any time.
             </p>
           </section>
 

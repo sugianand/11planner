@@ -1,3 +1,4 @@
+// Defines schedule view modes and event/day data types for calendar components.
 export type ViewMode = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
 export interface Event {

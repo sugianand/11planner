@@ -1,5 +1,7 @@
 "use client";
 
+// Full support assistant experience including chat history, help content, and escalation flow.
+
 import Image from "next/image";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
@@ -1434,7 +1436,7 @@ export default function SupportAssistantWidget() {
               isOpen ? "opacity-0 scale-75 rotate-45" : "opacity-100 scale-100 rotate-0"
             }`}
           >
-            forum
+            assistant
           </span>
           <span
             className={`absolute inset-0 material-symbols-outlined text-[23px] text-white leading-none transition-all duration-250 ease-out ${

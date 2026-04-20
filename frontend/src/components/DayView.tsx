@@ -1,5 +1,7 @@
 'use client';
 
+// Renders the single-day timeline calendar with drag-and-drop scheduling.
+
 import React from 'react';
 import { DayData, Event } from '@/types/schedule';
 import { getColorClass } from '@/utils/dateUtils';
@@ -26,6 +28,7 @@ export const DayView: React.FC<DayViewProps> = ({ dayData, events, onEventMove, 
     minute: (i % 4) * 15,
   }));
 
+  // Starts dragging for movable study events.
   const handleDragStart = (
     event: React.DragEvent<HTMLDivElement>,
     eventItem: Event
@@ -41,12 +44,14 @@ export const DayView: React.FC<DayViewProps> = ({ dayData, events, onEventMove, 
     });
   };
 
+  // Clears drag-related UI state after drag completes.
   const handleDragEnd = () => {
     setDraggingEventId(null);
     setActiveSlot(null);
     setActiveDropLabel(null);
   };
 
+  // Drops an event into a day slot and snaps to 5-minute precision.
   const handleDrop = (event: React.DragEvent<HTMLDivElement>, hour: number, minute: number) => {
     event.preventDefault();
     const eventId = event.dataTransfer.getData('text/plain');
@@ -69,6 +74,7 @@ export const DayView: React.FC<DayViewProps> = ({ dayData, events, onEventMove, 
     setDraggingEventId(null);
   };
 
+  // Updates active drop preview while dragging over a slot.
   const handleDragOver = (event: React.DragEvent<HTMLDivElement>, slotKey: string, hour: number, minute: number) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
@@ -90,6 +96,7 @@ export const DayView: React.FC<DayViewProps> = ({ dayData, events, onEventMove, 
     );
   };
 
+  // Removes the active drop highlight when leaving a slot.
   const handleDragLeave = (slotKey: string) => {
     setActiveSlot((prev) => (prev === slotKey ? null : prev));
     setActiveDropLabel(null);
@@ -107,12 +114,14 @@ export const DayView: React.FC<DayViewProps> = ({ dayData, events, onEventMove, 
     return () => clearTimeout(fadeTimer);
   }, [errorMessage]);
 
+  // Computes event duration in minutes with a visible minimum height.
   const getEventDurationMinutes = (eventItem: Event) => {
     const start = new Date(eventItem.start).getTime();
     const end = new Date(eventItem.end).getTime();
     return Math.max(Math.round((end - start) / 60000), 15);
   };
 
+  // Formats an event start/end time range for labels and tooltips.
   const getEventTimeLabel = (eventItem: Event) => {
     const start = new Date(eventItem.start);
     const end = new Date(eventItem.end);

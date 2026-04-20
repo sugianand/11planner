@@ -441,7 +441,11 @@ export default function AuthPage() {
                   <button
                     type="button"
                     className="btn"
-                    onClick={() => setShowRegisterEmailForm(true)}
+                    onClick={() => {
+                      setShowRegisterEmailForm(true);
+                      setErrorMessage("");
+                      setSuccessMessage("");
+                    }}
                     disabled={isSubmitting || !!oauthLoadingProvider}
                   >
                     Continue with Email
@@ -514,7 +518,15 @@ export default function AuthPage() {
                     {isSubmitting ? "Creating account..." : "Create Account"}
                   </button>
 
-                  <button type="button" className="secondary-btn" onClick={() => setShowRegisterEmailForm(false)}>
+                  <button
+                    type="button"
+                    className="secondary-btn"
+                    onClick={() => {
+                      setShowRegisterEmailForm(false);
+                      setErrorMessage("");
+                      setSuccessMessage("");
+                    }}
+                  >
                     Back
                   </button>
                 </>

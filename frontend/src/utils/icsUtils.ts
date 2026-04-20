@@ -1,6 +1,8 @@
 import { Event } from '@/types/schedule';
 
+// Serializes events to ICS and triggers a calendar file download.
 export function exportEventsToICS(events: Event[], filename: string = '11planner-schedule.ics') {
+  // Formats a Date to ICS UTC format (YYYYMMDDTHHMMSSZ).
   const formatICSDate = (date: Date) => {
     // Converts to UTC string: YYYYMMDDThhmmssZ
     return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';

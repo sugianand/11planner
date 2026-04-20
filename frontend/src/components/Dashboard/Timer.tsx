@@ -1,5 +1,7 @@
 "use client";
 
+// Interactive focus timer with mode switching and custom duration settings.
+
 import { useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -47,17 +49,20 @@ export default function Timer({
 
     const hasBackgroundRunningTimer = activeMode !== null && activeMode !== mode;
 
+    // Formats timer seconds as MM:SS for display.
     const formatTime = (seconds: number) => {
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
         return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
     };
 
+    // Computes progress ring percentage for the active mode.
     const calculateProgress = () => {
         const totalSeconds = modes[mode].minutes * 60;
         return ((totalSeconds - timeLeft) / totalSeconds) * 100;
     };
 
+    // Validates and applies custom duration settings from the modal.
     const handleSaveSettings = () => {
         const clampDraftMinutes = (rawValue: string, min: number, max: number) => {
             const parsed = Number.parseInt(rawValue.trim(), 10);
@@ -78,6 +83,7 @@ export default function Timer({
         setShowSettings(false);
     };
 
+    // Restricts duration input to numeric characters only.
     const handleDraftChange = (timerMode: TimerMode, rawValue: string) => {
         const digitsOnly = rawValue.replace(/\D/g, "");
 
@@ -89,6 +95,7 @@ export default function Timer({
         setTimerDraft((prev) => ({ ...prev, [timerMode]: digitsOnly }));
     };
 
+    // Clamps a draft duration when an input field loses focus.
     const handleDraftBlur = (timerMode: TimerMode, min: number, max: number) => {
         setTimerDraft((prev) => {
             const parsed = Number.parseInt(prev[timerMode].trim(), 10);
@@ -102,6 +109,7 @@ export default function Timer({
         });
     };
 
+    // Opens settings and seeds the draft with current durations.
     const openSettings = () => {
         setTimerDraft({
             pomodoro: customDurations.pomodoro.toString(),

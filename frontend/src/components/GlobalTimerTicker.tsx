@@ -1,15 +1,19 @@
 "use client";
 
+// Shows an always-visible mini timer when a session is running outside dashboard.
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTimer } from "@/contexts/TimerContext";
 
+// Formats remaining timer seconds as MM:SS.
 function formatTime(totalSeconds: number) {
   const mins = Math.floor(totalSeconds / 60);
   const secs = totalSeconds % 60;
   return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
 }
 
+// Shows a floating timer chip while a timer runs outside the dashboard page.
 export default function GlobalTimerTicker() {
   const pathname = usePathname();
   const { activeTimerMode, activeTimeLeft } = useTimer();

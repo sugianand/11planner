@@ -1,3 +1,4 @@
+// Defines shared domain and UI TypeScript interfaces used across planner features.
 // ========== Course Types ==========
 export interface Course {
   id: string;

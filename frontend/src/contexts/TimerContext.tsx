@@ -35,6 +35,7 @@ interface TimerContextType {
 
 const TimerContext = createContext<TimerContextType | null>(null);
 
+// Provides timer state and actions for focus and break modes.
 export function TimerProvider({ children }: { children: React.ReactNode }) {
   const [customTimerDurations, setCustomTimerDurations] = useState<Record<TimerMode, number>>({
     pomodoro: defaultTimerDurations.pomodoro,
@@ -59,6 +60,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     [customTimerDurations]
   );
 
+  // Stops and clears any currently running timer interval.
   const clearTimerInterval = useCallback(() => {
     if (timerIntervalRef.current) {
       clearInterval(timerIntervalRef.current);
@@ -102,6 +104,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
   const isTimerActive = activeTimerMode === timerMode;
   const activeTimeLeft = activeTimerMode ? remainingSeconds[activeTimerMode] : null;
 
+  // Starts or pauses the currently selected timer mode.
   const toggleTimer = useCallback(() => {
     if (activeTimerMode === timerMode) {
       clearTimerInterval();
@@ -123,10 +126,12 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     setActiveTimerMode(timerMode);
   }, [activeTimerMode, clearTimerInterval, timerMode, timerModes]);
 
+  // Switches which timer mode is shown in the UI.
   const handleTimerModeChange = useCallback((mode: TimerMode) => {
     setTimerMode(mode);
   }, []);
 
+  // Resets the selected timer mode back to its configured duration.
   const resetTimer = useCallback(() => {
     setRemainingSeconds((prev) => ({
       ...prev,
@@ -139,6 +144,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     }
   }, [activeTimerMode, clearTimerInterval, timerModes, timerMode]);
 
+  // Applies updated durations and refreshes all timer countdown values.
   const applyTimerSettings = useCallback((nextDurations?: Record<TimerMode, number>) => {
     const durationsToApply = nextDurations ?? customTimerDurations;
 
@@ -173,6 +179,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Returns the timer context and enforces provider usage.
 export function useTimer() {
   const context = useContext(TimerContext);
   if (!context) throw new Error("useTimer must be used within a TimerProvider");

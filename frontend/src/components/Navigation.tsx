@@ -1,5 +1,7 @@
 "use client";
 
+// Renders the top navigation bar with auth-aware links and user menu.
+
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -7,6 +9,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
+// Manages top navigation links, auth state, and user dropdown interactions.
 export default function Navigation() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -43,6 +46,7 @@ export default function Navigation() {
       return;
     }
 
+    // Closes the dropdown when a pointer event happens outside the menu.
     const handlePointerDown = (event: MouseEvent | TouchEvent) => {
       const target = event.target as Node | null;
       if (!target) {
@@ -54,6 +58,7 @@ export default function Navigation() {
       setIsUserDropdownOpen(false);
     };
 
+    // Closes the dropdown when Escape is pressed.
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setIsUserDropdownOpen(false);
@@ -71,6 +76,7 @@ export default function Navigation() {
     };
   }, [isUserDropdownOpen]);
 
+  // Signs out the current user and redirects to auth.
   async function logout() {
     const { error } = await supabase.auth.signOut();
     if (error) {
@@ -81,6 +87,7 @@ export default function Navigation() {
   }
 
   const pathname = usePathname();
+  // Checks whether a nav link should be highlighted as active.
   const isActive = (path: string) => pathname === path;
 
   return (

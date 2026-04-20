@@ -1,3 +1,4 @@
+// Initializes and exports the shared Supabase client used by the frontend app.
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = "https://ddszcujvbvvihwsrkzsk.supabase.co";

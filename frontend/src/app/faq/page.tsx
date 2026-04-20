@@ -70,7 +70,7 @@ export default function FaqPage() {
     {
       question: "How quickly can I get support if something breaks?",
       answer:
-        "Most support requests receive a response within a few business days. To get help faster, include the page where the issue occurred, steps to reproduce, and screenshots or error text."
+        "Most support requests receive a response within 2-3 business days. To get help faster, include the page where the issue occurred, steps to reproduce, and screenshots or error text."
     }
   ];
 

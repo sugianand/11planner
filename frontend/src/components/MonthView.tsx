@@ -1,5 +1,7 @@
 'use client';
 
+// Renders the month grid calendar with event chips and drag-and-drop support.
+
 import React from 'react';
 import { DayData, Event } from '@/types/schedule';
 import { getColorClass } from '@/utils/dateUtils';
@@ -20,6 +22,7 @@ export const MonthView: React.FC<MonthViewProps> = ({ daysInMonth, events, onEve
   const monthYear = monthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+  // Starts dragging for movable study events and prepares a drag preview.
   const handleDragStart = (event: React.DragEvent<HTMLDivElement>, eventId: string) => {
     const eventItem = events.find((item) => item.id === eventId);
     if (eventItem?.kind === 'class') {
@@ -46,11 +49,13 @@ export const MonthView: React.FC<MonthViewProps> = ({ daysInMonth, events, onEve
     setDraggingEventId(eventId);
   };
 
+  // Clears drag state when drag ends.
   const handleDragEnd = () => {
     setDraggingEventId(null);
     setActiveDay(null);
   };
 
+  // Drops an event on a day cell and keeps its original time-of-day.
   const handleDrop = (event: React.DragEvent<HTMLDivElement>, day: DayData) => {
     event.preventDefault();
     const eventId = event.dataTransfer.getData('text/plain');
@@ -70,12 +75,14 @@ export const MonthView: React.FC<MonthViewProps> = ({ daysInMonth, events, onEve
     setDraggingEventId(null);
   };
 
+  // Tracks which day cell is currently an active drop target.
   const handleDragOver = (event: React.DragEvent<HTMLDivElement>, dayKey: string) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
     setActiveDay(dayKey);
   };
 
+  // Clears the active drop target when leaving a day cell.
   const handleDragLeave = (dayKey: string) => {
     setActiveDay((prev) => (prev === dayKey ? null : prev));
   };
@@ -92,6 +99,7 @@ export const MonthView: React.FC<MonthViewProps> = ({ daysInMonth, events, onEve
     return () => clearTimeout(fadeTimer);
   }, [errorMessage]);
 
+  // Returns the dragged event start time for the in-cell drop hint label.
   const getDragTimeLabel = () => {
     if (!draggingEventId) {
       return '9:00 AM';

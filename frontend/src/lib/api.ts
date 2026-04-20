@@ -13,6 +13,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 // ========== API Helper Functions ==========
 
+// Sends a JSON request to the backend and throws a normalized error when it fails.
 async function fetchAPI<T>(
   endpoint: string,
   options: RequestInit = {}

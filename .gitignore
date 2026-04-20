@@ -51,6 +51,7 @@ __pycache__/
 venv/
 ENV/
 env/
+backend/notification_preferences.json
 
 # video files
 *.mp4

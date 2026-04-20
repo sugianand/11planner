@@ -1,5 +1,7 @@
 "use client";
 
+// Lazy-loads the support assistant widget as a client-only component.
+
 import dynamic from "next/dynamic";
 
 const SupportAssistantWidget = dynamic(() => import("@/components/SupportAssistantWidget"), {

@@ -1,5 +1,7 @@
 ﻿"use client";
 
+// Shows focus dashboard widgets, stats, and music controls on the dashboard page.
+
 import { ReactNode, useEffect, useState } from "react";
 import { usePlanner } from "@/contexts/PlannerContext";
 import { taskAPI } from "@/lib/api";
@@ -98,17 +100,20 @@ export default function FocusDashboardPanel({
     youtube: "https://music.youtube.com/",
   };
 
+  // Encodes PKCE bytes into URL-safe base64.
   const toBase64Url = (bytes: Uint8Array) => {
     const binary = String.fromCharCode(...bytes);
     return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
   };
 
+  // Creates an S256 PKCE challenge from a verifier string.
   const createPkceChallenge = async (verifier: string) => {
     const data = new TextEncoder().encode(verifier);
     const digest = await crypto.subtle.digest("SHA-256", data);
     return toBase64Url(new Uint8Array(digest));
   };
 
+  // Starts Spotify OAuth in a popup and stores PKCE/session metadata.
   const startSpotifyPopupConnect = async () => {
     const clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
     if (!clientId) {
@@ -171,6 +176,7 @@ export default function FocusDashboardPanel({
     }
   };
 
+  // Routes provider connect actions to Spotify OAuth or YouTube site popup.
   const handleProviderConnect = () => {
     if (musicProvider === "spotify") {
       void startSpotifyPopupConnect();
@@ -367,6 +373,7 @@ export default function FocusDashboardPanel({
     return deadline.getTime() === today.getTime();
   });
 
+  // Formats estimated hours with compact rounding for stat cards.
   const formatHours = (hours: number) => {
     const rounded = Math.round(hours * 10) / 10;
     if (rounded === 0) {
@@ -390,16 +397,19 @@ export default function FocusDashboardPanel({
   const youtubeEmbedSrc = `https://www.youtube.com/embed/${activeYoutubeTrack.youtubeId}?autoplay=${isYoutubePlaying ? 1 : 0}&controls=1&rel=0&modestbranding=1`;
   const activeYouTubeMusicUrl = `https://music.youtube.com/search?q=${encodeURIComponent(activeYoutubeTrack.searchQuery)}`;
 
+  // Moves to the previous YouTube track and starts playback.
   const handleYouTubePrev = () => {
     setActiveYoutubeIndex((prev) => (prev - 1 + youtubeTracks.length) % youtubeTracks.length);
     setIsYoutubePlaying(true);
   };
 
+  // Moves to the next YouTube track and starts playback.
   const handleYouTubeNext = () => {
     setActiveYoutubeIndex((prev) => (prev + 1) % youtubeTracks.length);
     setIsYoutubePlaying(true);
   };
 
+  // Toggles embedded YouTube playback state.
   const handleYouTubeTogglePlay = () => {
     setIsYoutubePlaying((prev) => !prev);
   };

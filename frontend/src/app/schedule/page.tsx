@@ -6,6 +6,7 @@ import { usePlanner } from "@/contexts/PlannerContext";
 import { ScheduleView } from "@/components/ScheduleView";
 import { Event } from "@/types/schedule";
 import Footer from "@/components/Footer";
+import AppDialog from "@/components/AppDialog";
 import { supabase } from "@/lib/supabaseClient";
 
 interface ScheduleStats {
@@ -30,6 +31,11 @@ export default function SchedulePage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [colorBy, setColorBy] = useState<"priority" | "course">("priority");
   const [exportIdentity, setExportIdentity] = useState<{ name: string; email: string } | null>(null);
+  const [dialog, setDialog] = useState<{ isOpen: boolean; title: string; message: string }>({
+    isOpen: false,
+    title: '',
+    message: '',
+  });
 
   const isPrintMode = searchParams.get("printMode") === "1";
   const includePersonalInfoInExport = searchParams.get("includePersonalInfo") !== "0";
@@ -358,10 +364,17 @@ export default function SchedulePage() {
               onColorByChange={setColorBy}
               errorMessage={error}
               onDismissError={() => setError(null)}
+              onShowDialog={(title, message) => setDialog({ isOpen: true, title, message })}
             />
           </div>
         </div>
       </div>
+      <AppDialog
+        isOpen={dialog.isOpen}
+        title={dialog.title}
+        message={dialog.message}
+        onClose={() => setDialog({ isOpen: false, title: '', message: '' })}
+      />
       <Footer />
     </div>
   );
