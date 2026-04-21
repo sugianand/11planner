@@ -1,3 +1,4 @@
+// Reusable stat card for presenting dashboard metrics and highlights.
 import { ReactNode } from "react";
 
 interface StatCardProps {
@@ -8,6 +9,7 @@ interface StatCardProps {
     icon?: string;
 }
 
+// Displays one dashboard metric with optional icon and subtext.
 export default function StatCard({
     label,
     value,

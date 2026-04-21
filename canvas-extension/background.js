@@ -4,6 +4,74 @@
  */
 
 const DEFAULT_API_URL = 'https://11planner-production.up.railway.app';
+const SUPABASE_URL = 'https://ddszcujvbvvihwsrkzsk.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkc3pjdWp2YnZ2aWh3c3JrenNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAxNjIzNDYsImV4cCI6MjA4NTczODM0Nn0.HfSG1DHiGG3Riv_JVFvFBWJggy40tPS4iAavIDKjs1o';
+
+function parseHashParams(url) {
+    const hash = new URL(url).hash.replace(/^#/, '');
+    return new URLSearchParams(hash);
+}
+
+function launchOAuthFlow(authUrl) {
+    return new Promise((resolve, reject) => {
+        chrome.identity.launchWebAuthFlow(
+            {
+                url: authUrl,
+                interactive: true,
+            },
+            (responseUrl) => {
+                if (chrome.runtime.lastError) {
+                    reject(new Error(chrome.runtime.lastError.message || 'Google login was cancelled.'));
+                    return;
+                }
+                if (!responseUrl) {
+                    reject(new Error('No OAuth response URL returned.'));
+                    return;
+                }
+                resolve(responseUrl);
+            }
+        );
+    });
+}
+
+async function loginWithGoogleOAuth() {
+    // Use the canonical extension OAuth callback URL so Supabase can return
+    // directly to the extension flow instead of falling back to site URL.
+    const redirectUri = chrome.identity.getRedirectURL();
+    const authUrl = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUri)}&response_type=token`;
+
+    const responseUrl = await launchOAuthFlow(authUrl);
+    const params = parseHashParams(responseUrl);
+    const accessToken = params.get('access_token');
+    const oauthError = params.get('error_description') || params.get('error');
+
+    if (oauthError) {
+        throw new Error(oauthError);
+    }
+
+    if (!accessToken) {
+        throw new Error('Google login did not return an access token.');
+    }
+
+    const profileRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+        headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${accessToken}`,
+        },
+    });
+
+    const profile = await profileRes.json();
+    if (!profileRes.ok || !profile?.id || !profile?.email) {
+        throw new Error(profile?.message || 'Could not load your profile after Google login.');
+    }
+
+    return {
+        userId: profile.id,
+        userEmail: profile.email,
+        accessToken,
+    };
+}
+>>>>>>> ed301b2f383147b7c1c7e91b18a7962643afc3fc
 
 // Retrieves user settings (backend URL, user ID) from Chrome storage
 async function getSettings() {
@@ -107,6 +175,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     // Retrieves user settings from storage
     if (message.action === 'getSettings') {
         getSettings().then(sendResponse);
+        return true;
+    }
+    // Runs Google OAuth login through Chrome Identity API from background context.
+    if (message.action === 'googleOAuthLogin') {
+        loginWithGoogleOAuth()
+            .then(sendResponse)
+            .catch(err => sendResponse({ error: err.message || 'Google login failed.' }));
         return true;
     }
 });

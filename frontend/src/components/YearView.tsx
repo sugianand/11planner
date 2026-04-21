@@ -1,5 +1,7 @@
 'use client';
 
+// Displays a full-year calendar overview with per-day event markers.
+
 import React from 'react';
 import { DayData, Event } from '@/types/schedule';
 
@@ -12,6 +14,7 @@ interface YearViewProps {
 export const YearView: React.FC<YearViewProps> = ({ year, monthsData, events }) => {
   const weekDays = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
+  // Filters non-class events that occur on a specific date.
   const getEventsForDay = (date: Date) => {
     return events.filter((e) => {
       const eventDate = new Date(e.start);

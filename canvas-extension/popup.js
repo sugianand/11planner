@@ -6,6 +6,15 @@
 // Supabase configuration (anon key is safe to embed in client code)
 const SUPABASE_URL = 'https://ddszcujvbvvihwsrkzsk.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkc3pjdWp2YnZ2aWh3c3JrenNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAxNjIzNDYsImV4cCI6MjA4NTczODM0Nn0.HfSG1DHiGG3Riv_JVFvFBWJggy40tPS4iAavIDKjs1o';
+const WEBSITE_BASE_URL = 'http://localhost:3000';
+const GOOGLE_BTN_CONTENT = `
+        <span class="google-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                <path d="M12 11v3.5h5.9c-.25 1.5-1.8 4.4-5.9 4.4-3.55 0-6.45-2.95-6.45-6.6s2.9-6.6 6.45-6.6c2.03 0 3.4.86 4.18 1.6l2.85-2.75C17.2 2.85 14.87 2 12 2 6.95 2 2.86 6.18 2.86 11.3S6.95 20.6 12 20.6c6.93 0 9.14-4.86 9.14-7.35 0-.5-.05-.87-.12-1.25H12z"></path>
+            </svg>
+        </span>
+        Log in with Google
+`;
 
 // State variables for extracted data and user selections
 let extractedTasks = [];
@@ -173,8 +182,99 @@ async function login(email, password) {
     return { userId: data.user.id, email: data.user.email, accessToken: data.access_token };
 }
 
+function parseHashParams(url) {
+    const hash = new URL(url).hash.replace(/^#/, '');
+    return new URLSearchParams(hash);
+}
+
+function getIdentityApi() {
+    if (typeof chrome !== 'undefined' && chrome.identity) {
+        return chrome.identity;
+    }
+    return null;
+}
+
+function getOAuthRedirectUrl() {
+    const identityApi = getIdentityApi();
+    if (identityApi && typeof identityApi.getRedirectURL === 'function') {
+        return identityApi.getRedirectURL('supabase-auth');
+    }
+
+    // Fallback: construct the Chromium OAuth redirect URL directly.
+    const runtimeId = chrome?.runtime?.id;
+    if (!runtimeId) {
+        throw new Error('Cannot determine extension ID for OAuth redirect.');
+    }
+    return `https://${runtimeId}.chromiumapp.org/supabase-auth`;
+}
+
+function launchOAuthFlow(authUrl) {
+    return new Promise((resolve, reject) => {
+        const identityApi = getIdentityApi();
+        if (!identityApi || typeof identityApi.launchWebAuthFlow !== 'function') {
+            reject(new Error('Google popup login is unavailable in this extension context. Reload the extension and try again.'));
+            return;
+        }
+
+        identityApi.launchWebAuthFlow(
+            {
+                url: authUrl,
+                interactive: true,
+            },
+            (responseUrl) => {
+                if (chrome.runtime.lastError) {
+                    reject(new Error(chrome.runtime.lastError.message || 'Google login was cancelled.'));
+                    return;
+                }
+                if (!responseUrl) {
+                    reject(new Error('No OAuth response URL returned.'));
+                    return;
+                }
+                resolve(responseUrl);
+            }
+        );
+    });
+}
+
+async function loginWithGoogle() {
+    const redirectUri = getOAuthRedirectUrl();
+    const authUrl = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUri)}&response_type=token`;
+
+    const responseUrl = await launchOAuthFlow(authUrl);
+    const params = parseHashParams(responseUrl);
+    const accessToken = params.get('access_token');
+    const oauthError = params.get('error_description') || params.get('error');
+
+    if (oauthError) {
+        throw new Error(oauthError);
+    }
+
+    if (!accessToken) {
+        throw new Error('Google login did not return an access token.');
+    }
+
+    const profileRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+        headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${accessToken}`,
+        },
+    });
+
+    const profile = await profileRes.json();
+    if (!profileRes.ok || !profile?.id || !profile?.email) {
+        throw new Error(profile?.message || 'Could not load your profile after Google login.');
+    }
+
+    return { userId: profile.id, email: profile.email, accessToken };
+}
+
 // Initializes popup UI when page loads
 document.addEventListener('DOMContentLoaded', () => {
+    const googleBtn = document.getElementById('googleLoginBtn');
+    if (googleBtn) {
+        googleBtn.innerHTML = GOOGLE_BTN_CONTENT;
+    }
+
     chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
         const activeTab = tabs?.[0];
         const available = isCanvasUrl(activeTab?.url || '');
@@ -219,9 +319,55 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Handles Google OAuth login button click
+    document.getElementById('googleLoginBtn')?.addEventListener('click', async () => {
+        const btn = document.getElementById('googleLoginBtn');
+        btn.disabled = true;
+        btn.textContent = 'Connecting...';
+        showStatus('Opening Google login...', 'info');
+
+        try {
+            const oauthResult = await new Promise((resolve, reject) => {
+                chrome.runtime.sendMessage({ action: 'googleOAuthLogin' }, response => {
+                    if (chrome.runtime.lastError) {
+                        reject(new Error(chrome.runtime.lastError.message || 'Could not start Google login.'));
+                        return;
+                    }
+                    if (!response) {
+                        reject(new Error('No OAuth response from background.'));
+                        return;
+                    }
+                    if (response.error) {
+                        reject(new Error(response.error));
+                        return;
+                    }
+                    resolve(response);
+                });
+            });
+
+            const { userId, userEmail, accessToken } = oauthResult;
+            chrome.storage.local.set({ userId, userEmail, accessToken }, () => {
+                showPanel(true, userEmail);
+                showStatus('Logged in with Google!', 'success');
+                setTimeout(() => { document.getElementById('status').className = 'status'; }, 2000);
+            });
+        } catch (err) {
+            showStatus(`Google login failed: ${err.message}`, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = GOOGLE_BTN_CONTENT;
+        }
+    });
+
+    // Redirects users without an account to website register mode
+    document.getElementById('signUpBtn')?.addEventListener('click', () => {
+        const signupUrl = `${WEBSITE_BASE_URL}/auth?mode=register`;
+        chrome.tabs.create({ url: signupUrl });
+    });
+
     // Handles logout button click
     document.getElementById('logoutBtn')?.addEventListener('click', () => {
-        chrome.storage.local.remove(['userId', 'userEmail'], () => {
+        chrome.storage.local.remove(['userId', 'userEmail', 'accessToken'], () => {
             showPanel(false);
             document.getElementById('status').className = 'status';
             extractedTasks = [];

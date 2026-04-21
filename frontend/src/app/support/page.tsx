@@ -17,7 +17,7 @@ export default function SupportPage() {
     {
       icon: "schedule",
       title: "Fast Response",
-      body: "We typically respond within a few business days with concrete next steps."
+      body: "We typically respond within 2-3 business days with concrete next steps."
     },
     {
       icon: "checklist",
@@ -75,7 +75,7 @@ export default function SupportPage() {
               Email: <span className="font-semibold">11planner.support@gmail.com</span>
             </p>
             <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
-              Typical response time: within a few business days.
+              Typical response time: within 2-3 business days.
             </p>
             <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
               For account deletion or privacy-related requests, please include &quot;Privacy Request&quot; in your subject line.

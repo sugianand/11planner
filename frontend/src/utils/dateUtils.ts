@@ -1,5 +1,6 @@
 import { DayData, TimeSlot } from '@/types/schedule';
 
+// Builds a 24-hour list of display slots used by day and week views.
 export function getTimeSlots(): TimeSlot[] {
   const slots: TimeSlot[] = [];
   for (let hour = 0; hour < 24; hour++) {
@@ -14,6 +15,7 @@ export function getTimeSlots(): TimeSlot[] {
   return slots;
 }
 
+// Creates a 6-week month grid (42 cells) including leading/trailing days.
 export function getDaysInMonth(date: Date): DayData[] {
   const year = date.getFullYear();
   const month = date.getMonth();
@@ -45,6 +47,7 @@ export function getDaysInMonth(date: Date): DayData[] {
   return days;
 }
 
+// Returns the Sunday-to-Saturday week containing the provided date.
 export function getWeekDays(date: Date): DayData[] {
   const currentDate = new Date(date);
   const day = currentDate.getDay();
@@ -73,6 +76,7 @@ export function getWeekDays(date: Date): DayData[] {
   return days;
 }
 
+// Maps one calendar date into the DayData shape used by the UI.
 export function getDayData(date: Date): DayData {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -88,6 +92,7 @@ export function getDayData(date: Date): DayData {
   };
 }
 
+// Formats a readable date span for schedule headers.
 export function formatDateRange(startDate: Date, endDate: Date): string {
   const startMonth = startDate.toLocaleString('en-US', { month: 'short' });
   const endMonth = endDate.toLocaleString('en-US', { month: 'short' });
@@ -103,6 +108,7 @@ export function formatDateRange(startDate: Date, endDate: Date): string {
   }
 }
 
+// Resolves an event color key to the corresponding Tailwind class string.
 export function getColorClass(color?: string): string {
   const colorMap: { [key: string]: string } = {
     blue: 'bg-blue-100/85 text-blue-900 border-blue-300/80 dark:bg-blue-500/18 dark:text-blue-100 dark:border-blue-400/35',
@@ -121,6 +127,7 @@ export function getColorClass(color?: string): string {
   return colorMap[color || 'blue'] || colorMap.blue;
 }
 
+// Builds month metadata for all 12 months in a given year.
 export function getMonthsInYear(year: number): { month: number; name: string; daysInMonth: DayData[] }[] {
   const months = [];
   for (let month = 0; month < 12; month++) {

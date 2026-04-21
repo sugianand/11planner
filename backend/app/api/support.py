@@ -156,11 +156,13 @@ APP_NAVIGATION_CONTEXT = (
     "  5) After generation, users can drag schedule blocks; overlapping blocks are prevented.\n"
     "  6) Color by Priority or Color by Course changes the event coloring.\n"
     "- Settings page exact flow:\n"
-    "  1) Use Search settings to filter the three panels: Personalize, Notifications, and Account.\n"
-    "  2) Personalize controls Theme Mode (light/dark) and Accent Theme (emerald, ocean, rose, slate, amber, violet).\n"
+    "  1) Use Search settings to filter the five panels: Appearance, Notifications, Privacy, Account, and Data.\n"
+    "  2) Appearance controls Theme Mode (light/dark) and Accent Theme (emerald, ocean, rose, slate, amber, violet).\n"
     "  3) Notifications controls Push Notifications, Notification Sound, Browser Permission, Reminder lead time (1-168 hours), Email Updates, and Weekly Report.\n"
-    "  4) Account includes Change Password, Public Profile Visibility, Usage Analytics, Personalized Insights, Share Progress with Integrations, Export Schedule as PDF, Clear Account Data, and Delete Account.\n"
-    "  5) The bottom status bar shows All changes saved or Saving..., and Reset This Section resets the currently open panel.\n"
+    "  4) Privacy controls Personalized Planner Recommendations, Learning Insights History, Anonymous Product Analytics, and Include Personal Info in Exports.\n"
+    "  5) Account includes Change Password and Delete Account.\n"
+    "  6) Data includes Export Schedule as PDF, Delete Learning Insights History, and Clear Account Data.\n"
+    "  7) The bottom status bar shows All changes saved or Saving..., and Reset This Section resets the currently open panel.\n"
     "- Notifications page exact flow:\n"
     "  1) The header shows live reminder status, current lead window, and counts for Task Alerts and Block Alerts.\n"
     "  2) Task Alerts includes overdue tasks and due-soon tasks based on the selected reminder lead time.\n"
@@ -171,7 +173,7 @@ APP_NAVIGATION_CONTEXT = (
     "  1) Profile shows Focus Profile identity info, email state, and initials avatar.\n"
     "  2) Users can click Edit Name, update First name and Last name, then Save Name (or Cancel).\n"
     "  3) Profile stats include Total Tasks, Completed, Courses, Current Momentum, Done, Remaining, Current Streak, Best Streak, and Next Goal.\n"
-    "  4) Weekly Snapshot includes a 7-Day Completed Trend chart based on completed task deadlines.\n"
+    "  4) Weekly Snapshot includes a 7-Day Completed Trend chart based on completed task completion timestamps.\n"
     "  5) Preference quiz entry is in the profile card with Start Preference Quiz or Retake Preference Quiz button linking to /profile/quiz.\n"
     "  6) Retake flow: open /profile, click Retake Preference Quiz, complete steps, then Submit to save and redirect to dashboard.\n"
     "- Preference Quiz page (/profile/quiz) exact flow:\n"
@@ -338,7 +340,7 @@ def fallback_reply(message: str, pathname: str | None = None) -> tuple[str, str 
 
     if route.startswith("/settings"):
         return (
-            "The Settings page lets you control how 11Planner looks and behaves. Use Search settings to find panels, then adjust Personalize, Notifications, or Account options. You can change Theme Mode and Accent Theme, manage Push Notifications and Reminder lead time, update email and weekly report preferences, and handle password, privacy, export, and account actions from there.",
+            "The Settings page lets you control how 11Planner looks and behaves. Use Search settings to find panels, then adjust Appearance, Notifications, Privacy, Account, or Data options. You can change Theme Mode and Accent Theme, manage Push Notifications and Reminder lead time, update email and weekly report preferences, adjust privacy controls, export your schedule as PDF, delete learning insights history, clear account data, and handle password or account deletion from there.",
             "settings",
         )
 
@@ -357,7 +359,7 @@ def fallback_reply(message: str, pathname: str | None = None) -> tuple[str, str 
 
     if "profile" in normalized or "quiz" in normalized or any(keyword in normalized for keyword in ("retake", "name", "streak", "momentum")):
         return (
-            "On Profile, you can view your Focus Profile info, Total Tasks, Completed, Courses, Current Momentum, Weekly Snapshot, Current Streak, Best Streak, and Next Goal. To retake preferences, open Profile and click Retake Preference Quiz (or Start Preference Quiz), complete the 6 steps, then click Submit to save and return to Dashboard.",
+            "On Profile, you can view your Focus Profile info, Total Tasks, Completed, Courses, Current Momentum, Weekly Snapshot, Current Streak, Best Streak, and Next Goal. The weekly insights are reset-aware and use completion timestamps. To retake preferences, open Profile and click Retake Preference Quiz (or Start Preference Quiz), complete the 6 steps, then click Submit to save and return to Dashboard.",
             "profile",
         )
 
@@ -404,7 +406,7 @@ def fallback_reply(message: str, pathname: str | None = None) -> tuple[str, str 
     if route.startswith("/faq"):
         return "I can help explain what the FAQ page covers, like setup, privacy, editing schedules, and support.", "support"
     if route.startswith("/privacy"):
-        return "I can help explain the Privacy page, including what data 11Planner collects and how you can request deletion.", "support"
+        return "I can help explain the Privacy page, including Personalized Planner Recommendations, Learning Insights History, Anonymous Product Analytics, Include Personal Info in Exports, and how you can request deletion.", "support"
     if route.startswith("/terms"):
         return "I can help explain the Terms page and the rules for using 11Planner.", "support"
     if route.startswith("/logo-story"):
@@ -418,7 +420,7 @@ def fallback_reply(message: str, pathname: str | None = None) -> tuple[str, str 
     if route.startswith("/courses"):
         return "I can help with Courses. Ask me about course setup, labs, syllabi, filters, or sort options.", "courses"
     if route.startswith("/settings"):
-        return "I can help with Settings. Ask me about the Search settings filter, Personalize, Notifications, Account options, or how Reset This Section works.", "settings"
+        return "I can help with Settings. Ask me about the Search settings filter, Appearance, Notifications, Privacy, Account, Data, or how Reset This Section works.", "settings"
     if route.startswith("/notifications"):
         return "I can help with Notifications. Ask me about Task Alerts, overdue and due-soon reminders, reminder lead time, the Mark Complete button for overdue tasks, or Study Block Alerts.", "notifications"
 

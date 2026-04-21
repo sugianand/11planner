@@ -2,6 +2,9 @@
 
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { usePlanner } from "@/contexts/PlannerContext";
+import { supabase } from "@/lib/supabaseClient";
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export type NotificationType = "info" | "warning" | "danger";
 
@@ -47,6 +50,20 @@ type AlertState = "none" | "soon" | "overdue";
 
 let toastAudio: HTMLAudioElement | null = null;
 let toastAudioStopTimer: number | null = null;
+
+// Resolves browser notification support and current permission in a consistent way.
+const getNotificationPermissionState = (): NotificationPermission | "unsupported" => {
+  if (typeof window === "undefined") {
+    return "unsupported";
+  }
+  if (!("Notification" in window)) {
+    return "unsupported";
+  }
+  if (!window.isSecureContext && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
+    return "unsupported";
+  }
+  return Notification.permission;
+};
 
 // Plays the short toast sound, falling back to a generated tone if the mp3 cannot be used.
 const playToastSound = () => {
@@ -96,36 +113,112 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [notificationHistory, setNotificationHistory] = useState<NotificationItem[]>([]);
   const activeNotificationIdsRef = useRef<Set<string>>(new Set());
-  const [notificationsEnabled, setNotificationsEnabledState] = useState(() => {
-    if (typeof window === "undefined") {
-      return true;
-    }
-    const savedEnabled = localStorage.getItem(STORAGE_KEYS.enabled);
-    return savedEnabled === null ? true : savedEnabled !== "false";
-  });
-  const [reminderLeadHours, setReminderLeadHoursState] = useState(() => {
-    if (typeof window === "undefined") {
-      return DEFAULT_LEAD_HOURS;
-    }
-    const savedLeadHours = Number(localStorage.getItem(STORAGE_KEYS.leadHours));
-    return Number.isNaN(savedLeadHours) ? DEFAULT_LEAD_HOURS : savedLeadHours;
-  });
-  const [permission, setPermission] = useState<NotificationPermission | "unsupported">(() =>
-    typeof window === "undefined" || !("Notification" in window) ? "unsupported" : Notification.permission
-  );
-  const notifiedRef = useRef<Record<string, AlertState>>(
-    (() => {
-      if (typeof window === "undefined") {
-        return {};
+  const [notificationsEnabled, setNotificationsEnabledState] = useState(true);
+  const [reminderLeadHours, setReminderLeadHoursState] = useState(DEFAULT_LEAD_HOURS);
+  const [permission, setPermission] = useState<NotificationPermission | "unsupported">("unsupported");
+  const [recipientEmail, setRecipientEmail] = useState<string | null>(null);
+  const [recipientName, setRecipientName] = useState<string | null>(null);
+  const notifiedRef = useRef<Record<string, AlertState>>({});
+
+  // Keeps the current signed-in email and display name available for alert copies.
+  useEffect(() => {
+    let isActive = true;
+
+    const syncRecipientProfile = async () => {
+      const { data } = await supabase.auth.getUser();
+      const authUser = data.user ?? null;
+
+      if (!isActive) {
+        return;
       }
+
+      if (!authUser) {
+        setRecipientEmail(null);
+        setRecipientName(null);
+        return;
+      }
+
+      setRecipientEmail(authUser.email ?? null);
+
+      const metadataName =
+        (authUser.user_metadata?.full_name as string | undefined)
+        || (authUser.user_metadata?.name as string | undefined)
+        || null;
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("firstname, lastname")
+        .eq("id", authUser.id)
+        .maybeSingle();
+
+      if (!isActive) {
+        return;
+      }
+
+      const first = (profile?.firstname || "").trim();
+      const last = (profile?.lastname || "").trim();
+      const profileName = `${first} ${last}`.trim();
+
+      setRecipientName(profileName || metadataName || null);
+    };
+
+    void syncRecipientProfile();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!isActive) {
+        return;
+      }
+
+      if (!session?.user) {
+        setRecipientEmail(null);
+        setRecipientName(null);
+        return;
+      }
+
+      setRecipientEmail(session.user.email ?? null);
+
+      const metadataName =
+        (session.user.user_metadata?.full_name as string | undefined)
+        || (session.user.user_metadata?.name as string | undefined)
+        || null;
+      setRecipientName(metadataName);
+
+      void syncRecipientProfile();
+    });
+
+    return () => {
+      isActive = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      const savedEnabled = localStorage.getItem(STORAGE_KEYS.enabled);
+      setNotificationsEnabledState(savedEnabled === null ? true : savedEnabled !== "false");
+
+      const savedLeadHours = Number(localStorage.getItem(STORAGE_KEYS.leadHours));
+      setReminderLeadHoursState(Number.isNaN(savedLeadHours) ? DEFAULT_LEAD_HOURS : savedLeadHours);
+
+      setPermission(getNotificationPermissionState());
+
       const savedNotified = localStorage.getItem(STORAGE_KEYS.notified);
       if (!savedNotified) {
-        return {};
+        notifiedRef.current = {};
+        return;
       }
+
       try {
         const parsed = JSON.parse(savedNotified) || {};
         if (typeof parsed !== "object" || Array.isArray(parsed)) {
-          return {};
+          notifiedRef.current = {};
+          return;
         }
         const cleaned: Record<string, AlertState> = {};
         Object.entries(parsed).forEach(([key, value]) => {
@@ -133,12 +226,16 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             cleaned[key] = value;
           }
         });
-        return cleaned;
+        notifiedRef.current = cleaned;
       } catch {
-        return {};
+        notifiedRef.current = {};
       }
-    })()
-  );
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -174,6 +271,49 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   }, []);
 
   // Adds a toast to the active stack, stores it in history, and optionally mirrors it to the browser notification API.
+  const sendEmailCopy = useCallback(
+    async (item: NotificationItem) => {
+      if (typeof window === "undefined") {
+        return;
+      }
+      if (item.taskId == null) {
+        return;
+      }
+      if (item.title !== "Task overdue" && item.title !== "Deadline soon") {
+        return;
+      }
+      if (localStorage.getItem("emailUpdates") === "false") {
+        return;
+      }
+      if (!recipientEmail) {
+        return;
+      }
+
+      try {
+        const greetingName = recipientName?.trim() || "there";
+        const isOverdueAlert = item.title === "Task overdue";
+        const alertType = isOverdueAlert ? "overdue" : "soon";
+
+        await fetch(`${API_BASE_URL}/api/email/task-alert/send`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            recipient_email: recipientEmail,
+            user_name: greetingName,
+            alert_type: alertType,
+            task_title: item.title,
+            task_message: item.message,
+          }),
+        });
+      } catch {
+        // Email copies are best-effort so in-app notifications still work if SMTP is unavailable.
+      }
+    },
+    [recipientEmail, recipientName]
+  );
+
   const pushNotification = useCallback((item: NotificationItem, options?: { showBrowser?: boolean; autoDismissMs?: number }) => {
     const showBrowser = options?.showBrowser ?? true;
     const autoDismissMs = options?.autoDismissMs ?? 10000;
@@ -198,11 +338,12 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
     if (didInsert) {
       playToastSound();
+      void sendEmailCopy(item);
     }
     setTimeout(() => {
       dismissNotification(item.id);
     }, autoDismissMs);
-  }, [permission, dismissNotification]);
+  }, [dismissNotification, permission, sendEmailCopy]);
 
   // Creates a manual in-app notification for UI actions and feedback messages.
   const createNotification = useCallback(
@@ -236,11 +377,20 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   // Requests browser notification permission when the user opts in.
   const requestPermission = useCallback(async () => {
-    if (typeof window === "undefined" || !("Notification" in window)) {
+    const current = getNotificationPermissionState();
+    if (current === "unsupported") {
       setPermission("unsupported");
       return "unsupported";
     }
-    const result = await Notification.requestPermission();
+
+    let result: NotificationPermission;
+    try {
+      result = await Notification.requestPermission();
+    } catch {
+      // If the browser blocks permission prompts at runtime, keep the last known permission.
+      result = Notification.permission;
+    }
+
     setPermission(result);
     return result;
   }, []);

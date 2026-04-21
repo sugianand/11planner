@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import Footer from "@/components/Footer";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 
 type Mode = "login" | "register";
 type OAuthProvider = "google";
@@ -36,6 +37,7 @@ function OAuthIcon() {
 }
 
 export default function AuthPage() {
+  const searchParams = useSearchParams();
   const [mode, setMode] = useState<Mode>("login");
   const [showRegisterEmailForm, setShowRegisterEmailForm] = useState(false);
   const [form, setForm] = useState<FormState>(initialForm);
@@ -54,6 +56,14 @@ export default function AuthPage() {
   const goToQuizOnboarding = (): void => {
     window.location.href = "/profile/quiz?onboarding=1";
   };
+
+  useEffect(() => {
+    const modeParam = searchParams.get("mode");
+    if (modeParam === "register") {
+      setMode("register");
+      setShowRegisterEmailForm(false);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     async function checkSession() {
@@ -441,7 +451,11 @@ export default function AuthPage() {
                   <button
                     type="button"
                     className="btn"
-                    onClick={() => setShowRegisterEmailForm(true)}
+                    onClick={() => {
+                      setShowRegisterEmailForm(true);
+                      setErrorMessage("");
+                      setSuccessMessage("");
+                    }}
                     disabled={isSubmitting || !!oauthLoadingProvider}
                   >
                     Continue with Email
@@ -514,7 +528,15 @@ export default function AuthPage() {
                     {isSubmitting ? "Creating account..." : "Create Account"}
                   </button>
 
-                  <button type="button" className="secondary-btn" onClick={() => setShowRegisterEmailForm(false)}>
+                  <button
+                    type="button"
+                    className="secondary-btn"
+                    onClick={() => {
+                      setShowRegisterEmailForm(false);
+                      setErrorMessage("");
+                      setSuccessMessage("");
+                    }}
+                  >
                     Back
                   </button>
                 </>

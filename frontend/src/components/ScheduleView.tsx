@@ -1,5 +1,7 @@
 'use client';
 
+// Coordinates schedule controls and switches between day, week, month, and year views.
+
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { ViewMode, Event, DayData } from '@/types/schedule';
 import { getDaysInMonth, getWeekDays, getDayData, getMonthsInYear } from '@/utils/dateUtils';
@@ -10,7 +12,6 @@ import { DayView } from './DayView';
 import { WeekView } from './WeekView';
 import { MonthView } from './MonthView';
 import { YearView } from './YearView';
-import AppDialog from './AppDialog';
 
 interface ScheduleViewProps {
   events?: Event[];
@@ -19,9 +20,10 @@ interface ScheduleViewProps {
   onColorByChange?: (colorBy: "priority" | "course") => void;
   errorMessage?: string | null;
   onDismissError?: () => void;
+  onShowDialog?: (title: string, message: string) => void;
 }
 
-export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEventMove, colorBy = "priority", onColorByChange, errorMessage = null, onDismissError }) => {
+export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEventMove, colorBy = "priority", onColorByChange, errorMessage = null, onDismissError, onShowDialog }) => {
   const { userId, courses, loadCourses } = usePlanner();
   const { effectiveTheme } = useTheme();
   const [viewMode, setViewMode] = useState<ViewMode>('monthly');
@@ -31,11 +33,6 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
   const [dayData, setDayData] = useState<DayData>(getDayData(currentDate));
   const [monthsInYear, setMonthsInYear] = useState(getMonthsInYear(currentDate.getFullYear()));
   const [eventList, setEventList] = useState<Event[]>(events);
-  const [dialog, setDialog] = useState<{ isOpen: boolean; title: string; message: string }>({
-    isOpen: false,
-    title: '',
-    message: '',
-  });
   const accentSoftStyle = {
     backgroundColor: 'var(--theme-accent-soft)',
     borderColor: 'var(--theme-accent)',
@@ -55,6 +52,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
     loadCourses();
   }, [loadCourses]);
 
+  // Parses HH:MM, HH:MM:SS, and AM/PM time strings into numeric parts.
   const parseTime = (value?: string | null) => {
     if (!value) {
       return null;
@@ -76,6 +74,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
     return { hour, minute, second };
   };
 
+  // Normalizes course weekday text into canonical weekday names.
   const parseCourseDays = (value?: string | null) => {
     const text = (value || '').trim();
     if (!text) return [] as string[];
@@ -112,6 +111,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
     return Array.from(new Set(dayMatches));
   };
 
+  // Builds class/lab occurrences for the currently visible date range.
   const classEvents = useMemo(() => {
     const rangeStart =
       viewMode === 'daily'
@@ -206,6 +206,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
 
   const displayEvents = useMemo(() => [...eventList, ...classEvents], [eventList, classEvents]);
 
+  // Recomputes derived day/week/month/year data when navigation changes date.
   const updateDate = (newDate: Date) => {
     setCurrentDate(newDate);
     setWeekDays(getWeekDays(newDate));
@@ -214,6 +215,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
     setMonthsInYear(getMonthsInYear(newDate.getFullYear()));
   };
 
+  // Moves the visible period backward based on current view mode.
   const handlePreviousPeriod = useCallback(() => {
     const newDate = new Date(currentDate);
     switch (viewMode) {
@@ -233,6 +235,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
     updateDate(newDate);
   }, [currentDate, viewMode]);
 
+  // Moves the visible period forward based on current view mode.
   const handleNextPeriod = useCallback(() => {
     const newDate = new Date(currentDate);
     switch (viewMode) {
@@ -252,21 +255,20 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
     updateDate(newDate);
   }, [currentDate, viewMode]);
 
+  // Jumps the calendar to today's date.
   const handleToday = useCallback(() => {
     updateDate(new Date());
   }, []);
 
+  // Exports the currently displayed study events to an ICS file.
   const handleExportICS = useCallback(() => {
     exportEventsToICS(eventList, '11planner-schedule.ics');
   }, [eventList]);
 
+  // Opens a webcal subscription URL, with a macOS localhost fallback dialog.
   const handleSubscribe = useCallback(() => {
     if (!userId) {
-      setDialog({
-        isOpen: true,
-        title: 'Login required',
-        message: 'Please log in to sync your calendar.',
-      });
+      onShowDialog?.('Login required', 'Please log in to sync your calendar.');
       return;
     }
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
@@ -279,27 +281,32 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
     const isLocalBackend = /localhost|127\.0\.0\.1/i.test(backendUrl);
 
     if (isMac && isLocalBackend) {
-      setDialog({
-        isOpen: true,
-        title: 'Mac subscribe limitation in local dev',
-        message: 'Apple Calendar cannot live-subscribe to localhost URLs. Use Export for local testing, or set NEXT_PUBLIC_API_URL to a public HTTPS URL for live subscribe.',
-      });
+      onShowDialog?.('Mac subscribe limitation in local dev', 'Apple Calendar cannot live-subscribe to localhost URLs. Use Export for local testing, or set NEXT_PUBLIC_API_URL to a public HTTPS URL for live subscribe.');
       exportEventsToICS(eventList, '11planner-schedule.ics');
       return;
     }
 
-    const link = document.createElement('a');
-    link.href = webcalUrl;
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }, [eventList, userId]);
+    const opened = window.open(webcalUrl, '_blank', 'noopener,noreferrer');
 
+    // Fallback for browsers that block window.open from this context.
+    if (!opened) {
+      const link = document.createElement('a');
+      link.href = webcalUrl;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  }, [eventList, userId, onShowDialog]);
+
+  // Switches the active calendar view mode.
   const handleViewModeChange = (mode: ViewMode) => {
     setViewMode(mode);
   };
 
+  // Applies drag-drop event moves after optional parent validation.
   const handleEventMove = useCallback(
     async (eventId: string, newStart: Date) => {
       let shouldApplyMove = true;
@@ -475,12 +482,6 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
           <YearView year={currentDate.getFullYear()} monthsData={monthsInYear} events={displayEvents} />
         )}
       </div>
-      <AppDialog
-        isOpen={dialog.isOpen}
-        title={dialog.title}
-        message={dialog.message}
-        onClose={() => setDialog({ isOpen: false, title: '', message: '' })}
-      />
     </div>
   );
 };

@@ -36,11 +36,13 @@ export default function AuthPage() {
     message: "",
   });
 
+  // Sends authenticated users away from auth screens.
   function goToNextPage(): void {
     window.location.href = "frontend/src/app/page.tsx";
   }
 
   useEffect(() => {
+    // Redirects immediately when an active session already exists.
     async function checkSession() {
       try {
         const {
@@ -70,6 +72,7 @@ export default function AuthPage() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Updates the controlled auth form state for any text/date input.
   function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
     const name = e.target.name;
     const value = e.target.value;
@@ -84,6 +87,7 @@ export default function AuthPage() {
     });
   }
 
+  // Creates a new auth account and profile row after validation.
   async function registerUser(): Promise<void> {
     const { username, email, dob, password, confirmPassword } = form;
 
@@ -137,6 +141,7 @@ export default function AuthPage() {
     setForm(initialForm);
   }
 
+  // Authenticates an existing user with email and password.
   async function loginUser(): Promise<void> {
     const email = form.loginEmail.trim();
     const password = form.loginPassword;
@@ -167,11 +172,16 @@ export default function AuthPage() {
     goToNextPage();
   }
 
+  // Sends the password reset email flow for the entered address.
   async function sendPasswordResetEmail(): Promise<void> {
     const email = form.resetEmail.trim();
 
     if (!email) {
-      alert("Please enter your email address.");
+      setDialog({
+        isOpen: true,
+        title: "Missing email",
+        message: "Please enter your email address.",
+      });
       return;
     }
 
@@ -180,18 +190,21 @@ export default function AuthPage() {
     });
 
     if (error) {
-      alert(error.message ?? "Failed to send reset email");
+      setDialog({
+        isOpen: true,
+        title: "Reset link failed",
+        message: error.message ?? "Failed to send reset email",
+      });
       return;
     }
 
-    alert("Password reset email sent! Check your inbox for the reset link.");
+    setDialog({
+      isOpen: true,
+      title: "Reset link sent",
+      message: "Password reset email sent! Check your inbox for the reset link.",
+    });
     setMode("login");
     setForm(initialForm);
-  }
-
-  async function logout(): Promise<void> {
-    await supabase.auth.signOut();
-    window.location.href = "/login";
   }
 
   return (

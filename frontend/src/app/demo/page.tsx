@@ -36,10 +36,6 @@ export default function DemoPage() {
             </video>
           </div>
 
-          <p className="mt-4 text-sm text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">
-            If you do not see the video, place the demo file at <span className="font-mono">/public/11planner demo.mp4</span>.
-          </p>
-
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Link
               href="/"
