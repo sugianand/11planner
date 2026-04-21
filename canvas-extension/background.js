@@ -3,7 +3,7 @@
  * Receives extracted assignments from the popup and POSTs them to the backend API.
  */
 
-const DEFAULT_API_URL = 'http://localhost:8000';
+const DEFAULT_API_URL = 'https://11planner-production.up.railway.app';
 
 // Retrieves user settings (backend URL, user ID) from Chrome storage
 async function getSettings() {
