@@ -50,9 +50,6 @@ export default function Home() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        router.push('/dashboard');
-      }
       setIsLoggedIn(!!session);
     });
   }, [router]);
