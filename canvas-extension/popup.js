@@ -458,28 +458,37 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
 
-            chrome.tabs.sendMessage(tab.id, { action: 'extract' }, response => {
-                if (chrome.runtime.lastError || !response) {
-                    const detail = chrome.runtime.lastError?.message || 'No extraction response';
-                    showStatus(`Could not extract. ${detail}`, 'error');
-                    btn.disabled = false;
-                    btn.textContent = 'Extract Courses and Tasks';
-                    return;
-                }
-                extractedTasks = response.assignments || [];
-                extractedCourses = response.courses || [];
-                selectedCourseCodes = new Set(extractedCourses.map(getCourseKey));
-                if (extractedTasks.length === 0) {
-                    showStatus('No tasks found on this page.', 'info');
-                } else {
-                    showStatus(`Found ${extractedTasks.length} task(s) and ${extractedCourses.length} course(s).`, 'success');
-                }
-                renderPreview(extractedTasks, extractedCourses);
-                btn.disabled = false;
-                btn.textContent = 'Extract Courses and Tasks';
+            // Wrap sendMessage in a Promise for better async handling
+            const response = await new Promise((resolve, reject) => {
+                chrome.tabs.sendMessage(tab.id, { action: 'extract' }, (response) => {
+                    if (chrome.runtime.lastError) {
+                        reject(new Error(chrome.runtime.lastError.message));
+                        return;
+                    }
+                    if (!response) {
+                        reject(new Error('No extraction response from content script'));
+                        return;
+                    }
+                    resolve(response);
+                });
             });
-        } catch (err) {
-            showStatus(`Error: ${err.message}`, 'error');
+
+            if (response.error) {
+                throw new Error(response.error);
+            }
+
+            extractedTasks = response.assignments || [];
+            extractedCourses = response.courses || [];
+            selectedCourseCodes = new Set(extractedCourses.map(getCourseKey));
+            if (extractedTasks.length === 0) {
+                showStatus('No tasks found on this page.', 'info');
+            } else {
+                showStatus(`Found ${extractedTasks.length} task(s) and ${extractedCourses.length} course(s).`, 'success');
+            }
+            renderPreview(extractedTasks, extractedCourses);
+        } catch (error) {
+            showStatus(`Could not extract. ${error.message}`, 'error');
+        } finally {
             btn.disabled = false;
             btn.textContent = 'Extract Courses and Tasks';
         }

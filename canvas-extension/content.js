@@ -1115,15 +1115,24 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     // Handles extraction request: extracts all assignments and courses
     if (message.action === 'extract') {
         (async () => {
-            const assignments = await extractAssignments();
-            const courses = extractCourses();
-            sendResponse({
-                assignments,
-                courses,
-                count: assignments.length,
-                courseCount: courses.length,
-            });
+            try {
+                const assignments = await extractAssignments();
+                const courses = extractCourses();
+                sendResponse({
+                    assignments,
+                    courses,
+                    count: assignments.length,
+                    courseCount: courses.length,
+                });
+            } catch (error) {
+                console.error('[11Planner] Extraction error:', error);
+                sendResponse({
+                    error: error.message || 'Extraction failed',
+                    assignments: [],
+                    courses: [],
+                });
+            }
         })();
+        return true; // Keep the message channel open for async response
     }
-    return true;
 });
