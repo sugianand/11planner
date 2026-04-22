@@ -11,7 +11,7 @@ function getVisibleText(el) {
         if (node.nodeType === Node.TEXT_NODE) {
             text += node.textContent;
         } else if (node.nodeType === Node.ELEMENT_NODE) {
-            const cls = node.className || '';
+            const cls = String(node.className || '');
             // Skip hidden elements
             if (cls.includes('screenreader-only') || cls.includes('screen-reader') ||
                 cls.includes('sr-only') || cls.includes('hidden')) return;
@@ -448,7 +448,7 @@ function isAssignmentLikeNode(node) {
 function parseCourseIdFromNode(node) {
     if (!node) return null;
 
-    const classText = node.className || '';
+    const classText = String(node.className || '');
     const clsMatch = classText.match(/group_course_(\d+)/i);
     if (clsMatch) return clsMatch[1];
 
@@ -471,7 +471,7 @@ function parseAssignmentIdFromNode(node) {
         node.getAttribute('data-original-title'),
         node.getAttribute('title'),
         node.id,
-        node.className,
+        String(node.className || ''),
         node.outerHTML,
     ].filter(Boolean);
 
