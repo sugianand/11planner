@@ -936,15 +936,27 @@ export default function CoursesPage() {
                 </p>
               </div>
             ) : (
-              filteredCourses.map((course) => (
+              filteredCourses.map((course) => {
+                const hasDay = !!course.courseDate?.trim();
+                const hasStartTime = !!toTimeInputValue(course.startTime);
+                const hasEndTime = !!toTimeInputValue(course.endTime);
+                const hasScheduledTime = hasDay && hasStartTime && hasEndTime;
+                const isSparseUnscheduledCard =
+                  !course.isOnline &&
+                  !hasScheduledTime &&
+                  !course.professor &&
+                  !course.description &&
+                  !course.hasLab;
+
+                return (
                 <div
                   key={course.id}
-                  className="bg-white/60 dark:bg-slate-800/55 backdrop-blur-md rounded-2xl shadow-sm p-6 border border-white/50 dark:border-slate-700/45 hover:bg-white/80 dark:hover:bg-slate-800/75 transition group relative overflow-hidden"
+                  className="h-[340px] bg-white/60 dark:bg-slate-800/55 backdrop-blur-md rounded-2xl shadow-sm p-6 border border-white/50 dark:border-slate-700/45 hover:bg-white/80 dark:hover:bg-slate-800/75 transition group relative overflow-hidden flex flex-col"
                 >
                   <div className="absolute top-0 left-0 w-1 h-full bg-[#306844]"></div>
                   <div className="mb-4 flex items-start justify-between gap-3">
-                    <div>
-                      <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
+                    <div className="min-w-0">
+                      <h3 className="mb-1 line-clamp-2 text-lg font-bold text-slate-900 dark:text-white">
                         {course.name}
                       </h3>
                       <p className="text-sm font-bold uppercase tracking-wider text-[#306844] dark:text-emerald-400">
@@ -964,6 +976,23 @@ export default function CoursesPage() {
                       <span className="material-symbols-outlined text-sm opacity-60">computer</span>
                       <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">Online/Asynchronous</p>
                     </div>
+                  ) : !hasScheduledTime ? (
+                    isSparseUnscheduledCard ? (
+                      <div className="mb-4 flex-1 rounded-xl border border-slate-200/80 bg-white/45 px-4 py-4 dark:border-slate-700/70 dark:bg-slate-900/25">
+                        <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                          <span className="material-symbols-outlined text-sm opacity-70">schedule</span>
+                          <p className="text-sm font-medium">Schedule not added yet</p>
+                        </div>
+                        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                          Upload syllabus or tap Edit to add days and time.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 mb-3 text-slate-700 dark:text-slate-300">
+                        <span className="material-symbols-outlined text-sm opacity-60">schedule</span>
+                        <p className="text-sm font-medium">Schedule not added yet</p>
+                      </div>
+                    )
                   ) : (
                     <div className="flex items-center gap-2 mb-3 text-slate-700 dark:text-slate-300">
                       <span className="material-symbols-outlined text-sm opacity-60">schedule</span>
@@ -989,42 +1018,45 @@ export default function CoursesPage() {
                       )}
                     </div>
                   )}
-                  <div className="flex gap-2 mt-4 pt-4 border-t border-slate-200/50 dark:border-slate-700/50 flex-wrap">
-                    <button
-                      onClick={() => cardSyllabusInputRefs.current[course.id]?.click()}
-                      className="w-full text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium py-1.5 px-3 rounded-lg transition hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
-                    >
-                      Upload Syllabus
-                    </button>
-                    <input
-                      type="file"
-                      accept=".pdf"
-                      className="hidden"
-                      ref={(el) => {
-                        cardSyllabusInputRefs.current[course.id] = el;
-                      }}
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        await handleUploadSyllabusForCourse(course, file);
-                        e.currentTarget.value = "";
-                      }}
-                    />
-                    <button
-                      onClick={() => handleEdit(course)}
-                      className="flex-1 text-slate-600 dark:text-slate-400 hover:text-[#002966] dark:hover:text-blue-300 font-medium py-1.5 px-3 rounded-lg transition hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(course.id)}
-                      className="flex-1 text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 font-medium py-1.5 px-3 rounded-lg transition hover:bg-red-50 dark:hover:bg-red-900/20"
-                    >
-                      Delete
-                    </button>
+                  <div className="mt-auto pt-3 border-t border-slate-200/50 dark:border-slate-700/50">
+                    <div className="flex gap-2 flex-wrap">
+                      <button
+                        onClick={() => cardSyllabusInputRefs.current[course.id]?.click()}
+                        className="w-full text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium py-1.5 px-3 rounded-lg transition hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+                      >
+                        Upload Syllabus
+                      </button>
+                      <button
+                        onClick={() => handleEdit(course)}
+                        className="flex-1 text-slate-600 dark:text-slate-400 hover:text-[#002966] dark:hover:text-blue-300 font-medium py-1.5 px-3 rounded-lg transition hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(course.id)}
+                        className="flex-1 text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 font-medium py-1.5 px-3 rounded-lg transition hover:bg-red-50 dark:hover:bg-red-900/20"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    className="hidden"
+                    ref={(el) => {
+                      cardSyllabusInputRefs.current[course.id] = el;
+                    }}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      await handleUploadSyllabusForCourse(course, file);
+                      e.currentTarget.value = "";
+                    }}
+                  />
                 </div>
-              ))
+              );
+              })
             )}
           </div>
         </div>
