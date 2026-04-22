@@ -1,5 +1,8 @@
 "use client";
 
+// Disable static prerendering for this page (requires browser APIs)
+export const dynamic = "force-dynamic";
+
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
