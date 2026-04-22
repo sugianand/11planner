@@ -341,7 +341,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
   const isMonthView = viewMode === 'monthly';
 
   return (
-    <div className={`flex flex-col ${isMonthView ? 'h-auto' : 'h-[895px]'} rounded-t-3xl rounded-b-none overflow-hidden border border-white/50 dark:border-slate-700/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-[0_22px_65px_-38px_rgba(15,23,42,0.55)]`}>
+    <div className={`flex flex-col ${isMonthView ? 'h-auto' : 'h-[895px]'} rounded-3xl overflow-hidden border border-white/50 dark:border-slate-700/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-[0_22px_65px_-38px_rgba(15,23,42,0.55)]`}>
       {/* Header */}
       <div
         className="border-b border-white/60 dark:border-slate-700/70 p-5"
@@ -470,7 +470,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
       </div>
 
       {/* Content */}
-      <div className={`${isMonthView ? 'overflow-visible' : 'flex-1 overflow-hidden'} bg-white/55 dark:bg-slate-900/55`}>
+      <div className={`${isMonthView ? 'overflow-visible p-2 md:p-3' : 'flex-1 overflow-hidden'} bg-white/55 dark:bg-slate-900/55`}>
         {viewMode === 'daily' && (
           <DayView dayData={dayData} events={displayEvents} onEventMove={handleEventMove} errorMessage={errorMessage} onDismissError={onDismissError} />
         )}

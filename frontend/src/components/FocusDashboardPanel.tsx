@@ -754,9 +754,16 @@ export default function FocusDashboardPanel({
                             className="mt-0.5 rounded border-slate-300 text-emerald-600 cursor-pointer"
                           />
                           <div className="flex-1 min-w-0">
-                            <p className={`text-sm font-medium ${item.completed ? "line-through text-slate-400 dark:text-slate-500" : "text-slate-700 dark:text-slate-200"}`}>
-                              {item.title}
-                            </p>
+                            <div className="flex items-start justify-between gap-2">
+                              <p className={`text-sm font-medium ${item.completed ? "text-slate-600 dark:text-slate-300" : "text-slate-700 dark:text-slate-200"}`}>
+                                {item.title}
+                              </p>
+                              {item.completed ? (
+                                <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+                                  Done
+                                </span>
+                              ) : null}
+                            </div>
                             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                               {item.startTime.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })} - {item.endTime.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
                             </p>
@@ -799,9 +806,16 @@ export default function FocusDashboardPanel({
                             className="mt-0.5 rounded border-amber-300 text-amber-600 cursor-pointer"
                           />
                           <div className="flex-1 min-w-0">
-                            <p className={`text-sm font-medium ${task.completed ? "line-through text-slate-400 dark:text-slate-500" : "text-slate-700 dark:text-slate-200"}`}>
-                              {task.title}
-                            </p>
+                            <div className="flex items-start justify-between gap-2">
+                              <p className={`text-sm font-medium ${task.completed ? "text-slate-600 dark:text-slate-300" : "text-slate-700 dark:text-slate-200"}`}>
+                                {task.title}
+                              </p>
+                              {task.completed ? (
+                                <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+                                  Done
+                                </span>
+                              ) : null}
+                            </div>
                             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                               {new Date(task.deadline).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
                             </p>

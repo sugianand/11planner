@@ -191,6 +191,7 @@ function SettingsPageContent() {
     setPrivacyAnalyticsEnabled(readStoredBoolean("privacyAnalyticsEnabled", false));
     setPrivacyPersonalizationEnabled(readStoredBoolean("privacyPersonalizationEnabled", true));
     setPrivacyInsightsHistoryEnabled(insightsHistoryValue === null ? true : insightsHistoryValue !== "false");
+
   }, []);
 
   useEffect(() => {
@@ -480,7 +481,7 @@ function SettingsPageContent() {
 
   useEffect(() => {
     const panelParam = searchParams.get("panel");
-    const normalizedPanel = panelParam === "personalize" ? "appearance" : panelParam;
+    const normalizedPanel = panelParam;
     const validPanels: SettingsPanel[] = ["appearance", "notifications", "privacy", "account", "data"];
     if (normalizedPanel && validPanels.includes(normalizedPanel as SettingsPanel)) {
       setActivePanel(normalizedPanel as SettingsPanel);
