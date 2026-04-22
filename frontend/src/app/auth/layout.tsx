@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
+import { Suspense } from "react";
 import "./auth.module.css";
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
-  return children;
+  return <Suspense fallback={<div>Loading...</div>}>{children}</Suspense>;
 }

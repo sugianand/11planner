@@ -41,7 +41,6 @@ function OAuthIcon() {
 }
 
 export default function AuthPage() {
-  const searchParams = useSearchParams();
   const [mode, setMode] = useState<Mode>("login");
   const [showRegisterEmailForm, setShowRegisterEmailForm] = useState(false);
   const [form, setForm] = useState<FormState>(initialForm);
@@ -52,6 +51,7 @@ export default function AuthPage() {
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const searchParams = useSearchParams();
 
   const goToNextPage = (): void => {
     window.location.href = "/dashboard";
