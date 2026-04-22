@@ -448,9 +448,10 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
         <div className="flex items-center justify-between rounded-2xl border border-white/70 dark:border-slate-700/70 bg-white/70 dark:bg-slate-800/60 px-3 py-2">
           <button
             onClick={handlePreviousPeriod}
-            className="px-3 py-1 text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-colors"
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200/90 bg-white/90 px-3.5 py-1.5 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-emerald-700 dark:hover:bg-emerald-900/30 dark:hover:text-emerald-300"
           >
-            ← Previous
+            <span aria-hidden="true">←</span>
+            <span>Previous</span>
           </button>
           <span className="text-lg font-semibold text-slate-900 dark:text-white tracking-tight">
             {viewMode === 'daily' && currentDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
@@ -460,9 +461,10 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
           </span>
           <button
             onClick={handleNextPeriod}
-            className="px-3 py-1 text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-colors"
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200/90 bg-white/90 px-3.5 py-1.5 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-emerald-700 dark:hover:bg-emerald-900/30 dark:hover:text-emerald-300"
           >
-            Next →
+            <span>Next</span>
+            <span aria-hidden="true">→</span>
           </button>
         </div>
       </div>

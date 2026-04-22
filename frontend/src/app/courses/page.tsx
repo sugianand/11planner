@@ -1028,7 +1028,7 @@ export default function CoursesPage() {
                       </button>
                       <button
                         onClick={() => handleEdit(course)}
-                        className="flex-1 text-slate-600 dark:text-slate-400 hover:text-[#002966] dark:hover:text-blue-300 font-medium py-1.5 px-3 rounded-lg transition hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                        className="flex-1 text-slate-600 dark:text-slate-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium py-1.5 px-3 rounded-lg transition hover:bg-emerald-50 dark:hover:bg-emerald-900/30"
                       >
                         Edit
                       </button>
