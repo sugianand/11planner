@@ -612,30 +612,16 @@ A: Yes, from your Profile page, but:
 
 ---
 
-## Glossary
-
-- **Assignment:** Graded coursework with a deadline
-- **Schedule Block:** A time period allocated for studying a specific task/course
-- **Task:** A self-created study activity (independent of assignments)
-- **Pomodoro:** Study technique using 25-min focus sessions + 5-min breaks
-- **Priority Level:** Importance rating (High, Medium, Low)
-- **Preference:** Your personal study schedule preferences
-- **AI Schedule:** Computer-generated optimal study schedule
-- **Conflict:** Overlapping study blocks or unrealistic deadlines
-- **Progress:** Percentage of completed tasks/assignments
 
 ---
 
 ## Additional Resources
 
-- **Design Document:** See DESIGN_DOCUMENT.md for technical architecture
 - **Privacy Policy:** See PRIVACY.md for data handling practices
 - **Terms of Service:** See TERMS.md for account policies
-- **Release Notes:** Check NEWS.md for latest feature updates
 
 ---
 
-**Last Updated:** March 2026  
 **11Planner Development Team**  
 Wayne State University
 
