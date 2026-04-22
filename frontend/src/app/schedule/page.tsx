@@ -1,5 +1,8 @@
 "use client";
 
+// Disable static prerendering for this page (requires browser APIs and hooks)
+export const dynamic = "force-dynamic";
+
 import { useMemo, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { usePlanner } from "@/contexts/PlannerContext";

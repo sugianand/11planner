@@ -1,5 +1,8 @@
 "use client";
 
+// Disable static prerendering for this page (requires browser APIs and hooks)
+export const dynamic = "force-dynamic";
+
 import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Quiz from "../quiz";
