@@ -185,7 +185,7 @@ export default function FocusDashboardPanel({
       void startSpotifyPopupConnect();
       return;
     }
-    window.open(providerSiteMap.youtube, "youtube-connect", "popup=yes,width=520,height=760");
+    window.open(providerSiteMap.youtube, "youtube-connect", "width=1200,height=800,menubar=no,toolbar=no,location=no,status=no,scrollbars=yes");
   };
 
   useEffect(() => {
