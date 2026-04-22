@@ -30,6 +30,18 @@ class TaskEstimateRequest(BaseModel):
 class ScheduleGenerateRequest(BaseModel):
     study_limit_hours: float | None = None
 
+
+class TaskUpdate(BaseModel):
+    """Model for updating task fields"""
+    completed: bool | None = None
+    task_title: str | None = None
+    description: str | None = None
+    priority_level: int | None = None
+    estimated_hours: float | None = None
+    task_type: str | None = None
+    deadline_at: str | None = None
+    status: str | None = None
+
 # Supabase client is used for all data operations
 _supabase_client: Client | None = None
 
@@ -402,15 +414,21 @@ async def estimate_task_time(task_id: str, request: TaskEstimateRequest):
 
 # Updates a task's fields (status, completed, etc.)
 @router.put("/tasks/{task_id}")
-async def update_task(task_id: str, task_data: dict):
+async def update_task(task_id: str, task_data: TaskUpdate):
     """Update a task's fields (e.g., mark as completed)"""
     try:
         supabase = get_supabase()
         
+        # Only include fields that were explicitly provided
+        update_dict = task_data.model_dump(exclude_unset=True)
+        
+        if not update_dict:
+            raise HTTPException(status_code=400, detail="No fields to update")
+        
         # Update the task in Supabase
         result = (
             supabase.table("tasks")
-            .update(task_data)
+            .update(update_dict)
             .eq("id", task_id)
             .execute()
         )
