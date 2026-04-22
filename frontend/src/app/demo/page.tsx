@@ -25,15 +25,15 @@ export default function DemoPage() {
             homework tracking, and personalized planning in action.
           </p>
 
-          <div className="mt-8 rounded-3xl border border-slate-200/70 dark:border-slate-700/80 bg-white/80 dark:bg-slate-900/70 p-0 shadow-xl overflow-hidden max-w-[960px] mx-auto">
-            <video
-              className="w-full h-auto max-h-[720px] bg-slate-950"
-              controls
-              preload="metadata"
-              src="/11planner%20demo.mp4"
-            >
-              Your browser does not support HTML5 video.
-            </video>
+          <div className="mt-8 rounded-3xl border border-slate-200/70 dark:border-slate-700/80 bg-white/80 dark:bg-slate-900/70 p-12 shadow-xl overflow-hidden max-w-[960px] mx-auto">
+            <div className="flex flex-col items-center justify-center py-24">
+              <svg className="w-16 h-16 mb-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-slate-600 dark:text-slate-400 text-lg font-medium">Demo video coming soon</p>
+              <p className="text-slate-500 dark:text-slate-500 text-sm mt-2">For now, check out the app directly by signing up!</p>
+            </div>
           </div>
 
           <div className="mt-8 flex flex-wrap justify-center gap-3">
