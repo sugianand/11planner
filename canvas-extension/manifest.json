@@ -11,13 +11,13 @@
   ],
   "host_permissions": [
     "https://*.instructure.com/*",
-    "https://*.canvas.*/*",
-    "https://canvas.*/*",
+    "https://canvas.instructure.com/*",
     "http://localhost:8000/*",
     "https://localhost:8000/*",
     "http://127.0.0.1:8000/*",
     "https://127.0.0.1:8000/*",
-    "https://ddszcujvbvvihwsrkzsk.supabase.co/*"
+    "https://ddszcujvbvvihwsrkzsk.supabase.co/*",
+    "https://11planner-production.up.railway.app/*"
   ],
   "action": {
     "default_popup": "popup.html",

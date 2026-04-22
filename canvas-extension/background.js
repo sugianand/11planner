@@ -71,7 +71,6 @@ async function loginWithGoogleOAuth() {
         accessToken,
     };
 }
->>>>>>> ed301b2f383147b7c1c7e91b18a7962643afc3fc
 
 // Retrieves user settings (backend URL, user ID) from Chrome storage
 async function getSettings() {
