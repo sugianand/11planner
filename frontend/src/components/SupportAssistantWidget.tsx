@@ -1479,11 +1479,14 @@ export default function SupportAssistantWidget() {
             </span>
           </span>
           <span
-            className={`absolute inset-0 material-symbols-outlined text-[23px] text-white leading-none transition-all duration-250 ease-out ${
+            className={`absolute inset-0 flex items-center justify-center transition-all duration-250 ease-out ${
               isOpen ? "opacity-100 scale-100 rotate-0" : "opacity-0 scale-75 -rotate-45"
             }`}
           >
-            close
+            <span className="relative block h-[18px] w-[18px]" aria-hidden="true">
+              <span className="absolute left-1/2 top-1/2 h-[2.5px] w-[18px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white rotate-45" />
+              <span className="absolute left-1/2 top-1/2 h-[2.5px] w-[18px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white -rotate-45" />
+            </span>
           </span>
         </span>
       </button>

@@ -724,7 +724,7 @@ export default function TasksPage() {
                         {estimatingTaskId === task.id ? "Estimating..." : "Get AI Estimated Time"}
                       </button>
                       <button onClick={() => handleEdit(task)}
-                        className="text-slate-500 dark:text-slate-400 hover:text-[#002966] dark:hover:text-blue-400 font-medium py-1.5 px-3 rounded-lg transition hover:bg-blue-50 dark:hover:bg-blue-900/20">
+                        className="text-slate-500 dark:text-slate-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium py-1.5 px-3 rounded-lg transition hover:bg-emerald-50 dark:hover:bg-emerald-900/30">
                         Edit
                       </button>
                       <button onClick={() => handleDelete(task.id)}
