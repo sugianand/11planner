@@ -11,6 +11,7 @@ import { Event } from "@/types/schedule";
 import Footer from "@/components/Footer";
 import AppDialog from "@/components/AppDialog";
 import { supabase } from "@/lib/supabaseClient";
+import { scheduleAPI } from "@/lib/api";
 
 interface ScheduleStats {
   total_hours: number;
@@ -115,24 +116,11 @@ export default function SchedulePage() {
     setSuccessMessage(null);
 
     try {
-      const response = await fetch(
-        `http://localhost:8000/api/schedule/generate/${userId}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            study_limit_hours: preferences?.dailyLimit ?? getStoredDailyLimit(),
-          }),
-        }
+      const data = await scheduleAPI.generate(
+        userId,
+        preferences?.dailyLimit ?? getStoredDailyLimit()
       );
 
-      if (!response.ok) {
-        throw new Error("Failed to generate schedule");
-      }
-
-      const data = await response.json();
       setScheduleStats(data.stats);
       await loadScheduleBlocks();
       setSuccessMessage("Schedule generated successfully.");
