@@ -661,7 +661,9 @@ export default function TasksPage() {
                     className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-2xl shadow-sm p-6 border border-white/40 dark:border-slate-700/40 hover:bg-white/70 dark:hover:bg-slate-800/70 transition group">
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{task.title}</h3>
+                        <h3 className={`text-lg font-semibold ${task.completed ? 'line-through text-slate-400 dark:text-slate-500' : 'text-slate-900 dark:text-white'}`}>
+                          {task.title}
+                        </h3>
                         <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">{getCourseName(task.course_id)}</p>
                       </div>
                       <div className="flex items-center gap-2">
@@ -715,7 +717,21 @@ export default function TasksPage() {
                       </div>
                     </div>
 
-                    <div className="flex gap-3 flex-wrap">
+                    <div className="flex gap-3 flex-wrap items-center">
+                      {/* Checkbox for task completion */}
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={task.completed}
+                          onChange={() => updateTask(task.id, { completed: !task.completed })}
+                          className="w-5 h-5 cursor-pointer accent-emerald-600 rounded"
+                          title={task.completed ? "Mark as pending" : "Mark as completed"}
+                        />
+                        <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                          {task.completed ? "Completed" : "Mark complete"}
+                        </span>
+                      </div>
+                      
                       <button
                         onClick={() => handleEstimateTaskTime(task)}
                         disabled={estimatingTaskId === task.id}
@@ -730,13 +746,6 @@ export default function TasksPage() {
                       <button onClick={() => handleDelete(task.id)}
                         className="text-slate-500 dark:text-slate-400 hover:text-red-600 font-medium py-1.5 px-3 rounded-lg transition hover:bg-red-50 dark:hover:bg-red-900/20">
                         Delete
-                      </button>
-                      <button onClick={() => updateTask(task.id, { completed: !task.completed })}
-                        className={`font-bold py-1.5 px-4 rounded-lg transition shadow-sm ${task.completed
-                          ? "bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-300"
-                          : "text-white"}`}
-                        style={!task.completed ? { backgroundColor: "var(--theme-accent-strong)" } : undefined}>
-                        {task.completed ? "Undo" : "Complete"}
                       </button>
                     </div>
                   </div>
