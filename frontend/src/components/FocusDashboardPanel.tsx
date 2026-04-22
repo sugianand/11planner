@@ -537,9 +537,9 @@ export default function FocusDashboardPanel({
                     >
                       {spotifyConnecting ? "Connecting..." : "Connect Spotify"}
                     </button>
-                    {/* Open Spotify login screen */}
+                    {/* Open Spotify home page in a new tab */}
                     <a
-                      href="https://accounts.spotify.com/login"
+                      href="https://open.spotify.com/"
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex items-center rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700"
