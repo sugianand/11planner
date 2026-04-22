@@ -129,6 +129,9 @@ export default function FocusDashboardPanel({
       const verifier = crypto.randomUUID() + crypto.randomUUID();
       const challenge = await createPkceChallenge(verifier);
       const redirectUri = `${window.location.origin}/music-auth/spotify`;
+      
+      // Log the redirect URI for debugging
+      console.log('[11Planner] Spotify OAuth - Using redirect_uri:', redirectUri);
 
       sessionStorage.setItem("spotify_oauth_state", state);
       sessionStorage.setItem("spotify_oauth_verifier", verifier);
