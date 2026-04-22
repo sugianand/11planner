@@ -400,6 +400,28 @@ async def estimate_task_time(task_id: str, request: TaskEstimateRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to estimate task time: {str(e)}")
 
+# Updates a task's fields (status, completed, etc.)
+@router.put("/tasks/{task_id}")
+async def update_task(task_id: str, task_data: dict):
+    """Update a task's fields (e.g., mark as completed)"""
+    try:
+        supabase = get_supabase()
+        
+        # Update the task in Supabase
+        result = (
+            supabase.table("tasks")
+            .update(task_data)
+            .eq("id", task_id)
+            .execute()
+        )
+        
+        if not result.data:
+            raise HTTPException(status_code=404, detail="Task not found")
+        
+        return result.data[0]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update task: {str(e)}")
+
 # ========== SCHEDULE GENERATION ENDPOINTS ==========
 
 # Generates and persists a study schedule for all pending user tasks.
