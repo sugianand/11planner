@@ -304,39 +304,26 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
     }
 
     const httpUrl = `${backendUrl}/api/schedule-blocks/${encodeURIComponent(userId)}/calendar.ics`;
-    const webcalUrl = httpUrl
-      .replace(/^https:\/\//, 'webcals://')
-      .replace(/^http:\/\//, 'webcal://');
+    const webcalUrl = httpUrl.replace(/^https?:\/\//, 'webcal://');
 
-    const isAppleDevice = /Mac|iPhone|iPad/i.test(navigator.userAgent);
-    const isLocalBackend = /localhost|127\.0\.0\.1/i.test(backendUrl);
-
-    if (isAppleDevice && isLocalBackend) {
-      onShowDialog?.('Mac subscribe limitation in local dev', 'Apple Calendar cannot live-subscribe to localhost URLs. Use Export for local testing, or set NEXT_PUBLIC_API_URL to a public HTTPS URL for live subscribe.');
-      exportEventsToICS(eventList, '11planner-schedule.ics');
-      return;
-    }
-
-    if (isAppleDevice) {
-      // Custom scheme handlers are most reliable when using same-tab navigation.
-      window.location.href = webcalUrl;
-      return;
-    }
-
-    const opened = window.open(webcalUrl, '_blank', 'noopener,noreferrer');
-
-    // Fallback for browsers that block window.open from this context.
-    if (!opened) {
+    const openWebcalUrl = (url: string) => {
+      const opened = window.open(url, '_blank', 'noopener,noreferrer');
+      if (opened) {
+        return true;
+      }
       const link = document.createElement('a');
-      link.href = webcalUrl;
+      link.href = url;
       link.target = '_blank';
       link.rel = 'noopener noreferrer';
       link.style.display = 'none';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-    }
-  }, [eventList, userId, onShowDialog]);
+      return true;
+    };
+
+    openWebcalUrl(webcalUrl);
+  }, [userId, onShowDialog]);
 
   // Switches the active calendar view mode.
   const handleViewModeChange = (mode: ViewMode) => {
