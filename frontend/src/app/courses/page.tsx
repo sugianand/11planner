@@ -50,6 +50,7 @@ export default function CoursesPage() {
   const [showForm, setShowForm] = useState(false);
   const [showDaysDropdown, setShowDaysDropdown] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deletingAllCourses, setDeletingAllCourses] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"name_asc" | "name_desc" | "time_asc" | "time_desc">("name_asc");
   const [typeFilter, setTypeFilter] = useState<"all" | "online" | "in_person" | "lab">("all");
@@ -251,6 +252,62 @@ export default function CoursesPage() {
       onConfirm: async () => {
         await deleteCourse(id);
         setDialog({ isOpen: false, title: "", message: "" });
+      },
+    });
+  };
+
+  const handleDeleteAllCourses = () => {
+    if (courses.length === 0 || deletingAllCourses) {
+      return;
+    }
+
+    setDialog({
+      isOpen: true,
+      title: "Delete all courses?",
+      message: "This will permanently remove every course in your account.",
+      confirmText: "Delete All",
+      cancelText: "Cancel",
+      destructive: true,
+      onConfirm: async () => {
+        const courseIds = courses.map((course) => course.id);
+        if (courseIds.length === 0) {
+          setDialog({ isOpen: false, title: "", message: "" });
+          return;
+        }
+
+        setDeletingAllCourses(true);
+        let deletedCount = 0;
+        let failedCount = 0;
+
+        for (const courseId of courseIds) {
+          try {
+            await deleteCourse(courseId);
+            deletedCount += 1;
+          } catch (err) {
+            failedCount += 1;
+            console.error(`Failed to delete course ${courseId}:`, err);
+          }
+        }
+
+        await loadCourses();
+        setShowForm(false);
+        setEditingId(null);
+        setDeletingAllCourses(false);
+
+        if (failedCount === 0) {
+          setDialog({
+            isOpen: true,
+            title: "Courses deleted",
+            message: `Deleted ${deletedCount} course${deletedCount === 1 ? "" : "s"}.`,
+          });
+          return;
+        }
+
+        setDialog({
+          isOpen: true,
+          title: "Some courses could not be deleted",
+          message: `Deleted ${deletedCount} of ${courseIds.length} courses. ${failedCount} failed.`,
+        });
       },
     });
   };
@@ -519,38 +576,48 @@ export default function CoursesPage() {
                 </div>
               </div>
 
-              <div className="flex items-center">
+              <div className="flex items-center gap-2">
                 {!showForm && (
-                  <button
-                    onClick={() => {
-                      setShowForm(true);
-                      setEditingId(null);
-                      setFormData({
-                        name: "",
-                        code: "",
-                        professor: "",
-                        description: "",
-                        user_id: userId,
-                        courseDate: "",
-                        startTime: "",
-                        endTime: "",
-                        isOnline: false,
-                        hasLab: false,
-                        labDay: "",
-                        labStartTime: "",
-                        labEndTime: "",
-                        labIsOnline: false,
-                      });
-                    }}
-                    className="text-white font-bold py-2.5 px-6 rounded-xl transition shadow-lg flex items-center gap-2"
-                    style={{
-                      backgroundColor: "var(--theme-accent-strong)",
-                      boxShadow: "0 10px 30px -18px var(--theme-accent-strong)",
-                    }}
-                  >
-                    <span className="material-symbols-outlined text-sm">add</span>
-                    New Course
-                  </button>
+                  <>
+                    <button
+                      onClick={() => {
+                        setShowForm(true);
+                        setEditingId(null);
+                        setFormData({
+                          name: "",
+                          code: "",
+                          professor: "",
+                          description: "",
+                          user_id: userId,
+                          courseDate: "",
+                          startTime: "",
+                          endTime: "",
+                          isOnline: false,
+                          hasLab: false,
+                          labDay: "",
+                          labStartTime: "",
+                          labEndTime: "",
+                          labIsOnline: false,
+                        });
+                      }}
+                      className="text-white font-bold py-2.5 px-6 rounded-xl transition shadow-lg flex items-center gap-2"
+                      style={{
+                        backgroundColor: "var(--theme-accent-strong)",
+                        boxShadow: "0 10px 30px -18px var(--theme-accent-strong)",
+                      }}
+                    >
+                      <span className="material-symbols-outlined text-sm">add</span>
+                      New Course
+                    </button>
+                    <button
+                      onClick={handleDeleteAllCourses}
+                      disabled={courses.length === 0 || deletingAllCourses}
+                      title={courses.length === 0 ? "No courses to delete" : "Delete all courses"}
+                      className="font-bold py-2.5 px-4 rounded-xl transition border disabled:opacity-50 disabled:cursor-not-allowed text-red-700 dark:text-red-300 border-red-300 dark:border-red-700/70 bg-red-50/80 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/35"
+                    >
+                      {deletingAllCourses ? "Deleting..." : "Delete All Courses"}
+                    </button>
+                  </>
                 )}
               </div>
             </div>

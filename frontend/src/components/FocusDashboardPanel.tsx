@@ -2,7 +2,7 @@
 
 // Shows focus dashboard widgets, stats, and music controls on the dashboard page.
 
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useCallback, useEffect, useState } from "react";
 import { usePlanner } from "@/contexts/PlannerContext";
 import { useMusic } from "@/contexts/MusicContext";
 import Timer from "@/components/Dashboard/Timer";
@@ -74,6 +74,7 @@ export default function FocusDashboardPanel({
   } = useMusic();
 
   const [togglingTaskId, setTogglingTaskId] = useState<string | null>(null);
+  const [checklistError, setChecklistError] = useState<string | null>(null);
   const [privacyPersonalizationEnabled, setPrivacyPersonalizationEnabled] = useState(true);
 
   const providerSiteMap: Record<string, string> = {
@@ -325,37 +326,136 @@ export default function FocusDashboardPanel({
     .filter((t) => scheduleBlocks.some((b) => b.task_id === t.id))
     .reduce((sum, t) => sum + t.estimated_hours, 0);
 
-  // Get today's tasks and assignments for the checklist sidebar
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
+  const startOfToday = new Date(today);
+  startOfToday.setHours(0, 0, 0, 0);
+  const startOfTomorrow = new Date(startOfToday);
+  startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
 
-  // Filter schedule blocks for today
-  const todaysScheduleBlocks = scheduleBlocks.filter((block) => {
-    const blockDate = new Date(block.start_time);
-    blockDate.setHours(0, 0, 0, 0);
-    return blockDate.getTime() === today.getTime();
+  const isWithinToday = (dateValue: Date) =>
+    dateValue.getTime() >= startOfToday.getTime() && dateValue.getTime() < startOfTomorrow.getTime();
+
+  const taskById = new Map<string, (typeof tasks)[number]>();
+  tasks.forEach((task) => {
+    taskById.set(task.id, task);
   });
 
-  // Map blocks to task details with timing info
-  const todaysScheduledTasks = todaysScheduleBlocks.map((block) => {
-    const task = tasks.find((t) => t.id === block.task_id);
-    return {
-      id: block.id,
-      taskId: block.task_id,
-      title: task?.title || "Untitled Task",
-      startTime: new Date(block.start_time),
-      endTime: new Date(block.end_time),
-      completed: task?.completed || false,
-    };
+  const groupedByTask = new Map<
+    string,
+    {
+      id: string;
+      taskId: string;
+      title: string;
+      startTime: Date;
+      endTime: Date;
+      completed: boolean;
+      blockCount: number;
+    }
+  >();
+
+  scheduleBlocks.forEach((block) => {
+    if (!block.task_id) {
+      return;
+    }
+
+    const blockStart = new Date(block.start_time);
+    if (Number.isNaN(blockStart.getTime()) || !isWithinToday(blockStart)) {
+      return;
+    }
+
+    const blockEnd = new Date(block.end_time);
+    const task = taskById.get(block.task_id);
+    if (!task) {
+      return;
+    }
+
+    const existing = groupedByTask.get(block.task_id);
+    if (!existing) {
+      groupedByTask.set(block.task_id, {
+        id: block.task_id,
+        taskId: block.task_id,
+        title: task.title || "Untitled Task",
+        startTime: blockStart,
+        endTime: Number.isNaN(blockEnd.getTime()) ? blockStart : blockEnd,
+        completed: task.completed,
+        blockCount: 1,
+      });
+      return;
+    }
+
+    if (blockStart.getTime() < existing.startTime.getTime()) {
+      existing.startTime = blockStart;
+    }
+
+    if (!Number.isNaN(blockEnd.getTime()) && blockEnd.getTime() > existing.endTime.getTime()) {
+      existing.endTime = blockEnd;
+    }
+
+    existing.completed = task.completed;
+    existing.blockCount += 1;
   });
 
-  const dueTodayTasks = tasks.filter((task) => {
-    const deadline = new Date(task.deadline);
-    deadline.setHours(0, 0, 0, 0);
-    return deadline.getTime() === today.getTime();
+  const todaysScheduledTasks = Array.from(groupedByTask.values()).sort((a, b) => {
+    if (a.completed !== b.completed) {
+      return a.completed ? 1 : -1;
+    }
+    return a.startTime.getTime() - b.startTime.getTime();
   });
+
+  const scheduledTaskIdSet = new Set(todaysScheduledTasks.map((item) => item.taskId));
+
+  const dueTodayTasks = tasks
+    .filter((task) => {
+      const deadline = new Date(task.deadline);
+      if (Number.isNaN(deadline.getTime())) {
+        return false;
+      }
+      return isWithinToday(deadline) && !scheduledTaskIdSet.has(task.id);
+    })
+    .sort((a, b) => {
+      if (a.completed !== b.completed) {
+        return a.completed ? 1 : -1;
+      }
+      return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
+    });
+
+  const checklistTotalCount = todaysScheduledTasks.length + dueTodayTasks.length;
+  const checklistCompletedCount =
+    todaysScheduledTasks.filter((item) => item.completed).length
+    + dueTodayTasks.filter((task) => task.completed).length;
+  const checklistProgressPercent =
+    checklistTotalCount === 0 ? 0 : Math.round((checklistCompletedCount / checklistTotalCount) * 100);
+
+  const formatDueTime = (deadlineValue: string) => {
+    const deadline = new Date(deadlineValue);
+    if (Number.isNaN(deadline.getTime())) {
+      return "Due today";
+    }
+    if (deadline.getHours() === 0 && deadline.getMinutes() === 0) {
+      return "Due today";
+    }
+    return `Due ${deadline.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}`;
+  };
+
+  const handleChecklistToggle = useCallback(
+    async (taskId: string, currentCompleted: boolean) => {
+      if (!taskId) {
+        return;
+      }
+
+      setChecklistError(null);
+      setTogglingTaskId(taskId);
+      try {
+        await updateTask(taskId, { completed: !currentCompleted });
+      } catch (err) {
+        console.error("Failed to update checklist task:", err);
+        setChecklistError("Could not update checklist item. Please try again.");
+      } finally {
+        setTogglingTaskId(null);
+      }
+    },
+    [updateTask]
+  );
 
   // Formats estimated hours with compact rounding for stat cards.
   const formatHours = (hours: number) => {
@@ -700,6 +800,25 @@ export default function FocusDashboardPanel({
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-4">
               Today&rsquo;s Checklist
             </h3>
+
+            <div className="mb-4">
+              <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                <span>Progress</span>
+                <span>{checklistCompletedCount}/{checklistTotalCount} done</span>
+              </div>
+              <div className="mt-2 h-2 w-full rounded-full bg-slate-200 dark:bg-slate-700">
+                <div
+                  className="h-2 rounded-full bg-emerald-500 transition-all"
+                  style={{ width: `${checklistProgressPercent}%` }}
+                />
+              </div>
+            </div>
+
+            {checklistError ? (
+              <p className="mb-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-900/60 dark:bg-rose-900/20 dark:text-rose-300">
+                {checklistError}
+              </p>
+            ) : null}
             
             {todaysScheduledTasks.length === 0 && dueTodayTasks.length === 0 ? (
               <div className="text-center py-6">
@@ -721,13 +840,7 @@ export default function FocusDashboardPanel({
                             checked={item.completed}
                             disabled={togglingTaskId === item.taskId}
                             onChange={() => {
-                              setTogglingTaskId(item.taskId);
-                              updateTask(item.taskId, { completed: !item.completed }).then(() => {
-                                setTogglingTaskId(null);
-                              }).catch((err) => {
-                                console.error("Failed to update scheduled task:", err);
-                                setTogglingTaskId(null);
-                              });
+                              void handleChecklistToggle(item.taskId, item.completed);
                             }}
                             className="mt-0.5 rounded border-slate-300 text-emerald-600 cursor-pointer"
                           />
@@ -744,6 +857,7 @@ export default function FocusDashboardPanel({
                             </div>
                             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                               {item.startTime.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })} - {item.endTime.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+                              {item.blockCount > 1 ? ` · ${item.blockCount} blocks` : ""}
                             </p>
                           </div>
                         </div>
@@ -767,13 +881,7 @@ export default function FocusDashboardPanel({
                             checked={task.completed}
                             disabled={togglingTaskId === task.id}
                             onChange={() => {
-                              setTogglingTaskId(task.id);
-                              updateTask(task.id, { completed: !task.completed }).then(() => {
-                                setTogglingTaskId(null);
-                              }).catch((err) => {
-                                console.error("Failed to update due today task:", err);
-                                setTogglingTaskId(null);
-                              });
+                              void handleChecklistToggle(task.id, task.completed);
                             }}
                             className="mt-0.5 rounded border-amber-300 text-amber-600 cursor-pointer"
                           />
@@ -789,7 +897,7 @@ export default function FocusDashboardPanel({
                               ) : null}
                             </div>
                             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                              {new Date(task.deadline).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+                              {formatDueTime(task.deadline)}
                             </p>
                           </div>
                         </div>

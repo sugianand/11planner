@@ -123,6 +123,7 @@ export default function TasksPage() {
   const [estimatingTaskId, setEstimatingTaskId] = useState<string | null>(null);
   const [expandedDescriptionTaskIds, setExpandedDescriptionTaskIds] = useState<Set<string>>(new Set());
   const [togglingTaskId, setTogglingTaskId] = useState<string | null>(null);
+  const [deletingAllTasks, setDeletingAllTasks] = useState(false);
 
   useEffect(() => {
     loadCourses();
@@ -263,6 +264,73 @@ export default function TasksPage() {
     } finally {
       setEstimatingTaskId(null);
     }
+  };
+
+  const handleDeleteAllTasks = () => {
+    if (tasks.length === 0 || deletingAllTasks) {
+      return;
+    }
+
+    setDialog({
+      isOpen: true,
+      title: "Delete all tasks?",
+      message: "This will permanently remove every task in your account.",
+      confirmText: "Delete All",
+      cancelText: "Cancel",
+      destructive: true,
+      onConfirm: async () => {
+        const taskIds = tasks.map((task) => task.id);
+        if (taskIds.length === 0) {
+          setDialog({ isOpen: false, title: "", message: "" });
+          return;
+        }
+
+        setDeletingAllTasks(true);
+        let deletedCount = 0;
+        let failedCount = 0;
+
+        for (const taskId of taskIds) {
+          try {
+            await deleteTask(taskId);
+            deletedCount += 1;
+          } catch (err) {
+            failedCount += 1;
+            console.error(`Failed to delete task ${taskId}:`, err);
+          }
+        }
+
+        await loadTasks();
+        setCourseFilter("all");
+        setShowForm(false);
+        setEditingId(null);
+        setFormData({
+          title: "",
+          category: "assignment",
+          course_id: "",
+          deadline: "",
+          estimated_hours: 2,
+          priority: 2,
+          description: "",
+          user_id: userId,
+        });
+        setDeletingAllTasks(false);
+
+        if (failedCount === 0) {
+          setDialog({
+            isOpen: true,
+            title: "Tasks deleted",
+            message: `Deleted ${deletedCount} task${deletedCount === 1 ? "" : "s"}.`,
+          });
+          return;
+        }
+
+        setDialog({
+          isOpen: true,
+          title: "Some tasks could not be deleted",
+          message: `Deleted ${deletedCount} of ${taskIds.length} tasks. ${failedCount} failed.`,
+        });
+      },
+    });
   };
 
   const getCourseName = (courseId: string | undefined) => {
@@ -426,7 +494,7 @@ export default function TasksPage() {
                 </div>
               </div>
 
-              <div className="flex items-center">
+              <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
                     setShowForm(true); setEditingId(null);
@@ -579,6 +647,14 @@ export default function TasksPage() {
                   style={activeTab === "completed" ? { backgroundColor: "var(--theme-accent-strong)" } : undefined}
                 >
                   Completed ({completedTasks})
+                </button>
+                <button
+                  onClick={handleDeleteAllTasks}
+                  disabled={tasks.length === 0 || deletingAllTasks}
+                  title={tasks.length === 0 ? "No tasks to delete" : "Delete all tasks"}
+                  className="ml-auto px-4 py-2 rounded-lg text-sm font-semibold transition border disabled:opacity-50 disabled:cursor-not-allowed text-red-700 dark:text-red-300 border-red-300 dark:border-red-700/70 bg-red-50/80 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/35"
+                >
+                  {deletingAllTasks ? "Deleting..." : "Delete All Tasks"}
                 </button>
               </div>
 
