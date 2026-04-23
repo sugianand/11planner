@@ -634,14 +634,14 @@ export default function FocusDashboardPanel({
 
             {musicProvider === 'youtube' ? (
               <div className="mt-3 flex flex-wrap gap-2">
-                {/* YouTube Music login - opens in new tab */}
+                {/* Opens YouTube Music directly so sign-in completes in the correct product context. */}
                 <a
-                  href="https://accounts.google.com/signin"
+                  href="https://music.youtube.com/"
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center rounded-full border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
                 >
-                  Connect YouTube
+                  Connect YouTube Music
                 </a>
                 <a
                   href="https://music.youtube.com/"
@@ -651,6 +651,9 @@ export default function FocusDashboardPanel({
                 >
                   Open YouTube Music
                 </a>
+                <p className="w-full text-[11px] text-slate-500 dark:text-slate-400">
+                  YouTube account selection is managed by YouTube Music. Open it to confirm the signed-in account.
+                </p>
               </div>
             ) : null}
             </>

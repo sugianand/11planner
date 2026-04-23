@@ -2,10 +2,20 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import FocusDashboardPanel from "@/components/FocusDashboardPanel";
 import Footer from "@/components/Footer";
 import { useTimer, defaultTimerDurations } from "@/contexts/TimerContext";
 import { usePlanner } from "@/contexts/PlannerContext";
+import {
+  attachGeneratedAudioSession,
+  attachHtmlAudioSession,
+  createPlaybackRequest,
+  getCurrentPlaybackRequestId,
+  getFocusAudioPlaybackSnapshot,
+  setFocusAudioVolume,
+  stopFocusAudioPlayback,
+} from "@/lib/focusAudioPlayback";
 
 type AtmosphereCategory = "All" | "Anime" | "Nature" | "Cafe" | "City" | "Abstract";
 
@@ -693,6 +703,7 @@ const createNoiseBuffer = (
 };
 
 export default function Dashboard() {
+  const searchParams = useSearchParams();
   const { userId } = usePlanner();
   const dashboardPrefsKey = useMemo(() => getDashboardPrefsKey(userId), [userId]);
   const [activeTab, setActiveTab] = useState<"backgrounds" | "sounds">("backgrounds");
@@ -746,13 +757,6 @@ export default function Dashboard() {
   const [prefsLoaded, setPrefsLoaded] = useState(false);
   const [loadedThumbnailPreviews, setLoadedThumbnailPreviews] = useState<Record<string, boolean>>({});
   const [failedThumbnailPreviews, setFailedThumbnailPreviews] = useState<Record<string, boolean>>({});
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const generatedAudioRef = useRef<{
-    context: AudioContext;
-    masterGain: GainNode;
-    stop: () => void;
-  } | null>(null);
-  const playbackRequestRef = useRef(0);
 
   useEffect(() => {
     const defaultBackgroundId = focusBackgrounds[0]?.id ?? "";
@@ -782,6 +786,21 @@ export default function Dashboard() {
       setVolume(Math.min(1, Math.max(0, storedPrefs.volume)));
     }
 
+    const playbackSnapshot = getFocusAudioPlaybackSnapshot();
+
+    if (
+      playbackSnapshot.isPlaying
+      && playbackSnapshot.userId === userId
+      && playbackSnapshot.soundId
+      && soundscapes.some((scene) => scene.id === playbackSnapshot.soundId)
+    ) {
+      setSoundId(playbackSnapshot.soundId);
+      setVolume(Math.min(1, Math.max(0, playbackSnapshot.volume)));
+      setIsPlaying(true);
+    } else {
+      setIsPlaying(false);
+    }
+
     setPrefsLoaded(true);
   }, [userId, dashboardPrefsKey]);
 
@@ -798,6 +817,22 @@ export default function Dashboard() {
 
     window.localStorage.setItem(dashboardPrefsKey, JSON.stringify(payload));
   }, [backgroundId, soundId, volume, prefsLoaded, dashboardPrefsKey, userId]);
+
+  useEffect(() => {
+    if (searchParams.get("focus") !== "sounds") {
+      return;
+    }
+
+    setIsAtmosphereOpen(true);
+    setActiveTab("sounds");
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!prefsLoaded) {
+      return;
+    }
+    setFocusAudioVolume(volume);
+  }, [prefsLoaded, volume]);
 
   useEffect(() => {
     const body = document.body;
@@ -863,17 +898,7 @@ export default function Dashboard() {
   }, [isDragging, dragOffset]);
 
   const stopPlayback = useCallback(async (syncState: boolean = true) => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.src = "";
-      audioRef.current = null;
-    }
-
-    if (generatedAudioRef.current) {
-      generatedAudioRef.current.stop();
-      await generatedAudioRef.current.context.close().catch(() => undefined);
-      generatedAudioRef.current = null;
-    }
+    await stopFocusAudioPlayback();
 
     if (syncState) {
       setIsPlaying(false);
@@ -1059,7 +1084,7 @@ export default function Dashboard() {
     async (scene: Soundscape, requestId: number) => {
       await stopPlayback(false);
 
-      if (requestId !== playbackRequestRef.current) {
+      if (requestId !== getCurrentPlaybackRequestId()) {
         return false;
       }
 
@@ -1091,13 +1116,13 @@ export default function Dashboard() {
         try {
           await audio.play();
 
-          if (requestId !== playbackRequestRef.current) {
+          if (requestId !== getCurrentPlaybackRequestId()) {
             audio.pause();
             audio.src = "";
             return false;
           }
 
-          audioRef.current = audio;
+          attachHtmlAudioSession(audio, scene.id, userId);
           return true;
         } catch {
           audio.pause();
@@ -1110,16 +1135,16 @@ export default function Dashboard() {
         return false;
       }
 
-      if (requestId !== playbackRequestRef.current) {
+      if (requestId !== getCurrentPlaybackRequestId()) {
         generatedSound.stop();
         await generatedSound.context.close().catch(() => undefined);
         return false;
       }
 
-      generatedAudioRef.current = generatedSound;
+      attachGeneratedAudioSession(generatedSound, scene.id, userId);
       return true;
     },
-    [createGeneratedSound, stopPlayback, volume]
+    [createGeneratedSound, stopPlayback, userId, volume]
   );
 
   const handleSaveMiniTimerSettings = () => {
@@ -1253,51 +1278,39 @@ export default function Dashboard() {
 
   const handleVolumeChange = (nextVolume: number) => {
     setVolume(nextVolume);
-
-    if (audioRef.current) {
-      audioRef.current.volume = nextVolume;
-    }
-
-    if (generatedAudioRef.current) {
-      generatedAudioRef.current.masterGain.gain.value = nextVolume;
-    }
   };
 
-  const handleSoundSelect = async (sceneId: string) => {
-    const requestId = playbackRequestRef.current + 1;
-    playbackRequestRef.current = requestId;
+  const handleSoundSelect = useCallback(
+    async (sceneId: string) => {
+      const requestId = createPlaybackRequest();
 
-    const scene = soundscapes.find((item) => item.id === sceneId);
-    if (!scene) {
-      return;
-    }
+      const scene = soundscapes.find((item) => item.id === sceneId);
+      if (!scene) {
+        return;
+      }
 
-    const isSameSound = sceneId === soundId;
-    if (isSameSound && isPlaying) {
-      await stopPlayback(true);
-      setIsPlaying(false);
-      return;
-    }
+      const isSameSound = sceneId === soundId;
+      if (isSameSound && isPlaying) {
+        await stopPlayback(true);
+        setIsPlaying(false);
+        return;
+      }
 
-    setSoundId(sceneId);
+      setSoundId(sceneId);
 
-    if (scene.engine === "none") {
-      await stopPlayback(true);
-      setIsPlaying(false);
-      return;
-    }
+      if (scene.engine === "none") {
+        await stopPlayback(true);
+        setIsPlaying(false);
+        return;
+      }
 
-    const isStarted = await startPlayback(scene, requestId);
-    if (requestId === playbackRequestRef.current) {
-      setIsPlaying(isStarted);
-    }
-  };
-
-  useEffect(() => {
-    return () => {
-      void stopPlayback(false);
-    };
-  }, [stopPlayback]);
+      const isStarted = await startPlayback(scene, requestId);
+      if (requestId === getCurrentPlaybackRequestId()) {
+        setIsPlaying(isStarted);
+      }
+    },
+    [isPlaying, soundId, startPlayback, stopPlayback]
+  );
 
   const atmospherePanel = (
     <div
