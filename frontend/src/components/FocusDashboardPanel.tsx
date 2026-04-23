@@ -739,10 +739,12 @@ export default function FocusDashboardPanel({
                             onChange={async () => {
                               setUpdatingTaskIds(prev => new Set(prev).add(item.taskId));
                               try {
-                                await taskAPI.update(item.taskId, { completed: !item.completed });
+                                console.log("Updating scheduled task:", item.taskId, "to completed:", !item.completed);
+                                const result = await taskAPI.update(item.taskId, { completed: !item.completed });
+                                console.log("Update successful:", result);
                                 await loadTasks();
                               } catch (error) {
-                                console.error("Failed to update task:", error);
+                                console.error("Failed to update scheduled task:", item.taskId, error);
                               } finally {
                                 setUpdatingTaskIds(prev => {
                                   const newSet = new Set(prev);
@@ -791,10 +793,12 @@ export default function FocusDashboardPanel({
                             onChange={async () => {
                               setUpdatingTaskIds(prev => new Set(prev).add(task.id));
                               try {
-                                await taskAPI.update(task.id, { completed: !task.completed });
+                                console.log("Updating due today task:", task.id, "to completed:", !task.completed);
+                                const result = await taskAPI.update(task.id, { completed: !task.completed });
+                                console.log("Update successful:", result);
                                 await loadTasks();
                               } catch (error) {
-                                console.error("Failed to update task:", error);
+                                console.error("Failed to update due today task:", task.id, error);
                               } finally {
                                 setUpdatingTaskIds(prev => {
                                   const newSet = new Set(prev);
