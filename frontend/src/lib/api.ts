@@ -116,11 +116,23 @@ export const taskAPI = {
   getById: (taskId: string) =>
     fetchAPI<Task>(`/api/tasks/detail/${taskId}`, { method: "GET" }),
 
-  update: (taskId: string, task: Partial<Task>) =>
-    fetchAPI<Task>(`/api/tasks/${taskId}`, {
+  update: (taskId: string, task: Partial<Task>) => {
+    // Map frontend Task fields to backend field names
+    const payload: Record<string, any> = {};
+    if (task.title !== undefined) payload.task_title = task.title;
+    if (task.completed !== undefined) payload.status = task.completed ? "completed" : "pending";
+    if (task.description !== undefined) payload.description = task.description;
+    if (task.priority !== undefined) payload.priority_level = task.priority;
+    if (task.estimated_hours !== undefined) payload.estimated_hours = task.estimated_hours;
+    if (task.category !== undefined) payload.task_type = task.category;
+    if (task.deadline !== undefined) payload.deadline_at = task.deadline;
+    if (task.course_id !== undefined) payload.course_id = task.course_id;
+    
+    return fetchAPI<Task>(`/api/tasks/${taskId}`, {
       method: "PUT",
-      body: JSON.stringify(task),
-    }),
+      body: JSON.stringify(payload),
+    });
+  },
 
   delete: (taskId: string) =>
     fetchAPI<{ message: string }>(`/api/tasks/${taskId}`, {
