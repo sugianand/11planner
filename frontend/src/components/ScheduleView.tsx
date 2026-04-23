@@ -23,26 +23,29 @@ interface ScheduleViewProps {
   onShowDialog?: (title: string, message: string) => void;
 }
 
-function getCalendarFeedBaseUrl(): string | null {
-  const configuredCalendarBase = process.env.NEXT_PUBLIC_CALENDAR_FEED_BASE_URL?.trim();
-  if (configuredCalendarBase && /^https?:\/\//i.test(configuredCalendarBase)) {
-    return configuredCalendarBase.replace(/\/$/, '');
-  }
+// Builds the https and webcal feed URLs for the current user.
+function getCalendarFeedUrls(userId: string): { httpUrl: string; webcalUrl: string } | null {
+  // Check configured env vars first.
+  const configuredBase = (
+    process.env.NEXT_PUBLIC_CALENDAR_FEED_BASE_URL ||
+    process.env.NEXT_PUBLIC_API_URL
+  )?.trim().replace(/\/$/, '');
 
-  const configuredApiBase = process.env.NEXT_PUBLIC_API_URL?.trim();
-  if (configuredApiBase && /^https?:\/\//i.test(configuredApiBase)) {
-    return configuredApiBase.replace(/\/$/, '');
-  }
+  let base = configuredBase || null;
 
-  if (typeof window !== 'undefined') {
+  // Fall back to localhost when running locally (backend on :8000).
+  if (!base && typeof window !== 'undefined') {
     const host = window.location.hostname;
-    const isLocalHost = /^(localhost|127\.0\.0\.1)$/i.test(host);
-    if (isLocalHost) {
-      return 'http://127.0.0.1:8000';
+    if (/^(localhost|127\.0\.0\.1)$/i.test(host)) {
+      base = 'http://localhost:8000';
     }
   }
 
-  return null;
+  if (!base) return null;
+
+  const httpUrl = `${base}/api/schedule-blocks/${encodeURIComponent(userId)}/calendar.ics`;
+  const webcalUrl = httpUrl.replace(/^https?:\/\//, 'webcal://');
+  return { httpUrl, webcalUrl };
 }
 
 export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEventMove, colorBy = "priority", onColorByChange, errorMessage = null, onDismissError, onShowDialog }) => {
@@ -55,6 +58,10 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
   const [dayData, setDayData] = useState<DayData>(getDayData(currentDate));
   const [monthsInYear, setMonthsInYear] = useState(getMonthsInYear(currentDate.getFullYear()));
   const [eventList, setEventList] = useState<Event[]>(events);
+  const [showCalendarModal, setShowCalendarModal] = useState(false);
+  const [webcalUrl, setWebcalUrl] = useState<string | null>(null);
+  const [feedHttpUrl, setFeedHttpUrl] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const accentSoftStyle = {
     backgroundColor: 'var(--theme-accent-soft)',
     borderColor: 'var(--theme-accent)',
@@ -287,43 +294,21 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
     exportEventsToICS(eventList, '11planner-schedule.ics');
   }, [eventList]);
 
-  // Opens a webcal subscription URL, with a macOS localhost fallback dialog.
+  // Builds the webcal URL and opens the subscription modal.
   const handleSubscribe = useCallback(() => {
     if (!userId) {
       onShowDialog?.('Login required', 'Please log in to sync your calendar.');
       return;
     }
-
-    const backendUrl = getCalendarFeedBaseUrl();
-    if (!backendUrl) {
-      onShowDialog?.(
-        'Calendar feed is not configured',
-        'Subscribe (Live) needs a public backend URL. Set NEXT_PUBLIC_API_URL (or NEXT_PUBLIC_CALENDAR_FEED_BASE_URL) to your deployed backend URL, then redeploy the frontend.'
-      );
+    if (displayEvents.length === 0) {
+      onShowDialog?.('No events to sync', 'Generate a schedule first, then use Subscribe to add it to your calendar.');
       return;
     }
-
-    const httpUrl = `${backendUrl}/api/schedule-blocks/${encodeURIComponent(userId)}/calendar.ics`;
-    const webcalUrl = httpUrl.replace(/^https?:\/\//, 'webcal://');
-
-    const openWebcalUrl = (url: string) => {
-      const opened = window.open(url, '_blank', 'noopener,noreferrer');
-      if (opened) {
-        return true;
-      }
-      const link = document.createElement('a');
-      link.href = url;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      return true;
-    };
-
-    openWebcalUrl(webcalUrl);
-  }, [userId, onShowDialog]);
+    const urls = getCalendarFeedUrls(userId);
+    setWebcalUrl(urls?.webcalUrl ?? null);
+    setFeedHttpUrl(urls?.httpUrl ?? null);
+    setShowCalendarModal(true);
+  }, [userId, displayEvents, onShowDialog]);
 
   // Switches the active calendar view mode.
   const handleViewModeChange = (mode: ViewMode) => {
@@ -508,6 +493,135 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
           <YearView year={currentDate.getFullYear()} monthsData={monthsInYear} events={displayEvents} />
         )}
       </div>
+
+      {/* Calendar Subscription Modal */}
+      {showCalendarModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)' }}
+          onClick={() => { setShowCalendarModal(false); setCopied(false); }}
+        >
+          <div
+            className="relative w-full max-w-md rounded-2xl border border-white/30 dark:border-slate-700/60 bg-white dark:bg-slate-900 shadow-2xl p-6 flex flex-col gap-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div
+                  className="flex items-center justify-center w-11 h-11 rounded-xl shadow"
+                  style={{ backgroundColor: 'var(--theme-accent-soft)' }}
+                >
+                  <span className="material-symbols-outlined text-xl" style={{ color: 'var(--theme-accent-strong)' }}>sync</span>
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-white leading-tight">Subscribe to Calendar</h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Auto-syncs whenever your schedule changes</p>
+                </div>
+              </div>
+              <button
+                onClick={() => { setShowCalendarModal(false); setCopied(false); }}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors mt-0.5"
+              >
+                <span className="material-symbols-outlined text-xl">close</span>
+              </button>
+            </div>
+
+            {/* How it works */}
+            <div className="rounded-xl border border-emerald-100 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-950/40 px-4 py-3 flex items-start gap-2.5">
+              <span className="material-symbols-outlined text-base mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400">info</span>
+              <p className="text-xs text-emerald-800 dark:text-emerald-300 leading-relaxed">
+                <strong>Live sync:</strong> Your calendar app polls this feed automatically — any changes you make on 11Planner appear in Apple Calendar, Outlook, or Google Calendar within an hour.
+              </p>
+            </div>
+
+            {/* Primary: webcal subscribe */}
+            {webcalUrl ? (
+              <div className="flex flex-col gap-2.5">
+                <button
+                  id="calendar-subscribe-webcal-btn"
+                  onClick={() => {
+                    window.location.href = webcalUrl;
+                    setShowCalendarModal(false);
+                    setCopied(false);
+                  }}
+                  className="w-full py-3 rounded-xl text-sm font-bold text-white transition hover:brightness-105 active:scale-[0.98] flex items-center justify-center gap-2 shadow-lg"
+                  style={{
+                    backgroundColor: 'var(--theme-accent-strong)',
+                    boxShadow: '0 8px 24px -10px var(--theme-accent-strong)',
+                  }}
+                >
+                  <span className="material-symbols-outlined text-base">event_available</span>
+                  Subscribe in Apple Calendar / Outlook
+                </button>
+
+                {/* Copy URL fallback */}
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg px-3 py-2 truncate border border-slate-200 dark:border-slate-700">
+                    {feedHttpUrl}
+                  </code>
+                  <button
+                    id="calendar-subscribe-copy-btn"
+                    onClick={() => {
+                      if (feedHttpUrl) {
+                        navigator.clipboard.writeText(feedHttpUrl);
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 2000);
+                      }
+                    }}
+                    className="shrink-0 px-3 py-2 rounded-lg text-xs font-semibold border transition-colors"
+                    style={{
+                      backgroundColor: copied ? 'var(--theme-accent-soft)' : 'transparent',
+                      borderColor: 'var(--theme-accent)',
+                      color: 'var(--theme-accent-strong)',
+                    }}
+                    title="Copy feed URL for Google Calendar or manual subscribe"
+                  >
+                    {copied ? 'Copied!' : 'Copy URL'}
+                  </button>
+                </div>
+                <p className="text-xs text-slate-400 dark:text-slate-500 text-center">
+                  Copy the URL → Google Calendar: <strong>Other calendars → From URL</strong>
+                </p>
+              </div>
+            ) : (
+              /* No backend URL configured */
+              <div className="rounded-xl border border-amber-100 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-950/30 px-4 py-3 flex items-start gap-2.5">
+                <span className="material-symbols-outlined text-base mt-0.5 shrink-0 text-amber-600 dark:text-amber-400">warning</span>
+                <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
+                  Live subscription requires a configured backend URL. Set <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">NEXT_PUBLIC_API_URL</code> in your environment variables and redeploy.
+                </p>
+              </div>
+            )}
+
+            {/* Divider */}
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+              <span className="text-xs text-slate-400 dark:text-slate-500">or one-time import</span>
+              <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+            </div>
+
+            {/* Secondary: one-time export */}
+            <button
+              id="calendar-subscribe-export-btn"
+              onClick={() => {
+                exportEventsToICS(displayEvents, '11planner-schedule.ics');
+                setShowCalendarModal(false);
+                setCopied(false);
+              }}
+              className="w-full py-2.5 rounded-xl text-sm font-semibold border transition-colors flex items-center justify-center gap-2"
+              style={{
+                backgroundColor: 'var(--theme-accent-soft)',
+                borderColor: 'var(--theme-accent)',
+                color: 'var(--theme-accent-strong)',
+              }}
+            >
+              <span className="material-symbols-outlined text-base">download</span>
+              Download .ics snapshot
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
