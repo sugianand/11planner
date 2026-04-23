@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabaseClient";
 import Footer from "@/components/Footer";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
+import AppDialog from "@/components/AppDialog";
 
 type Mode = "login" | "register";
 type OAuthProvider = "google";
@@ -51,6 +52,7 @@ export default function AuthPage() {
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [dialog, setDialog] = useState({ isOpen: false, title: "", message: "" });
   const searchParams = useSearchParams();
 
   const goToNextPage = (): void => {
@@ -205,7 +207,11 @@ export default function AuthPage() {
         ...initialForm,
         loginEmail: email,
       });
-      setSuccessMessage("Check your email to verify your account, then log in.");
+      setDialog({
+        isOpen: true,
+        title: "Check Your Email",
+        message: "We've sent a verification link to your email address. Please click the link to verify your account before logging in."
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -564,6 +570,12 @@ export default function AuthPage() {
         </div>
       </div>
       <Footer />
+      <AppDialog
+        isOpen={dialog.isOpen}
+        title={dialog.title}
+        message={dialog.message}
+        onClose={() => setDialog({ isOpen: false, title: "", message: "" })}
+      />
     </>
   );
 }
