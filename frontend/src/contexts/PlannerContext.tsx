@@ -739,13 +739,21 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
       if (task.description !== undefined) updatePayload.description = sanitizeTaskDescription(task.description);
       if (task.completed !== undefined) updatePayload.status = task.completed ? "completed" : "pending";
 
-      const { error: updateError } = await supabase
+      console.log("Updating task:", { id, payload: updatePayload, task }); // Debug log
+
+      const { error: updateError, data: updateData } = await supabase
         .from("tasks")
         .update(updatePayload)
         .eq("id", id)
-        .eq("user_id", userId);
+        .eq("user_id", userId)
+        .select();
 
-      if (updateError) throw updateError;
+      console.log("Update result:", { updateError, updateData }); // Debug log
+
+      if (updateError) {
+        console.error("Supabase update error:", updateError);
+        throw updateError;
+      }
 
       if (task.completed !== undefined && typeof window !== "undefined") {
         const completionTimestamps = readTaskCompletionTimestamps();
@@ -761,6 +769,7 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
         prev.map((t) => (t.id === id ? { ...t, ...task } : t))
       );
     } catch (err) {
+      console.error("Error in updateTask:", err); // Debug log
       setError(err instanceof Error ? err.message : "Failed to update task");
       throw err;
     } finally {

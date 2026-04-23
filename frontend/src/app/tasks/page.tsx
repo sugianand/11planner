@@ -122,11 +122,31 @@ export default function TasksPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [estimatingTaskId, setEstimatingTaskId] = useState<string | null>(null);
   const [expandedDescriptionTaskIds, setExpandedDescriptionTaskIds] = useState<Set<string>>(new Set());
+  const [togglingTaskId, setTogglingTaskId] = useState<string | null>(null);
 
   useEffect(() => {
     loadCourses();
     loadTasks();
   }, [userId, loadCourses, loadTasks]);
+
+  const handleToggleTaskCompletion = async (taskId: string, currentCompleted: boolean) => {
+    try {
+      setTogglingTaskId(taskId);
+      await updateTask(taskId, { completed: !currentCompleted });
+      // Auto-switch to completed tab if marking as complete
+      if (!currentCompleted) {
+        setTimeout(() => setActiveTab("completed"), 500);
+      }
+    } catch (err) {
+      setDialog({
+        isOpen: true,
+        title: "Error",
+        message: err instanceof Error ? err.message : "Failed to update task",
+      });
+    } finally {
+      setTogglingTaskId(null);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -723,12 +743,13 @@ export default function TasksPage() {
                         <input
                           type="checkbox"
                           checked={task.completed}
-                          onChange={() => updateTask(task.id, { completed: !task.completed })}
-                          className="w-5 h-5 cursor-pointer accent-emerald-600 rounded"
+                          onChange={() => handleToggleTaskCompletion(task.id, task.completed)}
+                          disabled={togglingTaskId === task.id}
+                          className="w-5 h-5 cursor-pointer accent-emerald-600 rounded disabled:opacity-50 disabled:cursor-not-allowed"
                           title={task.completed ? "Mark as pending" : "Mark as completed"}
                         />
                         <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
-                          {task.completed ? "Completed" : "Mark complete"}
+                          {togglingTaskId === task.id ? "Updating..." : task.completed ? "Completed" : "Mark complete"}
                         </span>
                       </div>
                       
