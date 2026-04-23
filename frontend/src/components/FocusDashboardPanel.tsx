@@ -74,6 +74,7 @@ export default function FocusDashboardPanel({
   } = useMusic();
 
   const [togglingTaskId, setTogglingTaskId] = useState<string | null>(null);
+  const [privacyPersonalizationEnabled, setPrivacyPersonalizationEnabled] = useState(true);
 
   const providerSiteMap: Record<string, string> = {
     spotify: "https://accounts.spotify.com/en/login",
