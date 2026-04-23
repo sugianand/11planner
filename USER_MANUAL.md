@@ -444,9 +444,36 @@ Access your profile by clicking **Profile** in the navigation bar.
 
 #### Theme & Display
 
+##### Color Themes
+
+Choose from six beautifully designed color themes to personalize your planner:
+
+- **🌿 Emerald** - A calming green theme that promotes focus and concentration. Perfect for long study sessions with its natural, soothing aesthetic.
+
+- **🌊 Ocean** - A refreshing blue theme inspired by the sea. Great for creating a peaceful study environment and maintaining mental clarity.
+
+- **🌹 Rose** - A warm, elegant pink theme that adds a touch of sophistication to your planning experience. Creates a cozy, approachable interface.
+
+- **🩶 Slate** - A neutral gray theme for a professional, minimalist look. Ideal for users who prefer a clean, distraction-free interface.
+
+- **🟡 Amber** - A warm, energizing golden theme that evokes productivity and warmth. Excellent for motivation during study sessions.
+
+- **💜 Violet** - A rich purple theme that inspires creativity and focus. Perfect for creative work and brainstorming sessions.
+
+##### Light & Dark Modes
+
+Each color theme works seamlessly in both light and dark modes:
+
 - **Dark Mode:** Easier on eyes during evening study
-- **Light Mode:** Standard interface
+- **Light Mode:** Standard interface for daytime use
 - **System Default:** Matches your device settings
+
+##### How to Change Your Theme
+
+1. Click on your **Profile** icon in the top navigation
+2. Go to **Settings**
+3. In the **Theme & Display** section, select your preferred color theme
+4. Your choice is automatically saved and will persist across all sessions
 
 ---
 
