@@ -327,25 +327,9 @@ document.addEventListener('DOMContentLoaded', () => {
         showStatus('Opening Google login...', 'info');
 
         try {
-            const oauthResult = await new Promise((resolve, reject) => {
-                chrome.runtime.sendMessage({ action: 'googleOAuthLogin' }, response => {
-                    if (chrome.runtime.lastError) {
-                        reject(new Error(chrome.runtime.lastError.message || 'Could not start Google login.'));
-                        return;
-                    }
-                    if (!response) {
-                        reject(new Error('No OAuth response from background.'));
-                        return;
-                    }
-                    if (response.error) {
-                        reject(new Error(response.error));
-                        return;
-                    }
-                    resolve(response);
-                });
-            });
+            const oauthResult = await loginWithGoogle();
 
-            const { userId, userEmail, accessToken } = oauthResult;
+            const { userId, email: userEmail, accessToken } = oauthResult;
             chrome.storage.local.set({ userId, userEmail, accessToken }, () => {
                 showPanel(true, userEmail);
                 showStatus('Logged in with Google!', 'success');
