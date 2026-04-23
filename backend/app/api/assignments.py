@@ -78,11 +78,6 @@ def map_row(row: dict) -> dict:
 # Returns all assignments for a user ordered by deadline.
 @router.get("/{user_id}", response_model=List[Assignment])
 async def get_assignments_by_user(user_id: str):
-    import os
-    print(f"DEBUG IN UVICORN: Fetching for {user_id}")
-    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_KEY")
-    print(f"DEBUG IN UVICORN: Using key ending in... {key[-5:] if key else 'None'} | Is Service Role? {'SUPABASE_SERVICE_ROLE_KEY' in os.environ}")
-    
     supabase = get_supabase()
     result = (
         supabase.table("assignments")
