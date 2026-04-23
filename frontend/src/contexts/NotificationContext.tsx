@@ -435,18 +435,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             taskId: task.id,
           };
           pushNotification(item);
+        }
         // Disabled "Deadline soon" notifications - user preference
-        // } else if (nextState === "soon" && previousState !== "soon") {
-        //   const item: NotificationItem = {
-        //     id: makeNotificationId("soon"),
-        //     title: "Deadline soon",
-        //     message: `${task.title} is due ${deadline.toLocaleString()}.`,
-        //     type: "warning",
-        //     createdAt: new Date().toISOString(),
-        //     taskId: task.id,
-        //   };
-        //   pushNotification(item);
-        // }
 
         if (previousState !== nextState) {
           notifiedRef.current[key] = nextState;
