@@ -57,6 +57,7 @@ export default function CoursesPage() {
   const cardSyllabusInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const courseDaysDropdownRef = useRef<HTMLDivElement | null>(null);
   const lastShownErrorRef = useRef<string | null>(null);
+  const [expandedDescriptionIds, setExpandedDescriptionIds] = useState<Set<string>>(new Set());
   const [dialog, setDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -1018,7 +1019,7 @@ export default function CoursesPage() {
                 return (
                 <div
                   key={course.id}
-                  className="h-[340px] bg-white/60 dark:bg-slate-800/55 backdrop-blur-md rounded-2xl shadow-sm p-6 border border-white/50 dark:border-slate-700/45 hover:bg-white/80 dark:hover:bg-slate-800/75 transition group relative overflow-hidden flex flex-col"
+                  className="min-h-[340px] bg-white/60 dark:bg-slate-800/55 backdrop-blur-md rounded-2xl shadow-sm p-6 border border-white/50 dark:border-slate-700/45 hover:bg-white/80 dark:hover:bg-slate-800/75 transition group relative overflow-hidden flex flex-col"
                 >
                   <div className="absolute top-0 left-0 w-1 h-full bg-[#306844]"></div>
                   <div className="mb-4 flex items-start justify-between gap-3">
@@ -1069,9 +1070,24 @@ export default function CoursesPage() {
                     </div>
                   )}
                   {course.description && (
-                    <p className="text-sm text-slate-600 dark:text-slate-300 mb-4 line-clamp-2 pl-4 border-l-2 border-slate-200 dark:border-slate-600 ml-1">
-                      {course.description}
-                    </p>
+                    <div className="mb-4 pl-4 border-l-2 border-slate-200 dark:border-slate-600 ml-1">
+                      <p className={`text-sm text-slate-600 dark:text-slate-300 ${expandedDescriptionIds.has(course.id) ? '' : 'line-clamp-2'}`}>
+                        {course.description}
+                      </p>
+                      {course.description.length > 120 && (
+                        <button
+                          type="button"
+                          onClick={() => setExpandedDescriptionIds((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(course.id)) { next.delete(course.id); } else { next.add(course.id); }
+                            return next;
+                          })}
+                          className="mt-1 text-xs font-semibold text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                        >
+                          {expandedDescriptionIds.has(course.id) ? 'Show less' : 'Show more'}
+                        </button>
+                      )}
+                    </div>
                   )}
                   {course.hasLab && (
                     <div className="mb-4 p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/40 rounded-lg">
