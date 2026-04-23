@@ -4,6 +4,7 @@ import { PlannerProvider } from "@/contexts/PlannerContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { TimerProvider } from "@/contexts/TimerContext";
+import { MusicProvider } from "@/contexts/MusicContext";
 import Navigation from "@/components/Navigation";
 import NotificationToasts from "@/components/NotificationToasts";
 import GlobalTimerTicker from "@/components/GlobalTimerTicker";
@@ -51,13 +52,15 @@ export default function RootLayout({
         <ThemeProvider>
           <PlannerProvider>
             <TimerProvider>
-              <NotificationProvider>
-                <Navigation />
-                <NotificationToasts />
-                {children}
-                <GlobalTimerTicker />
-                <SupportAssistantClient />
-              </NotificationProvider>
+              <MusicProvider>
+                <NotificationProvider>
+                  <Navigation />
+                  <NotificationToasts />
+                  {children}
+                  <GlobalTimerTicker />
+                  <SupportAssistantClient />
+                </NotificationProvider>
+              </MusicProvider>
             </TimerProvider>
           </PlannerProvider>
         </ThemeProvider>

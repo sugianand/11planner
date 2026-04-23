@@ -4,20 +4,11 @@
 
 import { ReactNode, useEffect, useState } from "react";
 import { usePlanner } from "@/contexts/PlannerContext";
+import { useMusic } from "@/contexts/MusicContext";
 import Timer from "@/components/Dashboard/Timer";
 import StatCard from "@/components/Dashboard/StatCard";
 
 type TimerMode = "pomodoro" | "shortBreak" | "longBreak";
-
-type YouTubeTrack = {
-  title: string;
-  artist: string;
-  duration: string;
-  youtubeId: string;
-  searchQuery: string;
-};
-
-type YouTubeMood = "lofi" | "synthwave" | "coding";
 
 type FocusDashboardPanelProps = {
   atmospherePanel?: ReactNode;
@@ -60,40 +51,29 @@ export default function FocusDashboardPanel({
     loadScheduleBlocks,
   } = usePlanner();
 
-  const [spotifyPlaylist, setSpotifyPlaylist] = useState("0vvXsWCC9xrXsKd4FyS8kM"); // Default to Lofi Girl
-  const [musicProvider, setMusicProvider] = useState("spotify"); // 'spotify', 'youtube'
-  const [isMusicOpen, setIsMusicOpen] = useState(false);
-  const [spotifyConnected, setSpotifyConnected] = useState(false);
-  const [spotifyConnecting, setSpotifyConnecting] = useState(false);
-  const [connectMessage, setConnectMessage] = useState("");
-  const [youtubeMood, setYoutubeMood] = useState<YouTubeMood>("lofi");
-  const [privacyPersonalizationEnabled, setPrivacyPersonalizationEnabled] = useState(true);
+  const {
+    spotifyPlaylist,
+    setSpotifyPlaylist,
+    musicProvider,
+    setMusicProvider,
+    isMusicOpen,
+    setIsMusicOpen,
+    spotifyConnected,
+    setSpotifyConnected,
+    spotifyConnecting,
+    setSpotifyConnecting,
+    connectMessage,
+    setConnectMessage,
+    youtubeMood,
+    setYoutubeMood,
+    activeYoutubeIndex,
+    setActiveYoutubeIndex,
+    isYoutubePlaying,
+    setIsYoutubePlaying,
+    youtubeTracks,
+  } = useMusic();
+
   const [togglingTaskId, setTogglingTaskId] = useState<string | null>(null);
-  const youtubeTracks: YouTubeTrack[] = [
-    {
-      title: "Deep Focus Lofi",
-      artist: "Lofi Girl",
-      duration: "Live",
-      youtubeId: "jfKfPfyJRdk",
-      searchQuery: "lofi beats",
-    },
-    {
-      title: "Synthwave Radio",
-      artist: "Lofi Geek",
-      duration: "Live",
-      youtubeId: "4xDzrJKXOOY",
-      searchQuery: "synthwave focus",
-    },
-    {
-      title: "Coding Mix",
-      artist: "Chill Music Lab",
-      duration: "1:02:10",
-      youtubeId: "n61ULEU7CO0",
-      searchQuery: "coding lofi mix",
-    },
-  ];
-  const [activeYoutubeIndex, setActiveYoutubeIndex] = useState(0);
-  const [isYoutubePlaying, setIsYoutubePlaying] = useState(false);
 
   const providerSiteMap: Record<string, string> = {
     spotify: "https://accounts.spotify.com/en/login",
