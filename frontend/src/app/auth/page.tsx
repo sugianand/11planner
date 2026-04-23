@@ -7,7 +7,7 @@ import { useSearchParams } from "next/navigation";
 
 type Mode = "login" | "register";
 type OAuthProvider = "google";
-
+// Form state for both login and registration, with fields for names, email, password, and confirm password
 type FormState = {
   firstname: string;
   lastname: string;
@@ -17,7 +17,7 @@ type FormState = {
   password: string;
   confirmPassword: string;
 };
-
+// Initial form state with empty strings for all fields
 const initialForm: FormState = {
   firstname: "",
   lastname: "",
@@ -27,7 +27,7 @@ const initialForm: FormState = {
   password: "",
   confirmPassword: "",
 };
-
+// OAuth icon component for Google OAuth button
 function OAuthIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className="oauth-logo google-logo">
@@ -35,7 +35,7 @@ function OAuthIcon() {
     </svg>
   );
 }
-
+// Determines if the user needs to go through preference onboarding by checking if key profile fields are missing, which indicates they haven't set up their preferences yet
 export default function AuthPage() {
   const searchParams = useSearchParams();
   const [mode, setMode] = useState<Mode>("login");
@@ -52,7 +52,7 @@ export default function AuthPage() {
   const goToNextPage = (): void => {
     window.location.href = "/dashboard";
   };
-
+// Redirects to onboarding quiz if preferences are missing, otherwise goes to dashboard
   const goToQuizOnboarding = (): void => {
     window.location.href = "/profile/quiz?onboarding=1";
   };
@@ -64,7 +64,7 @@ export default function AuthPage() {
       setShowRegisterEmailForm(false);
     }
   }, [searchParams]);
-
+// Extracts first and last name from Google OAuth metadata, with fallback to display name parsing if available
   useEffect(() => {
     async function checkSession() {
       if (window.location.hash.includes("type=recovery")) return;
@@ -91,7 +91,7 @@ export default function AuthPage() {
 
     return () => subscription.unsubscribe();
   }, []);
-
+//clears messages and updates the form field that changed
   function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
     const name = e.target.name;
     const value = e.target.value;
@@ -107,7 +107,7 @@ export default function AuthPage() {
       return updatedForm;
     });
   }
-
+//inserts profile if it doesn't exist, using metadata or fallback for names, and returns any error message
   async function ensureProfileExists(
     userId: string,
     metadata?: { firstname?: string; lastname?: string },
@@ -125,7 +125,7 @@ export default function AuthPage() {
 
     return insertError?.message ?? null;
   }
-
+//validates fields , signs user up, creates profile, and routes to onboarding quiz, with error handling and loading state management
   async function registerUser(): Promise<void> {
     if (isSubmitting) {
       return;
@@ -155,7 +155,7 @@ export default function AuthPage() {
       setErrorMessage("Passwords do not match.");
       return;
     }
-
+// password is validated and checked agaisnt confirm password, attempt to sign up with Supabase auth, showing error message on failure
     setIsSubmitting(true);
     try {
       const { data, error } = await supabase.auth.signUp({
@@ -196,7 +196,6 @@ export default function AuthPage() {
         goToQuizOnboarding();
         return;
       }
-
       setMode("login");
       setForm({
         ...initialForm,
@@ -208,7 +207,7 @@ export default function AuthPage() {
     }
 
   }
-
+// signs user in, checks if profile row exists, and redirects to onboarding quiz if key preference fields are missing, otherwise goes to dashboard, with error handling and loading state management
   async function loginUser(): Promise<void> {
     if (isSubmitting) {
       return;
@@ -258,7 +257,7 @@ export default function AuthPage() {
       setIsSubmitting(false);
     }
   }
-
+//Sends a password reset email using Supabase auth, with error handling and loading state management
   async function forgotPassword(): Promise<void> {
     if (isSubmitting) {
       return;
@@ -288,7 +287,7 @@ export default function AuthPage() {
       setIsSubmitting(false);
     }
   }
-
+// handles oauth redirect for Google, exchanges code for session, checks if profile row exists and creates if not, then routes to onboarding quiz if key preference fields are missing or dashboard if profile is complete, with error handling and loading state management
   async function signInWithProvider(provider: OAuthProvider): Promise<void> {
     if (isSubmitting || oauthLoadingProvider) {
       return;
@@ -314,7 +313,7 @@ export default function AuthPage() {
       setOauthLoadingProvider(null);
     }
   }
-
+// oauthButtons returns the appropriate buttons for the given context (login or register) and manages the loading state for OAuth sign-in
   const oauthButtons = (context: "login" | "register") => (
     <>
       <div className="oauth-divider"><span>{context === "login" ? "or" : "or continue with"}</span></div>
@@ -471,7 +470,7 @@ export default function AuthPage() {
                     value={form.firstname}
                     onChange={handleInputChange}
                   />
-
+// input fields for registration form, with password fields having show/hide toggle buttons and password requirements hint, and back button to go back to provider selection
                   <input
                     type="text"
                     name="lastname"
@@ -506,7 +505,7 @@ export default function AuthPage() {
                     </button>
                   </div>
                   <p className="field-hint">Password must be at least 6 characters and include 1 special character.</p>
-
+// Added confirm password field to registration form for validation, with show/hide toggle button
                   <div className="password-field">
                     <input
                       type={showConfirmPassword ? "text" : "password"}

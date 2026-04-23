@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Footer from "@/components/Footer";
-
+// Demo walkthrough page with embedded video and links to home and auth pages, styled with a focus on readability and visual appeal
 export default function DemoPage() {
   return (
     <div className="min-h-screen relative overflow-hidden transition-colors duration-500 pb-0">

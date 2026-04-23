@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import Footer from "@/components/Footer";
 import { usePlanner } from "@/contexts/PlannerContext";
-
+// FAQ page with Q and A, collabsible sections, and reveal animations 
 export default function FaqPage() {
   const { userId } = usePlanner();
   const isLoggedIn = userId !== "user_demo";
@@ -19,7 +19,7 @@ export default function FaqPage() {
       element.style.setProperty('--reveal-delay', `${Math.min(index * 50, 320)}ms`);
       element.classList.add('reveal-from-down');
     });
-
+// reflow to show the initial styles before adding the visible class for the animation
     requestAnimationFrame(() => {
       revealElements.forEach((element) => {
         element.classList.add('reveal-visible');
@@ -73,7 +73,7 @@ export default function FaqPage() {
         "Most support requests receive a response within 2-3 business days. To get help faster, include the page where the issue occurred, steps to reproduce, and screenshots or error text."
     }
   ];
-
+  // This displays the FAQ items in a collapsible format, allowing users to click on each question to reveal the answer, with smooth animations and styling for readability and visual appeal. The first item is open by default, and the state is managed to allow only one open item at a time.
   return (
     <div className="min-h-screen relative overflow-hidden transition-colors duration-500 pb-0">
       <div className="fixed inset-0 bg-focus-light dark:bg-focus-dark -z-20"></div>
@@ -131,7 +131,7 @@ export default function FaqPage() {
               );
             })}
           </section>
-
+          
           <section
             data-reveal
             data-reveal-once="true"

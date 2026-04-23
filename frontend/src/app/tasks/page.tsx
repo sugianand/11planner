@@ -8,7 +8,7 @@ import AppDialog from "@/components/AppDialog";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 const DESCRIPTION_PREVIEW_LIMIT = 160;
-
+// Utility function to determine the base URL for API calls, prioritizing an environment variable and falling back to the current origin with port 8000, which is where the backend server runs by default. This allows flexibility in different deployment environments without hardcoding URLs.
 function getApiBaseUrl(): string {
   if (API_BASE_URL && API_BASE_URL.trim().length > 0) {
     return API_BASE_URL.replace(/\/$/, "");
@@ -37,19 +37,19 @@ function toDateTimeLocalValue(value: string | undefined): string {
 }
 
 type TaskCategory = "assignment" | "exam" | "project";
-
+// Utility functions to get display labels and CSS classes for task categories, ensuring consistent styling and labeling across the app. This allows for easy updates to category names or styles in one place.
 function getTaskCategoryLabel(category: TaskCategory): string {
   if (category === "exam") return "Exam";
   if (category === "project") return "Project";
   return "Assignment";
 }
-
+// returns CSS for the pill badge based on task category, with carying color schemes for assignments, exams, and projects, and support for light and dark themes.
 function getTaskCategoryPillClass(category: TaskCategory): string {
   if (category === "exam") return "bg-rose-100 text-rose-800 dark:bg-rose-900/25 dark:text-rose-200";
   if (category === "project") return "bg-violet-100 text-violet-800 dark:bg-violet-900/25 dark:text-violet-200";
   return "bg-sky-100 text-sky-800 dark:bg-sky-900/25 dark:text-sky-200";
 }
-
+// This function takes a text string and splits it into parts based on URLs, returning an array of React elements where URLs are rendered as clickable links with specific styling, and non-URL text is rendered as normal spans. 
 function renderDescriptionWithLinks(text: string) {
   const urlRegex = /(https?:\/\/[^\s]+)/gi;
   const parts = text.split(urlRegex);
@@ -71,7 +71,7 @@ function renderDescriptionWithLinks(text: string) {
     return <span key={`text-${index}`}>{part}</span>;
   });
 }
-
+// Main component for tasks page that shows tasks, allows creating, editing, deleting, estimating time with AI, and filtering/sorting tasks. It uses the PlannerContext for state management and includes a dialog component for confirmations and messages.
 export default function TasksPage() {
   const {
     userId,
@@ -127,7 +127,7 @@ export default function TasksPage() {
     loadCourses();
     loadTasks();
   }, [userId, loadCourses, loadTasks]);
-
+// Checks if a task is overdue by comparing its deadline to the current time, returning true if the deadline has passed and the task is not marked as completed. This is used for filtering and styling overdue tasks in the UI.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title || !formData.deadline || !formData.course_id) {
@@ -151,7 +151,7 @@ export default function TasksPage() {
       console.error("Error saving task:", err);
     }
   };
-
+// Handles the delete action for a task by showing a confirmation dialog. If the user confirms, it calls the deleteTask function from the context and closes the dialog. This prevents accidental deletions by requiring user confirmation.
   const handleEdit = (task: Task) => {
     setFormData({
       title: task.title,
@@ -182,7 +182,7 @@ export default function TasksPage() {
       },
     });
   };
-
+// Handles the edit action for a task by populating the form with the task's existing data, setting the editingId to the task's ID, and showing the form.
   const handleEstimateTaskTime = async (task: Task) => {
     if (!userId || userId === "user_demo") {
       setDialog({
@@ -242,7 +242,7 @@ export default function TasksPage() {
       setEstimatingTaskId(null);
     }
   };
-
+// returns course name for a given course ID by looking it up in the courses array from context. If the course ID is not found, it returns "No Course" for undefined IDs or "Unknown Course" for IDs that don't match any course. This is used to display the course name associated with each task.
   const getCourseName = (courseId: string | undefined) => {
     if (!courseId) return "No Course";
     return courses.find((c) => c.id === courseId)?.name || "Unknown Course";
@@ -257,7 +257,7 @@ export default function TasksPage() {
       default: return "bg-green-100 text-green-800";
     }
   };
-
+// gets priority label based on numeric priority value, mapping 5 to "Critical", 4 to "High", 3 to "Medium", 2 to "Low", and 1 to "Very Low". This is used to display a human-readable priority level for each task.
   const getPriorityLabel = (priority: number) => {
     const labels: { [key: number]: string } = { 5: "Critical", 4: "High", 3: "Medium", 2: "Low", 1: "Very Low" };
     return labels[priority] || "Unknown";
@@ -286,7 +286,7 @@ export default function TasksPage() {
   const projectCount = tasks.filter((task) => (task.category || "assignment") === "project").length;
 
   const getDeadlineTime = (task: Task) => new Date(task.deadline).getTime();
-
+// This useMemo hook computes the filtered, searched, and sorted list of tasks to display based on the current state of tasks, active tab, search query, sorting option, and filters. It first filters tasks by completion status based on the active tab, then applies search filtering on title, course name, and description. 
   const filteredTasks = useMemo(() => {
     const getCourseName = (courseId: string | undefined) => {
       if (!courseId) return "No Course";
@@ -306,7 +306,7 @@ export default function TasksPage() {
     next7.setDate(next7.getDate() + 7);
     const next30 = new Date();
     next30.setDate(next30.getDate() + 30);
-
+// Checks to see if a task matches selected deadline and compares deadline to current date, checks to see if it falls within the timeframe
     const matchesDeadline = (task: Task) => {
       const d = new Date(task.deadline);
       if (isNaN(d.getTime())) return false;
@@ -364,7 +364,7 @@ export default function TasksPage() {
   useEffect(() => {
     if (currentPage > totalPages) startTransition(() => setCurrentPage(totalPages));
   }, [currentPage, totalPages]);
-
+// returns JSX for the tasks page, including a header with task counts, a button to create new tasks, error messages, a warning if no courses exist, and the main content area with tabs for pending and completed tasks, search and filter controls, and a list of tasks with options to edit, delete, and estimate time. 
   return (
     <div className="min-h-screen relative flex flex-col">
       <div className="fixed inset-0 bg-focus-light dark:bg-focus-dark bg-cover bg-center -z-20"></div>

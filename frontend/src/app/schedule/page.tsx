@@ -13,7 +13,7 @@ interface ScheduleStats {
   total_hours: number;
   avg_hours_per_day: number;
 }
-
+// Main schedule page that shows the generated schedule in a calendar view, allows regenerating the schedule, and displays stats about total and average hours. It also handles moving blocks around with conflict prevention and error handling.
 export default function SchedulePage() {
   const searchParams = useSearchParams();
   const {
@@ -36,7 +36,7 @@ export default function SchedulePage() {
     title: '',
     message: '',
   });
-
+// Reads URL parameters to determine if the page is in print mode and whether to include personal info in the export, which affects the display of identity details and the data included in the printable schedule.
   const isPrintMode = searchParams.get("printMode") === "1";
   const includePersonalInfoInExport = searchParams.get("includePersonalInfo") !== "0";
 
@@ -61,7 +61,7 @@ export default function SchedulePage() {
     }
 
     let isMounted = true;
-
+// loads authenticated user identity and profile name, and displays it in export header.
     const loadExportIdentity = async () => {
       const { data } = await supabase.auth.getUser();
       const authUser = data?.user;
@@ -94,7 +94,7 @@ export default function SchedulePage() {
       isMounted = false;
     };
   }, [isPrintMode, includePersonalInfoInExport]);
-
+// This is used for the onboarding quiz to determine if the user needs to go through preference setup based on whether they have key profile fields filled out, which affects routing after login.
   useEffect(() => {
     if (!error) {
       return;
@@ -128,7 +128,7 @@ export default function SchedulePage() {
       if (!response.ok) {
         throw new Error("Failed to generate schedule");
       }
-
+// Assuming the response includes updated stats about the generated schedule, we set that in state to display in the UI. Then we reload the schedule blocks to show the new schedule.
       const data = await response.json();
       setScheduleStats(data.stats);
       await loadScheduleBlocks();
@@ -169,7 +169,7 @@ export default function SchedulePage() {
         uniqueDays > 0 ? Math.round((totalHours / uniqueDays) * 100) / 100 : 0,
     };
   }, [scheduleStats, scheduleBlocks]);
-
+// Maps schedule blocks to calendar events with color coding based on either priority or course, and memoizes the result for performance. The color scheme can be changed by the user.
   const scheduleEvents = useMemo(() => {
     // Maps blocks to calendar events with a consistent color scheme.
     const getColorForBlock = (
@@ -276,7 +276,7 @@ export default function SchedulePage() {
       return false;
     }
   };
-
+// This is for the JSX return statement which shows schedule page, header, generate button, stats, and the schedule view with error handling and a dialog component for messages. 
   return (
     <div className="min-h-screen relative flex flex-col">
       <div className="fixed inset-0 bg-focus-light dark:bg-focus-dark bg-cover bg-center -z-20"></div>

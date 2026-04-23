@@ -8,7 +8,7 @@ import { useTimer, defaultTimerDurations } from "@/contexts/TimerContext";
 import { usePlanner } from "@/contexts/PlannerContext";
 
 type AtmosphereCategory = "All" | "Anime" | "Nature" | "Cafe" | "City" | "Abstract";
-
+// types for the focus dashboard, such as backgrounds and soundscapes, with categories for filtering and metadata for display and functionality
 type FocusBackground = {
   id: string;
   label: string;
@@ -299,7 +299,7 @@ const focusBackgrounds: FocusBackground[] = [
     imageUrl: "",
   },
 ];
-
+// list of atmosphere categories for backgrounds, and fallback image for backgrounds that fail to load
 const atmosphereCategories: AtmosphereCategory[] = [
   "All",
   "Nature",
@@ -605,7 +605,7 @@ const soundCategoryIcons: Record<SoundCategory, string> = {
   Brainwaves: "\u{1F9E0}",
   Noise: "\u3030\uFE0F",
 };
-
+// mapping of sound categories to icons for visual representation in the UI
 const soundIconsById: Record<string, string> = {
   "no-sound": "\u{1F507}",
   "delta-waves": "\u{1F30A}",
@@ -670,7 +670,7 @@ const createNoiseBuffer = (
     }
     return noiseBuffer;
   }
-
+// Pink noise generation using the Voss-McCartney algorithm
   let b0 = 0;
   let b1 = 0;
   let b2 = 0;
@@ -691,7 +691,7 @@ const createNoiseBuffer = (
   }
   return noiseBuffer;
 };
-
+// main dashboard component that manages state and user interactions for focus backgrounds, soundscapes, and timer settings, with persistence and UI controls
 export default function Dashboard() {
   const { userId } = usePlanner();
   const dashboardPrefsKey = useMemo(() => getDashboardPrefsKey(userId), [userId]);
@@ -732,7 +732,7 @@ export default function Dashboard() {
 
   const visibleTimerMode = activeTimerMode ?? timerMode;
   const visibleTimeLeft = activeTimeLeft ?? timeLeft;
-
+// state and refs for managing the position and dragging of the mini timer, as well as playback state and preferences for soundscapes and backgrounds
   const [timerPosition, setTimerPosition] = useState(getInitialTimerPosition);
   const hasAutoPositionedTimerRef = useRef(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -784,7 +784,7 @@ export default function Dashboard() {
 
     setPrefsLoaded(true);
   }, [userId, dashboardPrefsKey]);
-
+// Effect to persist user preferences for background, soundscape, and volume to localStorage whenever they change, with checks to avoid doing so before preferences are loaded or for the demo user
   useEffect(() => {
     if (!prefsLoaded || typeof window === "undefined" || userId === "user_demo") {
       return;
@@ -828,7 +828,7 @@ export default function Dashboard() {
       };
     });
   }, []);
-
+// Handlers and effects for managing the dragging behavior of the mini timer, including mouse events to update position and state accordingly
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     setIsDragging(true);
     setDragOffset({
@@ -879,7 +879,7 @@ export default function Dashboard() {
       setIsPlaying(false);
     }
   }, []);
-
+// function for creating and managing generated sounscapes with Web Audio API
   const createGeneratedSound = useCallback(
     (engine: Soundscape["engine"], nextVolume: number) => {
       const AudioContextCtor =
@@ -1043,7 +1043,7 @@ export default function Dashboard() {
           addNoiseLayer("brown", 0.25, "lowpass", 800);
           break;
       }
-
+// function returns the audio context, master gain node, and a stop function to clean up all audio nodes when the soundscape is stopped or changed
       return {
         context,
         masterGain,
@@ -1054,7 +1054,7 @@ export default function Dashboard() {
     },
     []
   );
-
+// function to handle starting playback of a selected soundscape, including stopping any existing playback, checking for audio support, and managing the audio elements or generated sounds 
   const startPlayback = useCallback(
     async (scene: Soundscape, requestId: number) => {
       await stopPlayback(false);
@@ -1080,7 +1080,7 @@ export default function Dashboard() {
               : configuredStart;
             audio.currentTime = Math.min(configuredStart, safeUpperBound);
           };
-
+// If metadata is loaded, we can seek that. Otherwise, we wait for that to load before seeking so that start time can be properly applied.
           if (audio.readyState >= 1) {
             seekToConfiguredStart();
           } else {
@@ -1153,7 +1153,7 @@ export default function Dashboard() {
       longBreak: customTimerDurations.longBreak.toString(),
     });
   }, [showMiniTimerSettings, customTimerDurations]);
-
+// handlers for managing changes to the mini timer settings, including input validation and for formatting the time display in the mini timer
   const handleMiniTimerDraftChange = (mode: "pomodoro" | "shortBreak" | "longBreak", rawValue: string) => {
     const digitsOnly = rawValue.replace(/\D/g, "");
 
@@ -1186,7 +1186,7 @@ export default function Dashboard() {
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
-
+// styling classes for hidden UI mode, adjusting background and border styles for buttons 
   const hiddenUiSecondaryButtonClasses = isUiTransparent
     ? "bg-white/30 dark:bg-slate-900/30 border-white/20 dark:border-slate-700/20 hover:bg-white/40 dark:hover:bg-slate-800/40"
     : "bg-white/90 dark:bg-slate-900/90 border-white/60 dark:border-slate-700/60 hover:bg-white dark:hover:bg-slate-800";
@@ -1198,7 +1198,7 @@ export default function Dashboard() {
   const hiddenUiPanelClasses = isUiTransparent
     ? "bg-white/30 dark:bg-slate-900/30 border-white/20 dark:border-slate-700/20"
     : "bg-white/90 dark:bg-slate-900/90 border-white/60 dark:border-slate-700/60";
-
+// styling classes for the hidden UI mode, adjusting the background and border styles
   const hiddenUiModeStripClasses = isUiTransparent
     ? "bg-white/35 dark:bg-slate-800/35 border border-white/25 dark:border-slate-700/25"
     : "bg-slate-100 dark:bg-slate-800";
@@ -1220,7 +1220,7 @@ export default function Dashboard() {
     () => soundscapes.find((scene) => scene.id === soundId) ?? soundscapes[0],
     [soundId]
   );
-
+// filtered lists of backgrounds and sounscapes based on active category by the user
   const filteredBackgrounds = useMemo(() => {
     if (activeBackgroundCategory === "All") {
       return focusBackgrounds;
@@ -1262,7 +1262,7 @@ export default function Dashboard() {
       generatedAudioRef.current.masterGain.gain.value = nextVolume;
     }
   };
-
+// handle selection of sounscape by the user
   const handleSoundSelect = async (sceneId: string) => {
     const requestId = playbackRequestRef.current + 1;
     playbackRequestRef.current = requestId;
@@ -1298,7 +1298,7 @@ export default function Dashboard() {
       void stopPlayback(false);
     };
   }, [stopPlayback]);
-
+// controls for visbility, trasnaprency, and tab selection 
   const atmospherePanel = (
     <div
       className={`${isUiTransparent
@@ -1555,7 +1555,7 @@ export default function Dashboard() {
       )}
     </div>
   );
-
+// main return statement for the component, rendering the background video or image, the atmosphere panel with controls for selecting backgrounds and sounds, and the mini timer if enabled
   return (
     <div
       className="min-h-screen relative overflow-hidden bg-transparent transition-colors duration-500 px-6 lg:px-10 pt-6 lg:pt-10 pb-0 flex flex-col"
@@ -1625,7 +1625,7 @@ export default function Dashboard() {
           }}
         />
       )}
-
+// controls for the mini timer, including buttons to toggle the mini timer display and to show the full UI, as well as the draggable mini timer panel with its own controls for managing the timer modes and settings
       <div
         className={`fixed bottom-8 left-8 z-50 flex items-center gap-3 transition-all duration-150 ease-out ${isUiHidden ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0 pointer-events-none"}`}
       >
@@ -1775,7 +1775,7 @@ export default function Dashboard() {
                   <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-300">min</span>
                 </div>
               </div>
-
+// input field for the long break duration, with validation for numeric input and a specified range of 1-60 minutes
               <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/70 p-4">
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <label className="text-sm font-semibold text-slate-800 dark:text-slate-100">Long Break</label>

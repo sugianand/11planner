@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import Footer from '@/components/Footer';
 
 export default function AboutPage() {
+  //data for three highlight cards (mission, planning unit, team model)
   const projectHighlights = [
     {
       label: 'Core Mission',
@@ -22,7 +23,7 @@ export default function AboutPage() {
       icon: 'diversity_3'
     }
   ];
-
+//Team member data with name, role, icon, color, and responsibilities for dynamic rendering of team section
   const teamMembers = [
     {
       name: "Tamana Gaur",
@@ -90,7 +91,7 @@ export default function AboutPage() {
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
-
+//toggling reveal classes based on scroll direction and intersection state, with option for one-time reveal
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -118,7 +119,7 @@ export default function AboutPage() {
         rootMargin: '-12% 0px -12% 0px'
       }
     );
-
+// stagger reveal delays across elements
     revealElements.forEach((element, index) => {
       element.style.setProperty('--reveal-delay', `${Math.min(index * 55, 360)}ms`);
       observer.observe(element);

@@ -8,18 +8,18 @@ import AppDialog from "@/components/AppDialog";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 const WEEK_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"] as const;
-
+// normalizes time string to HH:MM format for consistent display and comparison, supporting both 24-hour and 12-hour inputs with optional seconds
 const toTimeInputValue = (value?: string | null): string => {
   if (!value) return "";
   const trimmed = value.trim();
-
+// Check for HH:MM or HH:MM:SS format (24-hour)
   const isoMatch = trimmed.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
   if (isoMatch) {
     const hour = Math.min(23, Math.max(0, parseInt(isoMatch[1], 10)));
     const minute = Math.min(59, Math.max(0, parseInt(isoMatch[2], 10)));
     return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
   }
-
+// Check for HH:MM AM/PM format (12-hour)
   const amPmMatch = trimmed.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
   if (amPmMatch) {
     let hour = parseInt(amPmMatch[1], 10);
@@ -34,7 +34,7 @@ const toTimeInputValue = (value?: string | null): string => {
 
   return "";
 };
-
+// Course page component to create, edit, and delete courses with validation, syllabus upload and parsing, filtering/sorting, and error handling
 export default function CoursesPage() {
   const {
     userId,
@@ -46,7 +46,7 @@ export default function CoursesPage() {
     loading,
     error,
   } = usePlanner();
-
+// State for managing form visibility, editing mode, search/sort/filter options, syllabus upload, and dialogs for feedback and confirmation
   const [showForm, setShowForm] = useState(false);
   const [showDaysDropdown, setShowDaysDropdown] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -89,7 +89,7 @@ export default function CoursesPage() {
   useEffect(() => {
     loadCourses();
   }, [userId, loadCourses]);
-
+// Closes the course days dropdown when clicking outside of it, with event listeners for both mouse and touch interactions
   useEffect(() => {
     const handlePointerDown = (event: MouseEvent | TouchEvent) => {
       if (!showDaysDropdown) return;
@@ -122,7 +122,7 @@ export default function CoursesPage() {
 
     return () => window.clearTimeout(timeoutId);
   }, [error]);
-
+// checks to see if user needs to go through preference quiz by checking if any of the key preference fields are missing from their profile, returning true if they should be sent to onboarding quiz
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -147,7 +147,7 @@ export default function CoursesPage() {
         });
         return;
       }
-
+// Validate that start time is before end time for both course and lab sections, showing appropriate error messages if not
       if (formData.startTime >= formData.endTime) {
         setDialog({
           isOpen: true,
@@ -157,7 +157,7 @@ export default function CoursesPage() {
         return;
       }
     }
-
+// If course has a lab section, validate that lab times are properly filled out and that lab start time is before lab end time, showing appropriate error messages if not
     if (formData.hasLab && !isLabOnline) {
       if (!formData.labDay || !formData.labStartTime || !formData.labEndTime) {
         setDialog({
@@ -217,7 +217,7 @@ export default function CoursesPage() {
       });
     }
   };
-
+  // sets form data to the user's profile info if missing, then checks if onboarding quiz should be shown based on presence of key preference fields, and returns appropriate route for user
   const handleEdit = (course: Course) => {
     setFormData({
       name: course.name,
@@ -260,11 +260,11 @@ export default function CoursesPage() {
     .filter(Boolean);
 
   const orderedSelectedDays = WEEK_DAYS.filter((day) => selectedDays.includes(day));
-
+// Counts for display in header badges to show how many courses of each type the user has
   const onlineCourses = courses.filter((course) => course.isOnline).length;
   const inPersonCourses = courses.filter((course) => !course.isOnline).length;
   const labCourses = courses.filter((course) => course.hasLab).length;
-
+// Formats time strings for display in the course cards, showing "Time not set" if the time is missing or invalid, and converting to a more user-friendly format
   const formatTimeDisplay = (value?: string | null): string => {
     const normalized = toTimeInputValue(value);
     if (!normalized) return "Time not set";
@@ -281,7 +281,7 @@ export default function CoursesPage() {
       hour12: true,
     });
   };
-
+// Helper function to get start time in minutes for sorting, returning a large number if time is missing or invalid 
   const getCourseStartMinutes = (course: Course): number => {
     const normalized = toTimeInputValue(course.startTime);
     if (!normalized) return Number.MAX_SAFE_INTEGER;
@@ -294,14 +294,14 @@ export default function CoursesPage() {
 
   const filteredCourses = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-
+// filters courses based on search query matching the course name, code, professor, description, or day.
     const filtered = courses.filter((course) => {
       const name = (course.name || "").toLowerCase();
       const code = (course.code || "").toLowerCase();
       const professor = (course.professor || "").toLowerCase();
       const description = (course.description || "").toLowerCase();
       const day = (course.courseDate || "").toLowerCase();
-
+// checks if the course matches the selected type filter (online, in-person, lab, or all)
       const matchesSearch =
         q.length === 0 ||
         name.includes(q) ||
@@ -334,7 +334,7 @@ export default function CoursesPage() {
       return (a.name || "").localeCompare(b.name || "");
     });
   }, [courses, searchQuery, typeFilter, sortBy]);
-
+// toggles the selection of a day in the course days dropdown, updating the form data with the selected days in a consistent order
   const toggleDay = (day: string, checked: boolean) => {
     const nextDays = checked
       ? [...new Set([...selectedDays, day])]
@@ -429,7 +429,7 @@ export default function CoursesPage() {
     await uploadAndParseSyllabus(file, "course");
     inputEl.value = "";
   };
-
+// handles syllabus upload for specific course when user clicks the upload button on a course card, with the file input ref for that course
   const handleUploadLabSyllabus = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputEl = e.currentTarget;
     const file = e.target.files?.[0];
@@ -459,7 +459,7 @@ export default function CoursesPage() {
         });
         return;
       }
-
+// updates course with parsed syllabus data, keeping existing values for any fields that are missing from the parsed result, and showing a dialog with the outcome
       const parsed = data.parsed;
       await updateCourse(course.id, {
         name: parsed.name || course.name,
@@ -839,7 +839,7 @@ export default function CoursesPage() {
                     </div>
                   </div>
                 )}
-
+// Textarea for course description, allowing users to add additional details or notes about the course, with styling consistent with the rest of the form
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
                     Description
@@ -854,7 +854,7 @@ export default function CoursesPage() {
                     className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800"
                   />
                 </div>
-
+// Buttons to submit the form or cancel and close the form, with the submit button showing a loading state when the form is being submitted
                 <div className="flex gap-3">
                   <button
                     type="submit"
@@ -920,7 +920,7 @@ export default function CoursesPage() {
               </select>
             </div>
           </div>
-
+// shows different states in the courses grid: a loading message, a message when there are no courses or no courses match the filters, and the list of course cards when there are courses to display, with each card showing key information about the course and its schedule, and styling that indicates if it's an online course or has a lab component
           {/* Courses Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
             {loading && courses.length === 0 ? (
