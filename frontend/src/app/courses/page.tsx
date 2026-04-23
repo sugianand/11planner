@@ -610,14 +610,6 @@ export default function CoursesPage() {
                       <span className="material-symbols-outlined text-sm">add</span>
                       New Course
                     </button>
-                    <button
-                      onClick={handleDeleteAllCourses}
-                      disabled={courses.length === 0 || deletingAllCourses}
-                      title={courses.length === 0 ? "No courses to delete" : "Delete all courses"}
-                      className="font-bold py-2.5 px-4 rounded-xl transition border disabled:opacity-50 disabled:cursor-not-allowed text-red-700 dark:text-red-300 border-red-300 dark:border-red-700/70 bg-red-50/80 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/35"
-                    >
-                      {deletingAllCourses ? "Deleting..." : "Delete All Courses"}
-                    </button>
                   </>
                 )}
               </div>
@@ -959,33 +951,44 @@ export default function CoursesPage() {
                 placeholder="Search by name, code, professor, or day"
                 className="md:col-span-2 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800"
               />
-
-              <select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}
-                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800"
-              >
-                <option value="all">All Types</option>
-                <option value="online">Online</option>
-                <option value="in_person">In-Person</option>
-                <option value="lab">Has Lab</option>
-              </select>
+              <div className="flex md:justify-end">
+                <button
+                  onClick={handleDeleteAllCourses}
+                  disabled={courses.length === 0 || deletingAllCourses}
+                  title={courses.length === 0 ? "No courses to delete" : "Delete all courses"}
+                  className="w-full md:w-auto px-4 py-2 rounded-lg text-sm font-semibold transition border disabled:opacity-50 disabled:cursor-not-allowed text-red-700 dark:text-red-300 border-red-300 dark:border-red-700/70 bg-red-50/80 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/35"
+                >
+                  {deletingAllCourses ? "Deleting..." : "Delete All Courses"}
+                </button>
+              </div>
             </div>
 
             <div className="mt-3 flex items-center justify-between gap-3">
               <p className="text-sm text-slate-600 dark:text-slate-300">
                 Showing {filteredCourses.length} of {courses.length} courses
               </p>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800"
-              >
-                <option value="name_asc">Name (A-Z)</option>
-                <option value="name_desc">Name (Z-A)</option>
-                <option value="time_asc">Time (earliest)</option>
-                <option value="time_desc">Time (latest)</option>
-              </select>
+              <div className="ml-auto flex items-center gap-2">
+                <select
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}
+                  className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800"
+                >
+                  <option value="all">All Types</option>
+                  <option value="online">Online</option>
+                  <option value="in_person">In-Person</option>
+                  <option value="lab">Has Lab</option>
+                </select>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                  className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800"
+                >
+                  <option value="name_asc">Name (A-Z)</option>
+                  <option value="name_desc">Name (Z-A)</option>
+                  <option value="time_asc">Time (earliest)</option>
+                  <option value="time_desc">Time (latest)</option>
+                </select>
+              </div>
             </div>
           </div>
 
