@@ -118,11 +118,12 @@ export default function TasksPage() {
   const [courseFilter, setCourseFilter] = useState("all");
   const [deadlineFilter, setDeadlineFilter] = useState<"all" | "today" | "next7" | "next30" | "overdue">("all");
   const [typeFilter, setTypeFilter] = useState<"all" | TaskCategory>("all");
-  const [pageSize, setPageSize] = useState<10 | 25 | 50>(10);
+  const [pageSize, setPageSize] = useState<5 | 10 | 25 | 50>(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [estimatingTaskId, setEstimatingTaskId] = useState<string | null>(null);
   const [expandedDescriptionTaskIds, setExpandedDescriptionTaskIds] = useState<Set<string>>(new Set());
   const [togglingTaskId, setTogglingTaskId] = useState<string | null>(null);
+  const [deletingAllTasks, setDeletingAllTasks] = useState(false);
 
   useEffect(() => {
     loadCourses();
@@ -263,6 +264,73 @@ export default function TasksPage() {
     } finally {
       setEstimatingTaskId(null);
     }
+  };
+
+  const handleDeleteAllTasks = () => {
+    if (tasks.length === 0 || deletingAllTasks) {
+      return;
+    }
+
+    setDialog({
+      isOpen: true,
+      title: "Delete all tasks?",
+      message: "This will permanently remove every task in your account.",
+      confirmText: "Delete All",
+      cancelText: "Cancel",
+      destructive: true,
+      onConfirm: async () => {
+        const taskIds = tasks.map((task) => task.id);
+        if (taskIds.length === 0) {
+          setDialog({ isOpen: false, title: "", message: "" });
+          return;
+        }
+
+        setDeletingAllTasks(true);
+        let deletedCount = 0;
+        let failedCount = 0;
+
+        for (const taskId of taskIds) {
+          try {
+            await deleteTask(taskId);
+            deletedCount += 1;
+          } catch (err) {
+            failedCount += 1;
+            console.error(`Failed to delete task ${taskId}:`, err);
+          }
+        }
+
+        await loadTasks();
+        setCourseFilter("all");
+        setShowForm(false);
+        setEditingId(null);
+        setFormData({
+          title: "",
+          category: "assignment",
+          course_id: "",
+          deadline: "",
+          estimated_hours: 2,
+          priority: 2,
+          description: "",
+          user_id: userId,
+        });
+        setDeletingAllTasks(false);
+
+        if (failedCount === 0) {
+          setDialog({
+            isOpen: true,
+            title: "Tasks deleted",
+            message: `Deleted ${deletedCount} task${deletedCount === 1 ? "" : "s"}.`,
+          });
+          return;
+        }
+
+        setDialog({
+          isOpen: true,
+          title: "Some tasks could not be deleted",
+          message: `Deleted ${deletedCount} of ${taskIds.length} tasks. ${failedCount} failed.`,
+        });
+      },
+    });
   };
 
   const getCourseName = (courseId: string | undefined) => {
@@ -426,7 +494,7 @@ export default function TasksPage() {
                 </div>
               </div>
 
-              <div className="flex items-center">
+              <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
                     setShowForm(true); setEditingId(null);
@@ -580,6 +648,14 @@ export default function TasksPage() {
                 >
                   Completed ({completedTasks})
                 </button>
+                <button
+                  onClick={handleDeleteAllTasks}
+                  disabled={tasks.length === 0 || deletingAllTasks}
+                  title={tasks.length === 0 ? "No tasks to delete" : "Delete all tasks"}
+                  className="ml-auto px-4 py-2 rounded-lg text-sm font-semibold transition border disabled:opacity-50 disabled:cursor-not-allowed text-red-700 dark:text-red-300 border-red-300 dark:border-red-700/70 bg-red-50/80 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/35"
+                >
+                  {deletingAllTasks ? "Deleting..." : "Delete All Tasks"}
+                </button>
               </div>
 
               <div className="mb-4 flex flex-wrap gap-2">
@@ -652,9 +728,10 @@ export default function TasksPage() {
                   <label className="text-sm">Tasks per page</label>
                   <select
                     value={pageSize}
-                    onChange={(e) => setPageSize(Number(e.target.value) as 10 | 25 | 50)}
+                    onChange={(e) => setPageSize(Number(e.target.value) as 5 | 10 | 25 | 50)}
                     className="px-2 py-1.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                   >
+                    <option value={5}>5</option>
                     <option value={10}>10</option>
                     <option value={25}>25</option>
                     <option value={50}>50</option>
@@ -741,7 +818,7 @@ export default function TasksPage() {
 
                     <div className="flex gap-3 flex-wrap items-center">
                       {/* Checkbox for task completion */}
-                      <div className="flex items-center gap-2">
+                      <label className="flex items-center gap-2 cursor-pointer text-slate-500 dark:text-slate-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium py-1.5 px-3 -ml-3 rounded-lg transition hover:bg-emerald-50 dark:hover:bg-emerald-900/20">
                         <input
                           type="checkbox"
                           checked={task.completed}
@@ -750,10 +827,10 @@ export default function TasksPage() {
                           className="w-5 h-5 cursor-pointer accent-emerald-600 rounded disabled:opacity-50 disabled:cursor-not-allowed"
                           title={task.completed ? "Mark as pending" : "Mark as completed"}
                         />
-                        <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                        <span>
                           {togglingTaskId === task.id ? "Updating..." : task.completed ? "Completed" : "Mark complete"}
                         </span>
-                      </div>
+                      </label>
                       
                       <button
                         onClick={() => handleEstimateTaskTime(task)}
@@ -776,23 +853,25 @@ export default function TasksPage() {
               )}
 
               {!loading && filteredTasks.length > 0 && (
-                <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+                <div className="mt-6 flex flex-wrap items-center justify-center gap-3 rounded-2xl border border-white/70 bg-white/65 px-3 py-2.5 shadow-sm backdrop-blur-sm dark:border-slate-700/70 dark:bg-slate-900/55">
                   <button
                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 disabled:opacity-50"
+                    className="inline-flex items-center gap-2 rounded-xl border border-slate-200/90 bg-white/90 px-3.5 py-1.5 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:translate-y-0 disabled:hover:border-slate-200/90 disabled:hover:bg-white/90 disabled:hover:text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-emerald-700 dark:hover:bg-emerald-900/30 dark:hover:text-emerald-300 dark:disabled:hover:border-slate-600 dark:disabled:hover:bg-slate-800 dark:disabled:hover:text-slate-200"
                   >
+                    <span aria-hidden="true">←</span>
                     Previous
                   </button>
-                  <span className="px-3 py-1.5 text-sm text-slate-700 dark:text-slate-200">
+                  <span className="rounded-xl border border-white/70 bg-white/80 px-3.5 py-1.5 text-sm font-semibold text-slate-700 shadow-sm dark:border-slate-700/70 dark:bg-slate-800/80 dark:text-slate-200">
                     Page {currentPage} of {totalPages}
                   </span>
                   <button
                     onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                     disabled={currentPage === totalPages}
-                    className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 disabled:opacity-50"
+                    className="inline-flex items-center gap-2 rounded-xl border border-slate-200/90 bg-white/90 px-3.5 py-1.5 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:translate-y-0 disabled:hover:border-slate-200/90 disabled:hover:bg-white/90 disabled:hover:text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-emerald-700 dark:hover:bg-emerald-900/30 dark:hover:text-emerald-300 dark:disabled:hover:border-slate-600 dark:disabled:hover:bg-slate-800 dark:disabled:hover:text-slate-200"
                   >
                     Next
+                    <span aria-hidden="true">→</span>
                   </button>
                 </div>
               )}

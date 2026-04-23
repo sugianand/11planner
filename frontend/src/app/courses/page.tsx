@@ -50,12 +50,14 @@ export default function CoursesPage() {
   const [showForm, setShowForm] = useState(false);
   const [showDaysDropdown, setShowDaysDropdown] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deletingAllCourses, setDeletingAllCourses] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"name_asc" | "name_desc" | "time_asc" | "time_desc">("name_asc");
   const [typeFilter, setTypeFilter] = useState<"all" | "online" | "in_person" | "lab">("all");
   const cardSyllabusInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const courseDaysDropdownRef = useRef<HTMLDivElement | null>(null);
   const lastShownErrorRef = useRef<string | null>(null);
+  const [expandedDescriptionIds, setExpandedDescriptionIds] = useState<Set<string>>(new Set());
   const [dialog, setDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -251,6 +253,62 @@ export default function CoursesPage() {
       onConfirm: async () => {
         await deleteCourse(id);
         setDialog({ isOpen: false, title: "", message: "" });
+      },
+    });
+  };
+
+  const handleDeleteAllCourses = () => {
+    if (courses.length === 0 || deletingAllCourses) {
+      return;
+    }
+
+    setDialog({
+      isOpen: true,
+      title: "Delete all courses?",
+      message: "This will permanently remove every course in your account.",
+      confirmText: "Delete All",
+      cancelText: "Cancel",
+      destructive: true,
+      onConfirm: async () => {
+        const courseIds = courses.map((course) => course.id);
+        if (courseIds.length === 0) {
+          setDialog({ isOpen: false, title: "", message: "" });
+          return;
+        }
+
+        setDeletingAllCourses(true);
+        let deletedCount = 0;
+        let failedCount = 0;
+
+        for (const courseId of courseIds) {
+          try {
+            await deleteCourse(courseId);
+            deletedCount += 1;
+          } catch (err) {
+            failedCount += 1;
+            console.error(`Failed to delete course ${courseId}:`, err);
+          }
+        }
+
+        await loadCourses();
+        setShowForm(false);
+        setEditingId(null);
+        setDeletingAllCourses(false);
+
+        if (failedCount === 0) {
+          setDialog({
+            isOpen: true,
+            title: "Courses deleted",
+            message: `Deleted ${deletedCount} course${deletedCount === 1 ? "" : "s"}.`,
+          });
+          return;
+        }
+
+        setDialog({
+          isOpen: true,
+          title: "Some courses could not be deleted",
+          message: `Deleted ${deletedCount} of ${courseIds.length} courses. ${failedCount} failed.`,
+        });
       },
     });
   };
@@ -519,38 +577,40 @@ export default function CoursesPage() {
                 </div>
               </div>
 
-              <div className="flex items-center">
+              <div className="flex items-center gap-2">
                 {!showForm && (
-                  <button
-                    onClick={() => {
-                      setShowForm(true);
-                      setEditingId(null);
-                      setFormData({
-                        name: "",
-                        code: "",
-                        professor: "",
-                        description: "",
-                        user_id: userId,
-                        courseDate: "",
-                        startTime: "",
-                        endTime: "",
-                        isOnline: false,
-                        hasLab: false,
-                        labDay: "",
-                        labStartTime: "",
-                        labEndTime: "",
-                        labIsOnline: false,
-                      });
-                    }}
-                    className="text-white font-bold py-2.5 px-6 rounded-xl transition shadow-lg flex items-center gap-2"
-                    style={{
-                      backgroundColor: "var(--theme-accent-strong)",
-                      boxShadow: "0 10px 30px -18px var(--theme-accent-strong)",
-                    }}
-                  >
-                    <span className="material-symbols-outlined text-sm">add</span>
-                    New Course
-                  </button>
+                  <>
+                    <button
+                      onClick={() => {
+                        setShowForm(true);
+                        setEditingId(null);
+                        setFormData({
+                          name: "",
+                          code: "",
+                          professor: "",
+                          description: "",
+                          user_id: userId,
+                          courseDate: "",
+                          startTime: "",
+                          endTime: "",
+                          isOnline: false,
+                          hasLab: false,
+                          labDay: "",
+                          labStartTime: "",
+                          labEndTime: "",
+                          labIsOnline: false,
+                        });
+                      }}
+                      className="text-white font-bold py-2.5 px-6 rounded-xl transition shadow-lg flex items-center gap-2"
+                      style={{
+                        backgroundColor: "var(--theme-accent-strong)",
+                        boxShadow: "0 10px 30px -18px var(--theme-accent-strong)",
+                      }}
+                    >
+                      <span className="material-symbols-outlined text-sm">add</span>
+                      New Course
+                    </button>
+                  </>
                 )}
               </div>
             </div>
@@ -891,33 +951,44 @@ export default function CoursesPage() {
                 placeholder="Search by name, code, professor, or day"
                 className="md:col-span-2 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800"
               />
-
-              <select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}
-                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800"
-              >
-                <option value="all">All Types</option>
-                <option value="online">Online</option>
-                <option value="in_person">In-Person</option>
-                <option value="lab">Has Lab</option>
-              </select>
+              <div className="flex md:justify-end">
+                <button
+                  onClick={handleDeleteAllCourses}
+                  disabled={courses.length === 0 || deletingAllCourses}
+                  title={courses.length === 0 ? "No courses to delete" : "Delete all courses"}
+                  className="w-full md:w-auto px-4 py-2 rounded-lg text-sm font-semibold transition border disabled:opacity-50 disabled:cursor-not-allowed text-red-700 dark:text-red-300 border-red-300 dark:border-red-700/70 bg-red-50/80 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/35"
+                >
+                  {deletingAllCourses ? "Deleting..." : "Delete All Courses"}
+                </button>
+              </div>
             </div>
 
             <div className="mt-3 flex items-center justify-between gap-3">
               <p className="text-sm text-slate-600 dark:text-slate-300">
                 Showing {filteredCourses.length} of {courses.length} courses
               </p>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800"
-              >
-                <option value="name_asc">Name (A-Z)</option>
-                <option value="name_desc">Name (Z-A)</option>
-                <option value="time_asc">Time (earliest)</option>
-                <option value="time_desc">Time (latest)</option>
-              </select>
+              <div className="ml-auto flex items-center gap-2">
+                <select
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}
+                  className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800"
+                >
+                  <option value="all">All Types</option>
+                  <option value="online">Online</option>
+                  <option value="in_person">In-Person</option>
+                  <option value="lab">Has Lab</option>
+                </select>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                  className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white dark:bg-slate-800"
+                >
+                  <option value="name_asc">Name (A-Z)</option>
+                  <option value="name_desc">Name (Z-A)</option>
+                  <option value="time_asc">Time (earliest)</option>
+                  <option value="time_desc">Time (latest)</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -951,7 +1022,7 @@ export default function CoursesPage() {
                 return (
                 <div
                   key={course.id}
-                  className="h-[340px] bg-white/60 dark:bg-slate-800/55 backdrop-blur-md rounded-2xl shadow-sm p-6 border border-white/50 dark:border-slate-700/45 hover:bg-white/80 dark:hover:bg-slate-800/75 transition group relative overflow-hidden flex flex-col"
+                  className="min-h-[340px] bg-white/60 dark:bg-slate-800/55 backdrop-blur-md rounded-2xl shadow-sm p-6 border border-white/50 dark:border-slate-700/45 hover:bg-white/80 dark:hover:bg-slate-800/75 transition group relative overflow-hidden flex flex-col"
                 >
                   <div className="absolute top-0 left-0 w-1 h-full bg-[#306844]"></div>
                   <div className="mb-4 flex items-start justify-between gap-3">
@@ -1002,9 +1073,24 @@ export default function CoursesPage() {
                     </div>
                   )}
                   {course.description && (
-                    <p className="text-sm text-slate-600 dark:text-slate-300 mb-4 line-clamp-2 pl-4 border-l-2 border-slate-200 dark:border-slate-600 ml-1">
-                      {course.description}
-                    </p>
+                    <div className="mb-4 pl-4 border-l-2 border-slate-200 dark:border-slate-600 ml-1">
+                      <p className={`text-sm text-slate-600 dark:text-slate-300 ${expandedDescriptionIds.has(course.id) ? '' : 'line-clamp-2'}`}>
+                        {course.description}
+                      </p>
+                      {course.description.length > 120 && (
+                        <button
+                          type="button"
+                          onClick={() => setExpandedDescriptionIds((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(course.id)) { next.delete(course.id); } else { next.add(course.id); }
+                            return next;
+                          })}
+                          className="mt-1 text-xs font-semibold text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                        >
+                          {expandedDescriptionIds.has(course.id) ? 'Show less' : 'Show more'}
+                        </button>
+                      )}
+                    </div>
                   )}
                   {course.hasLab && (
                     <div className="mb-4 p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/40 rounded-lg">
