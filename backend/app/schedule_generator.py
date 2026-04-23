@@ -51,7 +51,7 @@ class ScheduleGenerator:
 
     # Returns the full weekday name for a datetime value.
     def day_name(self, dt: datetime) -> str:
-        return dt.strftime("%A") # returns day names like mon, tues, etc.
+        return dt.strftime("%A") # e.g. "Monday", "Tuesday"
     
     # Checks whether a date falls on a preferred workday.
     def is_workday(self, dt:datetime, pref: Preferences) -> bool:
@@ -84,7 +84,7 @@ class ScheduleGenerator:
             if self.overlaps(start, end, block.start, block.end):
                 return True
         return False
-    #checks to see if proposed schedule block overlaps with any busy blocks 
+
 
     # Advances the cursor until it is no longer inside a busy block.
     def skip_if_busy(self, dt: datetime, busy_blocks: List[BusyBlock]) -> datetime:
@@ -110,7 +110,7 @@ class ScheduleGenerator:
     def next_day_start(self, dt: datetime, pref: Preferences) -> datetime:
         dt += timedelta(days=1)
         return self.move_to_next_work_start(dt, pref)
-    #move to next day and set to work start time, used when current day time ends and you want to go to the next day 
+
 
     def relaxed_deadline_prefs(self, pref: Preferences) -> Preferences:
         """

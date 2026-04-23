@@ -663,7 +663,7 @@ async def generate_schedule(user_id: str, payload: ScheduleGenerateRequest | Non
         print(error_msg)
         raise HTTPException(status_code=500, detail=error_msg)
 
-    # Returns summary metrics for a user's current schedule coverage.
+# Returns summary metrics for a user's current schedule coverage.
 @router.get("/schedule/stats/{user_id}")
 async def get_schedule_stats(user_id: str):
     """Get statistics about user's schedule"""
