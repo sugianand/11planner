@@ -1,5 +1,8 @@
 "use client";
 
+// Landing page — the public-facing homepage of 11Planner.
+// Shows hero, focus pillars, demo CTA, workflow steps, and a final call-to-action.
+
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
@@ -9,6 +12,7 @@ export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const router = useRouter();
 
+  // Data for the three focus-pillar cards displayed below the hero
   const focusPillars = [
     {
       icon: 'target',
@@ -30,6 +34,7 @@ export default function Home() {
     }
   ];
 
+  // Data for the "How It Works" three-step workflow section
   const workflow = [
     {
       step: '01',
@@ -48,18 +53,22 @@ export default function Home() {
     }
   ];
 
+  // Check auth state on mount so CTA buttons route correctly (dashboard vs auth)
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setIsLoggedIn(!!session);
     });
   }, [router]);
 
+  // Scroll-reveal animation: uses IntersectionObserver to fade-in elements
+  // marked with the data-reveal attribute as the user scrolls.
   useEffect(() => {
     const revealElements = Array.from(document.querySelectorAll<HTMLElement>('[data-reveal]'));
     if (revealElements.length === 0) {
       return;
     }
 
+    // Track scroll direction to animate from the correct side
     let scrollDirection: 'up' | 'down' = 'down';
     let previousScrollY = window.scrollY;
 
@@ -109,6 +118,7 @@ export default function Home() {
     };
   }, []);
 
+  // Route users to dashboard (if logged in) or auth page (if not)
   const handleStartClick = () => {
     if (isLoggedIn) {
       router.push('/dashboard');
@@ -127,6 +137,7 @@ export default function Home() {
       </div>
 
       <main className="w-full max-w-[1220px] mx-auto px-5 md:px-7 mt-14 md:mt-20 mb-28 relative">
+        {/* Hero section — headline, description, CTA buttons, and stat badges */}
         <section className="grid lg:grid-cols-[1.2fr_0.8fr] gap-8 items-stretch">
           <div data-reveal data-reveal-once="true" className="rounded-[2.2rem] bg-[#f5fbf7]/85 dark:bg-slate-900/75 border border-emerald-100 dark:border-slate-700/70 shadow-[0_30px_80px_-35px_rgba(15,23,42,0.45)] p-8 md:p-12 backdrop-blur-sm">
             <p className="inline-flex items-center gap-2 text-[11px] font-black tracking-[0.16em] uppercase text-[#306844] dark:text-emerald-300 bg-white/70 dark:bg-slate-800/60 border border-emerald-100 dark:border-slate-600/70 rounded-full px-3 py-1.5">
@@ -203,6 +214,7 @@ export default function Home() {
           </aside>
         </section>
 
+        {/* Focus pillars — three cards highlighting the core planning principles */}
         <section className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
           {focusPillars.map((item) => (
             <article
@@ -220,6 +232,7 @@ export default function Home() {
           ))}
         </section>
 
+        {/* Demo CTA section — encourages users to watch the product tour video */}
         <section data-reveal className="mt-12 rounded-[2rem] bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-950/40 dark:to-slate-900/60 border border-emerald-200/60 dark:border-emerald-800/40 p-8 md:p-12 backdrop-blur-sm shadow-lg overflow-hidden relative">
           <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-emerald-200/20 dark:bg-emerald-500/10 blur-3xl -z-10"></div>
 
@@ -270,6 +283,7 @@ export default function Home() {
           </div>
         </section>
 
+        {/* How It Works — three-step workflow explaining the planning process */}
         <section data-reveal className="mt-12 rounded-[2rem] bg-gradient-to-r from-[#1f2937]/95 via-[#0f172a]/95 to-[#1e5f3b]/95 text-slate-100 border border-slate-700/60 p-8 md:p-10 shadow-xl">
           <div className="flex items-center gap-2 text-xs tracking-[0.16em] uppercase font-bold text-emerald-200">
             <span className="material-symbols-outlined text-sm">conversion_path</span>
@@ -286,6 +300,7 @@ export default function Home() {
           </div>
         </section>
 
+        {/* Final call-to-action section — prompts user to start planning */}
         <section data-reveal className="mt-12 text-center">
           <div data-reveal className="max-w-3xl mx-auto rounded-[2rem] bg-white/80 dark:bg-slate-900/80 border border-white/70 dark:border-slate-700/70 p-8 md:p-10 backdrop-blur-sm shadow-sm">
             <p className="text-xs uppercase tracking-[0.16em] font-black text-slate-500 dark:text-slate-300">Ready to switch from reactive planning to intentional planning?</p>

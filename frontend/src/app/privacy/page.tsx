@@ -1,13 +1,18 @@
 "use client";
 
+// Privacy Policy page — explains what 11Planner collects, how data is used,
+// user rights, and how to request data deletion.
+
 import Link from "next/link";
 import Footer from "@/components/Footer";
 import { usePlanner } from "@/contexts/PlannerContext";
 
 export default function PrivacyPage() {
   const { userId } = usePlanner();
+  // Show the "Back to home" link only for authenticated users
   const isLoggedIn = userId !== "user_demo";
 
+  // Summary cards displayed at the top of the privacy page
   const highlights = [
     {
       icon: "verified_user",
@@ -47,6 +52,7 @@ export default function PrivacyPage() {
             </p>
           </div>
 
+          {/* Highlight cards — key privacy commitments at a glance */}
           <section className="grid md:grid-cols-3 gap-4">
             {highlights.map((item) => (
               <article
@@ -68,6 +74,7 @@ export default function PrivacyPage() {
             ))}
           </section>
 
+          {/* What we collect — itemized list of data categories */}
           <section className="space-y-4">
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">What we collect</h2>
             <ul className="space-y-3 text-slate-700 dark:text-slate-300">
@@ -90,6 +97,7 @@ export default function PrivacyPage() {
             </ul>
           </section>
 
+          {/* Privacy controls — settings the user can toggle */}
           <section className="space-y-4">
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">Privacy controls in Settings</h2>
             <ul className="space-y-2 text-slate-700 dark:text-slate-300">

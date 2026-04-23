@@ -1,13 +1,18 @@
 "use client";
 
+// Support page — provides contact details, common troubleshooting tips,
+// and links to related policy pages (privacy, terms).
+
 import Link from "next/link";
 import Footer from "@/components/Footer";
 import { usePlanner } from "@/contexts/PlannerContext";
 
 export default function SupportPage() {
   const { userId } = usePlanner();
+  // Only show "Back to home" for authenticated users
   const isLoggedIn = userId !== "user_demo";
 
+  // Key support options displayed as summary cards
   const supportHighlights = [
     {
       icon: "mail",
@@ -42,6 +47,7 @@ export default function SupportPage() {
             </p>
           </div>
 
+          {/* Support highlights — email, response time, and actionable help */}
           <section className="grid md:grid-cols-3 gap-4">
             {supportHighlights.map((item) => (
               <article
@@ -63,6 +69,7 @@ export default function SupportPage() {
             ))}
           </section>
 
+          {/* Contact details — highlighted with themed accent background */}
           <section
             className="space-y-4 rounded-2xl p-5"
             style={{
@@ -82,6 +89,7 @@ export default function SupportPage() {
             </p>
           </section>
 
+          {/* Tips for writing a helpful support email */}
           <section className="space-y-4">
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">Before you email us</h2>
             <ul className="space-y-2 text-slate-700 dark:text-slate-300">
@@ -92,6 +100,7 @@ export default function SupportPage() {
             </ul>
           </section>
 
+          {/* Common self-service fixes users can try first */}
           <section className="space-y-4">
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">Common fixes</h2>
             <ul className="space-y-2 text-slate-700 dark:text-slate-300">

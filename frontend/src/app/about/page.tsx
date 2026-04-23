@@ -1,10 +1,14 @@
 'use client';
 
+// About page — introduces the 11Planner project mission, team members,
+// and collaborative development philosophy.
+
 import Link from 'next/link';
 import { useEffect } from 'react';
 import Footer from '@/components/Footer';
 
 export default function AboutPage() {
+  // Key project highlights displayed as summary cards at the top
   const projectHighlights = [
     {
       label: 'Core Mission',
@@ -23,6 +27,7 @@ export default function AboutPage() {
     }
   ];
 
+  // Team member profiles with roles and responsibilities for the "Meet the team" section
   const teamMembers = [
     {
       name: "Tamana Gaur",
@@ -74,6 +79,7 @@ export default function AboutPage() {
     }
   ];
 
+  // Scroll-reveal animation — fades in elements with data-reveal as they enter the viewport
   useEffect(() => {
     const revealElements = Array.from(document.querySelectorAll<HTMLElement>('[data-reveal]'));
     if (revealElements.length === 0) {
@@ -140,6 +146,7 @@ export default function AboutPage() {
       </div>
 
       <main className="w-full max-w-[1200px] mx-auto px-6 py-16">
+        {/* Main content card — contains all about page sections */}
         <div data-reveal data-reveal-once="true" className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl rounded-3xl p-8 md:p-12 shadow-2xl dark:border dark:border-slate-700/50 mb-12">
           <div data-reveal data-reveal-once="true" className="text-center mb-10">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/40 dark:bg-slate-700/40 text-slate-800 dark:text-slate-200 text-xs font-bold uppercase tracking-widest border border-white/20 dark:border-slate-600/30 mb-6">
@@ -155,6 +162,7 @@ export default function AboutPage() {
             </p>
           </div>
 
+          {/* Project highlights grid — core mission, planning unit, team model */}
           <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
             {projectHighlights.map((item) => (
               <article
@@ -192,6 +200,7 @@ export default function AboutPage() {
             <p className="text-slate-600 dark:text-slate-300 text-center mt-2">Role ownership with cross-functional contribution in every sprint.</p>
           </div>
 
+          {/* Team member cards — two-column grid with roles and responsibilities */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {teamMembers.map((member, index) => (
               <div

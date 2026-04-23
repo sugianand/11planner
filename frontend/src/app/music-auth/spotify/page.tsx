@@ -1,8 +1,12 @@
 "use client";
 
+// Spotify OAuth callback page — receives the authorization code from Spotify,
+// stores it in localStorage, posts it back to the opener window, then closes.
+
 import { useEffect } from "react";
 
 export default function SpotifyAuthCallbackPage() {
+  // Extract OAuth params from the URL, persist the result, notify the opener window, and close
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code") || undefined;
@@ -28,6 +32,7 @@ export default function SpotifyAuthCallbackPage() {
     window.close();
   }, []);
 
+  // Fallback UI shown briefly while the window auto-closes
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-50 px-6 py-10 text-center dark:bg-slate-950">
       <div className="max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">

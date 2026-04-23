@@ -1,13 +1,18 @@
 "use client";
 
+// Terms of Service page — outlines acceptable use, account responsibilities,
+// content ownership, and legal disclaimers for 11Planner.
+
 import Link from "next/link";
 import Footer from "@/components/Footer";
 import { usePlanner } from "@/contexts/PlannerContext";
 
 export default function TermsPage() {
   const { userId } = usePlanner();
+  // Show navigation link only for logged-in users
   const isLoggedIn = userId !== "user_demo";
 
+  // Summary cards for top-level terms highlights
   const highlights = [
     {
       icon: "check_circle",
@@ -46,6 +51,7 @@ export default function TermsPage() {
             </p>
           </div>
 
+          {/* Terms highlight cards — quick overview of key terms */}
           <section className="grid md:grid-cols-3 gap-4">
             {highlights.map((item) => (
               <article

@@ -1,5 +1,8 @@
 "use client";
 
+// Logo Story page — explains the inspiration and meaning behind the
+// 11Planner name and logo, including attribution for licensed assets.
+
 import Link from "next/link";
 
 export default function LogoStoryPage() {
@@ -25,6 +28,7 @@ export default function LogoStoryPage() {
         </div>
 
         <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-sm p-6 border border-white/40 dark:border-slate-700/40 space-y-6">
+          {/* The connection — why the name "11" and what it represents */}
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">The connection</h2>
             <p className="text-slate-700 dark:text-slate-300">
@@ -34,6 +38,7 @@ export default function LogoStoryPage() {
             </p>
           </section>
 
+          {/* Why students connect — resonance with academic pressure */}
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">Why students connect</h2>
             <p className="text-slate-700 dark:text-slate-300">
@@ -43,6 +48,7 @@ export default function LogoStoryPage() {
             </p>
           </section>
 
+          {/* Rights and attribution — legal disclaimer for the logo */}
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">Rights and attribution</h2>
             <p className="text-slate-700 dark:text-slate-300">
@@ -51,6 +57,7 @@ export default function LogoStoryPage() {
             </p>
           </section>
 
+          {/* Footer navigation links — back to home and terms */}
           <div className="pt-4 border-t border-slate-200/70 dark:border-slate-700/70 flex flex-wrap gap-4">
             <Link
               href="/"

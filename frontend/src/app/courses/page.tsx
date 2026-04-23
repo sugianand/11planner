@@ -1,14 +1,25 @@
 "use client";
 
+// Courses page — CRUD interface for managing the user's academic courses.
+// Supports syllabus PDF upload (auto-parse), search/filter/sort, inline editing,
+// and lab schedule management.
+
 import { useState, useEffect, useMemo, useRef } from "react";
 import { usePlanner } from "@/contexts/PlannerContext";
 import { CourseCreate, Course } from "@/types";
 import Footer from "@/components/Footer";
 import AppDialog from "@/components/AppDialog";
 
+// Backend API base URL (falls back to localhost for dev)
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+// Weekdays used for course day selection
 const WEEK_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"] as const;
 
+/**
+ * Normalize a time string ("HH:MM", "HH:MM:SS", or "H:MM AM/PM") into
+ * the HTML time-input format "HH:MM". Returns "" for invalid input.
+ */
 const toTimeInputValue = (value?: string | null): string => {
   if (!value) return "";
   const trimmed = value.trim();
@@ -47,10 +58,13 @@ export default function CoursesPage() {
     error,
   } = usePlanner();
 
+  // Form visibility, editing mode, bulk-delete flag
   const [showForm, setShowForm] = useState(false);
   const [showDaysDropdown, setShowDaysDropdown] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingAllCourses, setDeletingAllCourses] = useState(false);
+
+  // Search, sort, and type-filter state for the course list
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"name_asc" | "name_desc" | "time_asc" | "time_desc">("name_asc");
   const [typeFilter, setTypeFilter] = useState<"all" | "online" | "in_person" | "lab">("all");
@@ -88,10 +102,12 @@ export default function CoursesPage() {
     labIsOnline: false,
   });
 
+  // Load courses on mount and whenever the user changes
   useEffect(() => {
     loadCourses();
   }, [userId, loadCourses]);
 
+  // Close the days dropdown when clicking outside of it
   useEffect(() => {
     const handlePointerDown = (event: MouseEvent | TouchEvent) => {
       if (!showDaysDropdown) return;
@@ -125,6 +141,7 @@ export default function CoursesPage() {
     return () => window.clearTimeout(timeoutId);
   }, [error]);
 
+  // Validate and submit the course form (create or update)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -220,6 +237,7 @@ export default function CoursesPage() {
     }
   };
 
+  // Pre-populate the form with existing course data for editing
   const handleEdit = (course: Course) => {
     setFormData({
       name: course.name,
@@ -242,6 +260,7 @@ export default function CoursesPage() {
     window.scrollTo({ top: 250, behavior: 'smooth' });
   };
 
+  // Prompt for confirmation then delete a single course
   const handleDelete = async (id: string) => {
     setDialog({
       isOpen: true,
@@ -257,6 +276,7 @@ export default function CoursesPage() {
     });
   };
 
+  // Prompt for confirmation then delete ALL courses in sequence
   const handleDeleteAllCourses = () => {
     if (courses.length === 0 || deletingAllCourses) {
       return;
@@ -323,6 +343,7 @@ export default function CoursesPage() {
   const inPersonCourses = courses.filter((course) => !course.isOnline).length;
   const labCourses = courses.filter((course) => course.hasLab).length;
 
+  // Format a time string into a user-friendly display (e.g., "2:30 PM")
   const formatTimeDisplay = (value?: string | null): string => {
     const normalized = toTimeInputValue(value);
     if (!normalized) return "Time not set";
@@ -350,6 +371,7 @@ export default function CoursesPage() {
     return hour * 60 + minute;
   };
 
+  // Filter and sort courses based on the current search/filter/sort state
   const filteredCourses = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
 
@@ -404,6 +426,7 @@ export default function CoursesPage() {
     });
   };
 
+  // Upload a syllabus PDF to the backend, parse it, and fill the form
   const uploadAndParseSyllabus = async (file: File, type: "course" | "lab") => {
     const formDataToSend = new FormData();
     formDataToSend.append("file", file);

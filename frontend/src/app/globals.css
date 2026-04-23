@@ -1,7 +1,15 @@
+/* ============================================================
+   globals.css — Master stylesheet for 11Planner
+   Contains: Tailwind imports, theme color tokens, data-theme
+   overrides, layout utilities, animations, and the scroll-reveal
+   system used across landing and public pages.
+   ============================================================ */
 
 @import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));
+
+/* ----- Default (emerald) theme tokens ----- */
 
 :root {
   --background: #ffffff;
@@ -29,6 +37,7 @@
   --theme-accent-soft: rgba(52, 211, 153, 0.16);
 }
 
+/* ----- Emerald theme (explicit data-attribute variant) ----- */
 [data-theme="emerald"] {
   --theme-50: rgba(52, 211, 153, 0.08);
   --theme-100: rgba(52, 211, 153, 0.14);
@@ -49,6 +58,7 @@
   --theme-accent-soft: rgba(52, 211, 153, 0.16);
 }
 
+/* ----- Ocean theme ----- */
 [data-theme="ocean"] {
   --theme-50: rgba(56, 189, 248, 0.08);
   --theme-100: rgba(56, 189, 248, 0.14);
@@ -69,6 +79,7 @@
   --theme-accent-soft: rgba(56, 189, 248, 0.16);
 }
 
+/* ----- Rose theme ----- */
 [data-theme="rose"] {
   --theme-50: rgba(251, 113, 133, 0.08);
   --theme-100: rgba(251, 113, 133, 0.14);
@@ -89,6 +100,7 @@
   --theme-accent-soft: rgba(251, 113, 133, 0.16);
 }
 
+/* ----- Slate theme ----- */
 [data-theme="slate"] {
   --theme-50: rgba(148, 163, 184, 0.08);
   --theme-100: rgba(148, 163, 184, 0.14);
@@ -109,6 +121,7 @@
   --theme-accent-soft: rgba(148, 163, 184, 0.16);
 }
 
+/* ----- Amber theme ----- */
 [data-theme="amber"] {
   --theme-50: rgba(251, 191, 36, 0.08);
   --theme-100: rgba(251, 191, 36, 0.14);
@@ -129,6 +142,7 @@
   --theme-accent-soft: rgba(251, 191, 36, 0.16);
 }
 
+/* ----- Violet theme ----- */
 [data-theme="violet"] {
   --theme-50: rgba(167, 139, 250, 0.08);
   --theme-100: rgba(167, 139, 250, 0.14);
@@ -340,12 +354,14 @@
   }
 }
 
+/* ----- Base body styles ----- */
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-manrope), Arial, Helvetica, sans-serif;
 }
 
+/* Text selection uses the current theme accent */
 ::selection {
   background: var(--theme-accent-soft);
 }
@@ -356,6 +372,7 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
+/* Ensure all interactive elements show a pointer cursor */
 button,
 a,
 input[type="button"],
@@ -365,6 +382,7 @@ select {
   cursor: pointer;
 }
 
+/* ----- Drag-and-drop ghost element animation ----- */
 @keyframes dragGhostIn {
   from {
     opacity: 0;
@@ -381,6 +399,7 @@ select {
   animation: dragGhostIn 160ms ease-out;
 }
 
+/* ----- Glassmorphism utility classes ----- */
 .glass-hero {
   background: rgba(255, 255, 255, 0.4);
   backdrop-filter: blur(24px);
@@ -395,6 +414,7 @@ select {
   border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
+/* ----- Dashboard UI auto-hide (navbar slides away during focus mode) ----- */
 body.dashboard-ui-hidden nav[data-dashboard-nav="true"] {
   transform: translateY(-100%);
   opacity: 0;
@@ -417,6 +437,7 @@ body.dashboard-ui-hidden nav[data-dashboard-nav="true"]:focus-within {
   transition: transform 480ms ease, opacity 480ms ease;
 }
 
+/* ----- Floating icon animation (used on decorative elements) ----- */
 @keyframes float {
   0% {
     transform: translateY(0px) rotate(0deg);
@@ -453,11 +474,16 @@ body.dashboard-ui-hidden nav[data-dashboard-nav="true"]:focus-within {
 
 }
 
+/* ----- Noise/grain texture overlay ----- */
 .grain-overlay {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E");
   mix-blend-mode: soft-light;
 }
 
+/* ----- Scroll-reveal system -----
+   Elements with [data-reveal] start hidden and animate into view
+   via IntersectionObserver (see useEffect in page components).
+   Supports directional reveals (up/down) and staggered delays. */
 [data-reveal] {
   opacity: 0;
   --reveal-offset: 26px;
@@ -486,6 +512,7 @@ body.dashboard-ui-hidden nav[data-dashboard-nav="true"]:focus-within {
   transition-delay: var(--reveal-delay, 0ms) !important;
 }
 
+/* Respect user preference for reduced motion */
 @media (prefers-reduced-motion: reduce) {
   [data-reveal] {
     opacity: 1;

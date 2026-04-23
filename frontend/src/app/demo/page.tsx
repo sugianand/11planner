@@ -1,5 +1,8 @@
 "use client";
 
+// Demo page — placeholder for the 11Planner product tour video.
+// Currently displays a "coming soon" message with links to sign up.
+
 import Link from "next/link";
 import Footer from "@/components/Footer";
 
@@ -13,6 +16,7 @@ export default function DemoPage() {
       </div>
 
       <main className="w-full max-w-[980px] mx-auto px-6 py-16">
+        {/* Demo content card — heading, description, video placeholder, and nav links */}
         <section className="bg-white/75 dark:bg-slate-900/75 border border-white/50 dark:border-slate-700/60 rounded-3xl shadow-xl p-8 md:p-12 backdrop-blur-sm text-center">
           <p className="text-xs tracking-[0.16em] uppercase font-bold text-emerald-700 dark:text-emerald-300">
             Demo Update
@@ -25,6 +29,7 @@ export default function DemoPage() {
             homework tracking, and personalized planning in action.
           </p>
 
+          {/* Video placeholder — will be replaced with an embedded video player */}
           <div className="mt-8 rounded-3xl border border-slate-200/70 dark:border-slate-700/80 bg-white/80 dark:bg-slate-900/70 p-12 shadow-xl overflow-hidden max-w-[960px] mx-auto">
             <div className="flex flex-col items-center justify-center py-24">
               <svg className="w-16 h-16 mb-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -36,6 +41,7 @@ export default function DemoPage() {
             </div>
           </div>
 
+          {/* Navigation links — back to home or open the app */}
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Link
               href="/"
