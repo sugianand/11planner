@@ -150,7 +150,7 @@ export const scheduleAPI = {
     }),
 
   generate: (userId: string, studyLimitHours?: number) =>
-    fetchAPI<{ message: string; blocks: ScheduleBlock[]; stats: Record<string, unknown> | null }>(
+    fetchAPI<{ message: string; blocks: ScheduleBlock[]; stats: { total_hours: number; avg_hours_per_day: number } | null }>(
       `/api/schedule/generate/${userId}`,
       {
         method: "POST",
