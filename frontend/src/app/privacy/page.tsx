@@ -6,7 +6,7 @@
 import Link from "next/link";
 import Footer from "@/components/Footer";
 import { usePlanner } from "@/contexts/PlannerContext";
-
+// Privacy policy page with sections on data collection, usage, sharing, and user rights, styled for readability and clarity
 export default function PrivacyPage() {
   const { userId } = usePlanner();
   // Show the "Back to home" link only for authenticated users
@@ -30,7 +30,7 @@ export default function PrivacyPage() {
       body: "Reasonable safeguards protect your account and planning data."
     }
   ];
-
+// overview sections to show privacy highlights and key points about data collection, usage, sharing, and user rights
   return (
     <div className="min-h-screen relative overflow-hidden transition-colors duration-500 pb-0">
       <div className="fixed inset-0 bg-focus-light dark:bg-focus-dark -z-20"></div>

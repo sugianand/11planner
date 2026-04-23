@@ -4,7 +4,7 @@
 // 11Planner name and logo, including attribution for licensed assets.
 
 import Link from "next/link";
-
+// This page explains the inspiration and meaning behind the 11Planner logo, including its connection to student culture as well as rights and attribution info.
 export default function LogoStoryPage() {
   return (
     <div className="min-h-screen relative overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors duration-500 p-6 lg:p-10">

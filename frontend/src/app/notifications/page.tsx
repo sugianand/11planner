@@ -85,7 +85,7 @@ export default function NotificationsPage() {
       .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())
       .slice(0, 10);
   }, [tasks, nowMs, leadMs, notificationsEnabled]);
-
+// This processes the schedule blocks to find current and upcoming blocks within the alert window, associating them with their related tasks for display in the alert cards.
   const blockRanges = useMemo<BlockWithRange[]>(() => {
     return scheduleBlocks
       .flatMap((block) => {
@@ -107,7 +107,7 @@ export default function NotificationsPage() {
   const currentBlocks = useMemo(() => {
     return blockRanges.filter((entry) => entry.start.getTime() <= nowMs && entry.end.getTime() >= nowMs);
   }, [blockRanges, nowMs]);
-
+// Upcoming blocks are those that start within the lead time window, sorted by start time, and limited to the next 10 to avoid overwhelming the user.
   const upcomingBlocks = useMemo(() => {
     const windowMs = Math.max(leadMs, 6 * 60 * 60 * 1000);
     return blockRanges
@@ -150,7 +150,7 @@ export default function NotificationsPage() {
       </div>
     );
   }
-
+// provides overview cards that show status, and detailed sections for for task alerts and block alerts.
   return (
     <div className="relative min-h-screen overflow-hidden flex flex-col">
       <div className="fixed inset-0 bg-focus-light dark:bg-focus-dark bg-cover bg-center -z-30" />

@@ -908,7 +908,7 @@ function SettingsPageContent() {
           })
           .eq("id", user.id);
         if (clearProfilePreferences.error) throw clearProfilePreferences.error;
-
+// This is used for cloud-synced theme, color theme, and notification preferences, so it runs after clearing all user data to ensure a clean slate.
         const clearCloudSettings = await supabase
           .from("user_settings")
           .delete()
@@ -1000,7 +1000,7 @@ function SettingsPageContent() {
       },
     });
   };
-
+// Tracks whether any settings have unsaved changes compared to the last saved state, to conditionally trigger auto-saving and warn about unsaved changes when navigating away.
   const hasChanges = useMemo(() => {
     return (
       theme !== savedSettings.theme ||
@@ -1148,7 +1148,7 @@ function SettingsPageContent() {
     ],
     []
   );
-
+// Filters the navigation items based on the search query, matching against both the label and associated keywords for each section.
   const filteredNavItems = useMemo(() => {
     const query = settingsSearch.trim().toLowerCase();
     if (!query) return navItems;

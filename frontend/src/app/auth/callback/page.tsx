@@ -22,7 +22,7 @@ type ProfileRow = {
   assignmentplan?: string | null;
   daily_study_limit?: number | null;
 };
-
+//split display name string into first and last name, handling edge cases like extra spaces and single-word names
 function splitDisplayName(name: string): { first: string | null; last: string | null } {
   const normalized = name.trim().replace(/\s+/g, " ");
   if (!normalized) {
@@ -37,7 +37,7 @@ function splitDisplayName(name: string): { first: string | null; last: string | 
     last: parts.slice(1).join(" "),
   };
 }
-
+// extracting first and last names from various possible metadata fields, with fallback to display name parsing for Google OAuth profiles
 function getGoogleNames(metadata: Record<string, unknown> | undefined): { first: string | null; last: string | null } {
   const given = typeof metadata?.given_name === "string" ? metadata.given_name : null;
   const family = typeof metadata?.family_name === "string" ? metadata.family_name : null;
@@ -54,7 +54,7 @@ function getGoogleNames(metadata: Record<string, unknown> | undefined): { first:
     last: family || lastFromCustom || split.last,
   };
 }
-
+// returns true if the profile is missing any of the key preference fields, showing that the user should be sent to the onboarding quiz to set them up
 function needsPreferenceOnboarding(profile: ProfileRow | null): boolean {
   if (!profile) {
     return true;
@@ -69,7 +69,7 @@ function needsPreferenceOnboarding(profile: ProfileRow | null): boolean {
     profile.daily_study_limit !== undefined
   );
 }
-
+// Main component for Oauth callback, processes callback parameters, syncs user profile, routes to correct page, handles loading and errors
 export default function AuthCallbackPage() {
   const router = useRouter();
   const [state, setState] = useState<CallbackState>({ loading: true, error: "" });
@@ -88,7 +88,7 @@ export default function AuthCallbackPage() {
 
       const names = getGoogleNames(metadata);
       const sendToOnboarding = needsPreferenceOnboarding(existingProfile ?? null);
-
+// keep existing name if profile exists, otherwise use metadata or display name parsing to set first and last name on new profile creation, with upsert to avoid conflicts
       const { error: profileError } = await supabase
         .from("profiles")
         .upsert(
@@ -106,7 +106,7 @@ export default function AuthCallbackPage() {
 
       return sendToOnboarding ? "/profile/quiz?onboarding=1" : "/dashboard";
     }
-
+// Handles oauth redirect, exchanges code for session, syncs profile, and routes user, with error handling and loading state management
     async function handleOAuthCallback() {
       const url = new URL(window.location.href);
       const code = url.searchParams.get("code");
@@ -123,7 +123,7 @@ export default function AuthCallbackPage() {
           setState({ loading: false, error: error.message });
           return;
         }
-
+// if session is returned, sync profile and route user, otherwise show error about missing session after code exchange
         const user = data.session?.user;
         if (user) {
           const metadata = user.user_metadata as Record<string, unknown> | undefined;
@@ -146,7 +146,7 @@ export default function AuthCallbackPage() {
         router.replace(route);
         return;
       }
-
+// If no code and no session, show error about missing OAuth code and suggest starting from login/register
       setState({
         loading: false,
         error: "Missing OAuth code. Start from Login/Register and verify redirect URL is /auth/callback.",
