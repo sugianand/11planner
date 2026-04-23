@@ -426,20 +426,31 @@ async def update_task(task_id: str, task_data: TaskUpdate):
         if not update_dict:
             raise HTTPException(status_code=400, detail="No fields to update")
         
-        # Update the task in Supabase
+        print(f"[UPDATE_TASK] Updating task {task_id} with: {update_dict}")
+        
+        # Update the task in Supabase and get the updated data back
         result = (
             supabase.table("tasks")
             .update(update_dict)
             .eq("id", task_id)
+            .select()
             .execute()
         )
         
-        if not result.data:
-            raise HTTPException(status_code=404, detail="Task not found")
+        print(f"[UPDATE_TASK] Result data: {result.data}, Error: {result.error if hasattr(result, 'error') else 'None'}")
         
+        if not result.data or len(result.data) == 0:
+            print(f"[UPDATE_TASK] No data returned - task not found or not updated")
+            raise HTTPException(status_code=404, detail="Task not found or could not be updated")
+        
+        print(f"[UPDATE_TASK] Successfully updated task: {result.data[0]}")
         return result.data[0]
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"Error in update_task: {str(e)}")
+        print(f"[UPDATE_TASK] Error in update_task: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to update task: {str(e)}")
 
 # ========== SCHEDULE GENERATION ENDPOINTS ==========
