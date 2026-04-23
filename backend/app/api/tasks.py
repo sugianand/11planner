@@ -440,15 +440,16 @@ async def update_task(task_id: str, task_data: TaskUpdate):
         if not update_dict:
             raise HTTPException(status_code=400, detail="No fields to update")
         
-        # Update in Supabase
+        # Update in Supabase - MUST use .select() to ensure proper WHERE clause application
         result = (
             supabase.table("tasks")
             .update(update_dict)
             .eq("id", task_id)
+            .select()
             .execute()
         )
         
-        if not result.data:
+        if result.data is None or len(result.data) == 0:
             raise HTTPException(status_code=404, detail="Task not found")
         
         return {"message": "Task updated successfully", "task": result.data[0]}

@@ -741,17 +741,20 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
 
       if (Object.keys(updatePayload).length === 0) return;
 
-      const { error: updateError } = await supabase
+      // Update only the specific task with this ID and user_id
+      const { error: updateError, data: updatedData } = await supabase
         .from("tasks")
         .update(updatePayload)
         .eq("id", id)
-        .eq("user_id", userId);
+        .eq("user_id", userId)
+        .select();
 
       if (updateError) throw updateError;
+      if (!updatedData || updatedData.length === 0) throw new Error("Task not found");
 
-      // Update local state immediately
+      // Update ONLY the specific task in local state by ID
       setTasks((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, ...task } : t))
+        prev.map((t) => t.id === id ? { ...t, ...task } : t)
       );
 
       // Store completion timestamp if completing
