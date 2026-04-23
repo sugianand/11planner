@@ -2,20 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { useSearchParams } from "next/navigation";
 import FocusDashboardPanel from "@/components/FocusDashboardPanel";
 import Footer from "@/components/Footer";
 import { useTimer, defaultTimerDurations } from "@/contexts/TimerContext";
 import { usePlanner } from "@/contexts/PlannerContext";
-import {
-  attachGeneratedAudioSession,
-  attachHtmlAudioSession,
-  createPlaybackRequest,
-  getCurrentPlaybackRequestId,
-  getFocusAudioPlaybackSnapshot,
-  setFocusAudioVolume,
-  stopFocusAudioPlayback,
-} from "@/lib/focusAudioPlayback";
 
 type AtmosphereCategory = "All" | "Anime" | "Nature" | "Cafe" | "City" | "Abstract";
 
@@ -703,7 +693,6 @@ const createNoiseBuffer = (
 };
 
 export default function Dashboard() {
-  const searchParams = useSearchParams();
   const { userId } = usePlanner();
   const dashboardPrefsKey = useMemo(() => getDashboardPrefsKey(userId), [userId]);
   const [activeTab, setActiveTab] = useState<"backgrounds" | "sounds">("backgrounds");
@@ -757,6 +746,16 @@ export default function Dashboard() {
   const [prefsLoaded, setPrefsLoaded] = useState(false);
   const [loadedThumbnailPreviews, setLoadedThumbnailPreviews] = useState<Record<string, boolean>>({});
   const [failedThumbnailPreviews, setFailedThumbnailPreviews] = useState<Record<string, boolean>>({});
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const generatedAudioRef = useRef<{
+    context: AudioContext;
+    masterGain: GainNode;
+    stop: () => void;
+  } | null>(null);
+  const playbackRequestRef = useRef(0);
+  // Tracks the latest backgroundId for use in event handlers that close over stale values.
+  const backgroundIdRef = useRef(backgroundId);
+  const [expandedSoundId, setExpandedSoundId] = useState<string | null>(null);
 
   useEffect(() => {
     const defaultBackgroundId = focusBackgrounds[0]?.id ?? "";
@@ -786,21 +785,6 @@ export default function Dashboard() {
       setVolume(Math.min(1, Math.max(0, storedPrefs.volume)));
     }
 
-    const playbackSnapshot = getFocusAudioPlaybackSnapshot();
-
-    if (
-      playbackSnapshot.isPlaying
-      && playbackSnapshot.userId === userId
-      && playbackSnapshot.soundId
-      && soundscapes.some((scene) => scene.id === playbackSnapshot.soundId)
-    ) {
-      setSoundId(playbackSnapshot.soundId);
-      setVolume(Math.min(1, Math.max(0, playbackSnapshot.volume)));
-      setIsPlaying(true);
-    } else {
-      setIsPlaying(false);
-    }
-
     setPrefsLoaded(true);
   }, [userId, dashboardPrefsKey]);
 
@@ -817,22 +801,6 @@ export default function Dashboard() {
 
     window.localStorage.setItem(dashboardPrefsKey, JSON.stringify(payload));
   }, [backgroundId, soundId, volume, prefsLoaded, dashboardPrefsKey, userId]);
-
-  useEffect(() => {
-    if (searchParams.get("focus") !== "sounds") {
-      return;
-    }
-
-    setIsAtmosphereOpen(true);
-    setActiveTab("sounds");
-  }, [searchParams]);
-
-  useEffect(() => {
-    if (!prefsLoaded) {
-      return;
-    }
-    setFocusAudioVolume(volume);
-  }, [prefsLoaded, volume]);
 
   useEffect(() => {
     const body = document.body;
@@ -898,7 +866,17 @@ export default function Dashboard() {
   }, [isDragging, dragOffset]);
 
   const stopPlayback = useCallback(async (syncState: boolean = true) => {
-    await stopFocusAudioPlayback();
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = "";
+      audioRef.current = null;
+    }
+
+    if (generatedAudioRef.current) {
+      generatedAudioRef.current.stop();
+      await generatedAudioRef.current.context.close().catch(() => undefined);
+      generatedAudioRef.current = null;
+    }
 
     if (syncState) {
       setIsPlaying(false);
@@ -1084,7 +1062,7 @@ export default function Dashboard() {
     async (scene: Soundscape, requestId: number) => {
       await stopPlayback(false);
 
-      if (requestId !== getCurrentPlaybackRequestId()) {
+      if (requestId !== playbackRequestRef.current) {
         return false;
       }
 
@@ -1116,13 +1094,13 @@ export default function Dashboard() {
         try {
           await audio.play();
 
-          if (requestId !== getCurrentPlaybackRequestId()) {
+          if (requestId !== playbackRequestRef.current) {
             audio.pause();
             audio.src = "";
             return false;
           }
 
-          attachHtmlAudioSession(audio, scene.id, userId);
+          audioRef.current = audio;
           return true;
         } catch {
           audio.pause();
@@ -1135,16 +1113,16 @@ export default function Dashboard() {
         return false;
       }
 
-      if (requestId !== getCurrentPlaybackRequestId()) {
+      if (requestId !== playbackRequestRef.current) {
         generatedSound.stop();
         await generatedSound.context.close().catch(() => undefined);
         return false;
       }
 
-      attachGeneratedAudioSession(generatedSound, scene.id, userId);
+      generatedAudioRef.current = generatedSound;
       return true;
     },
-    [createGeneratedSound, stopPlayback, userId, volume]
+    [createGeneratedSound, stopPlayback, volume]
   );
 
   const handleSaveMiniTimerSettings = () => {
@@ -1234,6 +1212,7 @@ export default function Dashboard() {
   );
 
   useEffect(() => {
+    backgroundIdRef.current = backgroundId;
     setPreviewVideoSceneId(backgroundId);
   }, [backgroundId]);
 
@@ -1263,9 +1242,15 @@ export default function Dashboard() {
   }, [activeSoundCategory]);
 
   const handleBackgroundSelect = (sceneId: string) => {
-    setVideoError(false);
-    setIsBackgroundVideoReady(false);
+    // Only reset video loading state when switching to a different background
+    if (sceneId !== backgroundId) {
+      setVideoError(false);
+      setIsBackgroundVideoReady(false);
+    }
     setBackgroundId(sceneId);
+    backgroundIdRef.current = sceneId;
+    // Pin the preview highlight to the newly selected card immediately
+    setPreviewVideoSceneId(sceneId);
   };
 
   const markThumbnailLoaded = (sceneId: string) => {
@@ -1278,39 +1263,51 @@ export default function Dashboard() {
 
   const handleVolumeChange = (nextVolume: number) => {
     setVolume(nextVolume);
+
+    if (audioRef.current) {
+      audioRef.current.volume = nextVolume;
+    }
+
+    if (generatedAudioRef.current) {
+      generatedAudioRef.current.masterGain.gain.value = nextVolume;
+    }
   };
 
-  const handleSoundSelect = useCallback(
-    async (sceneId: string) => {
-      const requestId = createPlaybackRequest();
+  const handleSoundSelect = async (sceneId: string) => {
+    const requestId = playbackRequestRef.current + 1;
+    playbackRequestRef.current = requestId;
 
-      const scene = soundscapes.find((item) => item.id === sceneId);
-      if (!scene) {
-        return;
-      }
+    const scene = soundscapes.find((item) => item.id === sceneId);
+    if (!scene) {
+      return;
+    }
 
-      const isSameSound = sceneId === soundId;
-      if (isSameSound && isPlaying) {
-        await stopPlayback(true);
-        setIsPlaying(false);
-        return;
-      }
+    const isSameSound = sceneId === soundId;
+    if (isSameSound && isPlaying) {
+      await stopPlayback(true);
+      setIsPlaying(false);
+      return;
+    }
 
-      setSoundId(sceneId);
+    setSoundId(sceneId);
 
-      if (scene.engine === "none") {
-        await stopPlayback(true);
-        setIsPlaying(false);
-        return;
-      }
+    if (scene.engine === "none") {
+      await stopPlayback(true);
+      setIsPlaying(false);
+      return;
+    }
 
-      const isStarted = await startPlayback(scene, requestId);
-      if (requestId === getCurrentPlaybackRequestId()) {
-        setIsPlaying(isStarted);
-      }
-    },
-    [isPlaying, soundId, startPlayback, stopPlayback]
-  );
+    const isStarted = await startPlayback(scene, requestId);
+    if (requestId === playbackRequestRef.current) {
+      setIsPlaying(isStarted);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      void stopPlayback(false);
+    };
+  }, [stopPlayback]);
 
   const atmospherePanel = (
     <div
@@ -1405,67 +1402,67 @@ export default function Dashboard() {
               </div>
 
               <div className="grid w-full gap-4 grid-cols-2 md:grid-cols-4 lg:grid-cols-5">
-                    {filteredBackgrounds.map((scene) => {
-                      const shouldAnimatePreview = showAllThumbnailMotion || previewVideoSceneId === scene.id;
+                {filteredBackgrounds.map((scene) => {
+                  const shouldAnimatePreview = showAllThumbnailMotion || previewVideoSceneId === scene.id;
 
-                      return (
-                        <button
-                          key={scene.id}
-                          onClick={() => handleBackgroundSelect(scene.id)}
-                          onMouseEnter={() => setPreviewVideoSceneId(scene.id)}
-                          onFocus={() => setPreviewVideoSceneId(scene.id)}
-                          onMouseLeave={() => setPreviewVideoSceneId(activeBackground?.id ?? "")}
-                          onBlur={() => setPreviewVideoSceneId(activeBackground?.id ?? "")}
-                          className={`text-center rounded-2xl border p-4 transition shadow-sm ${scene.id === activeBackground?.id
-                            ? "border-emerald-500 bg-emerald-50/80 dark:bg-emerald-900/30"
-                            : "border-white/40 dark:border-slate-700/40 bg-white/70 dark:bg-slate-900/70 hover:bg-white dark:hover:bg-slate-800"
-                            }`}
-                        >
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="h-20 w-32 rounded-xl bg-slate-200/70 dark:bg-slate-700/70 overflow-hidden">
-                        {scene.videoUrl ? (
-                          <div className="relative h-full w-full">
-                            <Image
-                              src={scene.imageUrl || FALLBACK_BACKGROUND_IMAGE}
-                              alt={`${scene.label} thumbnail`}
-                              fill
-                              className="absolute inset-0 h-full w-full object-cover"
-                              loading="lazy"
-                              sizes="128px"
-                            />
-                            {!failedThumbnailPreviews[scene.id] && shouldAnimatePreview ? (
-                              <video
-                                className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${loadedThumbnailPreviews[scene.id] ? "opacity-100" : "opacity-0"}`}
-                                src={scene.videoUrl}
-                                muted
-                                loop
-                                playsInline
-                                autoPlay
-                                preload="none"
-                                onLoadedData={() => markThumbnailLoaded(scene.id)}
-                                onError={() => markThumbnailFailed(scene.id)}
+                  return (
+                    <button
+                      key={scene.id}
+                      onClick={() => handleBackgroundSelect(scene.id)}
+                      onMouseEnter={() => setPreviewVideoSceneId(scene.id)}
+                      onFocus={() => setPreviewVideoSceneId(scene.id)}
+                      onMouseLeave={() => setPreviewVideoSceneId(backgroundIdRef.current)}
+                      onBlur={() => setPreviewVideoSceneId(backgroundIdRef.current)}
+                      className={`text-center rounded-2xl border p-4 transition shadow-sm ${scene.id === activeBackground?.id
+                        ? "border-emerald-500 bg-emerald-50/80 dark:bg-emerald-900/30"
+                        : "border-white/40 dark:border-slate-700/40 bg-white/70 dark:bg-slate-900/70 hover:bg-white dark:hover:bg-slate-800"
+                        }`}
+                    >
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="h-20 w-32 rounded-xl bg-slate-200/70 dark:bg-slate-700/70 overflow-hidden">
+                          {scene.videoUrl ? (
+                            <div className="relative h-full w-full">
+                              <Image
+                                src={scene.imageUrl || FALLBACK_BACKGROUND_IMAGE}
+                                alt={`${scene.label} thumbnail`}
+                                fill
+                                className="absolute inset-0 h-full w-full object-cover"
+                                loading="lazy"
+                                sizes="128px"
                               />
-                            ) : null}
-                          </div>
-                        ) : scene.imageUrl ? (
-                          <div
-                            className="h-full w-full bg-cover bg-center"
-                            style={{ backgroundImage: `url(${scene.imageUrl})` }}
-                          />
-                        ) : (
-                          <div className="h-full w-full bg-[radial-gradient(circle_at_top,#bbf7d0,transparent_60%),radial-gradient(circle_at_30%_60%,#fde68a,transparent_55%),radial-gradient(circle_at_80%_20%,#bae6fd,transparent_55%)]" />
-                        )}
+                              {!failedThumbnailPreviews[scene.id] && shouldAnimatePreview ? (
+                                <video
+                                  className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${loadedThumbnailPreviews[scene.id] ? "opacity-100" : "opacity-0"}`}
+                                  src={scene.videoUrl}
+                                  muted
+                                  loop
+                                  playsInline
+                                  autoPlay
+                                  preload="none"
+                                  onLoadedData={() => markThumbnailLoaded(scene.id)}
+                                  onError={() => markThumbnailFailed(scene.id)}
+                                />
+                              ) : null}
+                            </div>
+                          ) : scene.imageUrl ? (
+                            <div
+                              className="h-full w-full bg-cover bg-center"
+                              style={{ backgroundImage: `url(${scene.imageUrl})` }}
+                            />
+                          ) : (
+                            <div className="h-full w-full bg-[radial-gradient(circle_at_top,#bbf7d0,transparent_60%),radial-gradient(circle_at_30%_60%,#fde68a,transparent_55%),radial-gradient(circle_at_80%_20%,#bae6fd,transparent_55%)]" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900 dark:text-white">{scene.label}</p>
+                          <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">{scene.description}</p>
+                          {!scene.videoUrl && !scene.imageUrl && scene.id !== "default" && (
+                            <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-2">
+                              Add a video or image URL to enable a live background.
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900 dark:text-white">{scene.label}</p>
-                        <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">{scene.description}</p>
-                        {!scene.videoUrl && !scene.imageUrl && scene.id !== "default" && (
-                          <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-2">
-                            Add a video or image URL to enable a live background.
-                          </p>
-                        )}
-                      </div>
-                    </div>
                     </button>
                   );
                 })}
@@ -1522,9 +1519,21 @@ export default function Dashboard() {
                           <p className={`text-sm font-semibold ${isActive ? "text-emerald-800 dark:text-emerald-200" : "text-slate-800 dark:text-slate-100"}`}>
                             {scene.label}
                           </p>
-                          <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5 line-clamp-1">
+                          <p className={`text-[11px] text-slate-600 dark:text-slate-300 mt-0.5 ${expandedSoundId === scene.id ? '' : 'line-clamp-1'}`}>
                             {scene.description}
                           </p>
+                          {scene.description.length > 42 && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setExpandedSoundId((prev) => prev === scene.id ? null : scene.id);
+                              }}
+                              className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 mt-0.5 transition-colors"
+                            >
+                              {expandedSoundId === scene.id ? 'less' : 'more...'}
+                            </button>
+                          )}
                         </div>
 
                         <div className="mt-0.5 flex items-center gap-2">
@@ -1584,7 +1593,7 @@ export default function Dashboard() {
             loop
             playsInline
             poster={activeBackground.imageUrl || FALLBACK_BACKGROUND_IMAGE}
-            preload="metadata"
+            preload="auto"
             onLoadStart={() => {
               setVideoError(false);
               setIsBackgroundVideoReady(false);
@@ -1615,10 +1624,7 @@ export default function Dashboard() {
         )}
       </div>
       {shouldRenderBackgroundVideo && !isBackgroundVideoReady ? (
-        <div
-          className="fixed inset-0 -z-[15] bg-cover bg-center"
-          style={{ backgroundImage: `url(${activeBackground?.imageUrl || FALLBACK_BACKGROUND_IMAGE})` }}
-        />
+        <div className="fixed inset-0 -z-[15] bg-slate-900 transition-opacity duration-500" />
       ) : null}
 
       {videoError && (
@@ -1659,64 +1665,64 @@ export default function Dashboard() {
 
       <div
         className={`fixed z-50 backdrop-blur-xl border rounded-3xl p-4 shadow-lg w-48 cursor-move select-none transition-all duration-300 ease-out origin-bottom-right ${hiddenUiPanelClasses} ${isUiHidden && showMiniTimer ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-90 translate-y-4 pointer-events-none"}`}
-          style={{
-            left: `${timerPosition.x}px`,
-            top: `${timerPosition.y}px`,
-          }}
-          onMouseDown={handleMouseDown}
-        >
-          <div className="flex flex-col items-center gap-3">
-            <div className="text-center">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{timerModes[visibleTimerMode].label}{visibleTimerMode === "pomodoro" ? " Session" : ""}</p>
-              <p className="text-3xl font-bold text-slate-900 dark:text-white">{formatTime(visibleTimeLeft)}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={resetTimer}
-                onMouseDown={(e) => e.stopPropagation()}
-                className="h-10 w-10 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition flex items-center justify-center"
-              >
-                <span className="material-symbols-outlined text-lg text-slate-700 dark:text-slate-200">restart_alt</span>
-              </button>
-              <button
-                onClick={toggleTimer}
-                onMouseDown={(e) => e.stopPropagation()}
-                className="h-12 w-12 rounded-full bg-emerald-600 hover:bg-emerald-700 transition flex items-center justify-center"
-              >
-                <span className="material-symbols-outlined text-xl text-white fill-current">{isTimerActive ? "pause" : "play_arrow"}</span>
-              </button>
-              <button
-                onClick={() => setShowMiniTimerSettings(true)}
-                onMouseDown={(e) => e.stopPropagation()}
-                className="h-10 w-10 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition flex items-center justify-center"
-              >
-                <span className="material-symbols-outlined text-lg text-slate-700 dark:text-slate-200">settings</span>
-              </button>
-            </div>
-            <div className={`flex items-center gap-1 rounded-full p-1 ${hiddenUiModeStripClasses}`}>
-              <button
-                onClick={() => handleTimerModeChange("pomodoro")}
-                onMouseDown={(e) => e.stopPropagation()}
-                className={`px-2 py-1 text-[10px] font-semibold rounded-full transition ${visibleTimerMode === "pomodoro" ? "bg-emerald-600 text-white" : "text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700"}`}
-              >
-                Focus
-              </button>
-              <button
-                onClick={() => handleTimerModeChange("shortBreak")}
-                onMouseDown={(e) => e.stopPropagation()}
-                className={`px-2 py-1 text-[10px] font-semibold rounded-full transition ${visibleTimerMode === "shortBreak" ? "bg-emerald-600 text-white" : "text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700"}`}
-              >
-                Short
-              </button>
-              <button
-                onClick={() => handleTimerModeChange("longBreak")}
-                onMouseDown={(e) => e.stopPropagation()}
-                className={`px-2 py-1 text-[10px] font-semibold rounded-full transition ${visibleTimerMode === "longBreak" ? "bg-emerald-600 text-white" : "text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700"}`}
-              >
-                Long
-              </button>
-            </div>
+        style={{
+          left: `${timerPosition.x}px`,
+          top: `${timerPosition.y}px`,
+        }}
+        onMouseDown={handleMouseDown}
+      >
+        <div className="flex flex-col items-center gap-3">
+          <div className="text-center">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{timerModes[visibleTimerMode].label}{visibleTimerMode === "pomodoro" ? " Session" : ""}</p>
+            <p className="text-3xl font-bold text-slate-900 dark:text-white">{formatTime(visibleTimeLeft)}</p>
           </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={resetTimer}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="h-10 w-10 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition flex items-center justify-center"
+            >
+              <span className="material-symbols-outlined text-lg text-slate-700 dark:text-slate-200">restart_alt</span>
+            </button>
+            <button
+              onClick={toggleTimer}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="h-12 w-12 rounded-full bg-emerald-600 hover:bg-emerald-700 transition flex items-center justify-center"
+            >
+              <span className="material-symbols-outlined text-xl text-white fill-current">{isTimerActive ? "pause" : "play_arrow"}</span>
+            </button>
+            <button
+              onClick={() => setShowMiniTimerSettings(true)}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="h-10 w-10 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition flex items-center justify-center"
+            >
+              <span className="material-symbols-outlined text-lg text-slate-700 dark:text-slate-200">settings</span>
+            </button>
+          </div>
+          <div className={`flex items-center gap-1 rounded-full p-1 ${hiddenUiModeStripClasses}`}>
+            <button
+              onClick={() => handleTimerModeChange("pomodoro")}
+              onMouseDown={(e) => e.stopPropagation()}
+              className={`px-2 py-1 text-[10px] font-semibold rounded-full transition ${visibleTimerMode === "pomodoro" ? "bg-emerald-600 text-white" : "text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700"}`}
+            >
+              Focus
+            </button>
+            <button
+              onClick={() => handleTimerModeChange("shortBreak")}
+              onMouseDown={(e) => e.stopPropagation()}
+              className={`px-2 py-1 text-[10px] font-semibold rounded-full transition ${visibleTimerMode === "shortBreak" ? "bg-emerald-600 text-white" : "text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700"}`}
+            >
+              Short
+            </button>
+            <button
+              onClick={() => handleTimerModeChange("longBreak")}
+              onMouseDown={(e) => e.stopPropagation()}
+              className={`px-2 py-1 text-[10px] font-semibold rounded-full transition ${visibleTimerMode === "longBreak" ? "bg-emerald-600 text-white" : "text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700"}`}
+            >
+              Long
+            </button>
+          </div>
+        </div>
       </div>
 
       {showMiniTimerSettings && (
