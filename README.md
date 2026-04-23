@@ -28,18 +28,18 @@ A modern scheduling application built with **Next.js**, **React**, and **TypeScr
 ```
 src/
 ├── app/
-│   ├── layout.tsx          # Root layout
-│   ├── page.tsx            # Home page with ScheduleView component
-│   └── globals.css         # Global styles
+│   ├── layout.tsx         # Root layout
+│   ├── page.tsx           # Home page with ScheduleView component
+│   └── globals.css        # Global styles
 ├── components/
-│   ├── ScheduleView.tsx    # Main schedule container with view switcher
-│   ├── DayView.tsx         # Daily calendar component
-│   ├── WeekView.tsx        # Weekly calendar component
-│   └── MonthView.tsx       # Monthly calendar component
+│   ├── ScheduleView.tsx   # Main schedule container with view switcher
+│   ├── DayView.tsx        # Daily calendar component
+│   ├── WeekView.tsx       # Weekly calendar component
+│   └── MonthView.tsx      # Monthly calendar component
 ├── types/
-│   └── schedule.ts         # TypeScript types and interfaces
+│   └── schedule.ts        # TypeScript types and interfaces
 └── utils/
-    └── dateUtils.ts        # Date formatting and calculation utilities
+    └── dateUtils.ts       # Date formatting and calculation utilities
 ```
 
 ## Getting Started
