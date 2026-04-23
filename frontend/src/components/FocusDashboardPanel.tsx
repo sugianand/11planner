@@ -4,7 +4,6 @@
 
 import { ReactNode, useEffect, useState } from "react";
 import { usePlanner } from "@/contexts/PlannerContext";
-import { taskAPI } from "@/lib/api";
 import Timer from "@/components/Dashboard/Timer";
 import StatCard from "@/components/Dashboard/StatCard";
 
@@ -55,6 +54,7 @@ export default function FocusDashboardPanel({
     userId,
     tasks,
     scheduleBlocks,
+    updateTask,
     loadTasks,
     loadAssignments,
     loadScheduleBlocks,
@@ -68,7 +68,7 @@ export default function FocusDashboardPanel({
   const [connectMessage, setConnectMessage] = useState("");
   const [youtubeMood, setYoutubeMood] = useState<YouTubeMood>("lofi");
   const [privacyPersonalizationEnabled, setPrivacyPersonalizationEnabled] = useState(true);
-  const [updatingTaskIds, setUpdatingTaskIds] = useState<Set<string>>(new Set());
+  const [togglingTaskId, setTogglingTaskId] = useState<string | null>(null);
   const youtubeTracks: YouTubeTrack[] = [
     {
       title: "Deep Focus Lofi",
@@ -735,23 +735,15 @@ export default function FocusDashboardPanel({
                           <input
                             type="checkbox"
                             checked={item.completed}
-                            disabled={updatingTaskIds.has(item.taskId)}
-                            onChange={async () => {
-                              setUpdatingTaskIds(prev => new Set(prev).add(item.taskId));
-                              try {
-                                console.log("Updating scheduled task:", item.taskId, "to completed:", !item.completed);
-                                const result = await taskAPI.update(item.taskId, { completed: !item.completed });
-                                console.log("Update successful:", result);
-                                await loadTasks();
-                              } catch (error) {
-                                console.error("Failed to update scheduled task:", item.taskId, error);
-                              } finally {
-                                setUpdatingTaskIds(prev => {
-                                  const newSet = new Set(prev);
-                                  newSet.delete(item.taskId);
-                                  return newSet;
-                                });
-                              }
+                            disabled={togglingTaskId === item.taskId}
+                            onChange={() => {
+                              setTogglingTaskId(item.taskId);
+                              updateTask(item.taskId, { completed: !item.completed }).then(() => {
+                                setTogglingTaskId(null);
+                              }).catch((err) => {
+                                console.error("Failed to update scheduled task:", err);
+                                setTogglingTaskId(null);
+                              });
                             }}
                             className="mt-0.5 rounded border-slate-300 text-emerald-600 cursor-pointer"
                           />
@@ -789,23 +781,15 @@ export default function FocusDashboardPanel({
                           <input
                             type="checkbox"
                             checked={task.completed}
-                            disabled={updatingTaskIds.has(task.id)}
-                            onChange={async () => {
-                              setUpdatingTaskIds(prev => new Set(prev).add(task.id));
-                              try {
-                                console.log("Updating due today task:", task.id, "to completed:", !task.completed);
-                                const result = await taskAPI.update(task.id, { completed: !task.completed });
-                                console.log("Update successful:", result);
-                                await loadTasks();
-                              } catch (error) {
-                                console.error("Failed to update due today task:", task.id, error);
-                              } finally {
-                                setUpdatingTaskIds(prev => {
-                                  const newSet = new Set(prev);
-                                  newSet.delete(task.id);
-                                  return newSet;
-                                });
-                              }
+                            disabled={togglingTaskId === task.id}
+                            onChange={() => {
+                              setTogglingTaskId(task.id);
+                              updateTask(task.id, { completed: !task.completed }).then(() => {
+                                setTogglingTaskId(null);
+                              }).catch((err) => {
+                                console.error("Failed to update due today task:", err);
+                                setTogglingTaskId(null);
+                              });
                             }}
                             className="mt-0.5 rounded border-amber-300 text-amber-600 cursor-pointer"
                           />
