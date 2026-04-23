@@ -420,37 +420,41 @@ async def update_task(task_id: str, task_data: TaskUpdate):
     try:
         supabase = get_supabase()
         
-        # Only include fields that were explicitly provided
-        update_dict = task_data.model_dump(exclude_unset=True)
+        # Build update payload from provided fields
+        update_dict = {}
+        if task_data.completed is not None:
+            update_dict["status"] = "completed" if task_data.completed else "pending"
+        if task_data.task_title is not None:
+            update_dict["task_title"] = task_data.task_title
+        if task_data.description is not None:
+            update_dict["description"] = task_data.description
+        if task_data.priority_level is not None:
+            update_dict["priority_level"] = task_data.priority_level
+        if task_data.estimated_hours is not None:
+            update_dict["estimated_hours"] = task_data.estimated_hours
+        if task_data.task_type is not None:
+            update_dict["task_type"] = task_data.task_type
+        if task_data.deadline_at is not None:
+            update_dict["deadline_at"] = task_data.deadline_at
         
         if not update_dict:
             raise HTTPException(status_code=400, detail="No fields to update")
         
-        print(f"[UPDATE_TASK] Updating task {task_id} with: {update_dict}")
-        
-        # Update the task in Supabase and get the updated data back
+        # Update in Supabase
         result = (
             supabase.table("tasks")
             .update(update_dict)
             .eq("id", task_id)
-            .select()
             .execute()
         )
         
-        print(f"[UPDATE_TASK] Result data: {result.data}, Error: {result.error if hasattr(result, 'error') else 'None'}")
+        if not result.data:
+            raise HTTPException(status_code=404, detail="Task not found")
         
-        if not result.data or len(result.data) == 0:
-            print(f"[UPDATE_TASK] No data returned - task not found or not updated")
-            raise HTTPException(status_code=404, detail="Task not found or could not be updated")
-        
-        print(f"[UPDATE_TASK] Successfully updated task: {result.data[0]}")
-        return result.data[0]
+        return {"message": "Task updated successfully", "task": result.data[0]}
     except HTTPException:
         raise
     except Exception as e:
-        print(f"[UPDATE_TASK] Error in update_task: {str(e)}")
-        import traceback
-        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to update task: {str(e)}")
 
 # ========== SCHEDULE GENERATION ENDPOINTS ==========

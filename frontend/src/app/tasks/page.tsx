@@ -129,22 +129,24 @@ export default function TasksPage() {
     loadTasks();
   }, [userId, loadCourses, loadTasks]);
 
+  // Simple, clean task completion handler
   const handleToggleTaskCompletion = async (taskId: string, currentCompleted: boolean) => {
     try {
       setTogglingTaskId(taskId);
       await updateTask(taskId, { completed: !currentCompleted });
-      // Auto-switch to completed tab if marking as complete
+      setTogglingTaskId(null);
+      
+      // Auto-switch tab when marking complete
       if (!currentCompleted) {
-        setTimeout(() => setActiveTab("completed"), 500);
+        setTimeout(() => setActiveTab("completed"), 300);
       }
     } catch (err) {
+      setTogglingTaskId(null);
       setDialog({
         isOpen: true,
-        title: "Error",
+        title: "Error updating task",
         message: err instanceof Error ? err.message : "Failed to update task",
       });
-    } finally {
-      setTogglingTaskId(null);
     }
   };
 
