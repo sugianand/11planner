@@ -13,6 +13,7 @@ import {
 } from "@/types";
 import {
   assignmentAPI,
+  taskAPI,
   scheduleAPI,
 } from "@/lib/api";
 
@@ -741,18 +742,31 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
 
       console.log("Updating task:", { id, payload: updatePayload, task }); // Debug log
 
-      const { error: updateError, data: updateData } = await supabase
+      // Ensure we have at least one field to update
+      if (Object.keys(updatePayload).length === 0) {
+        console.warn("No fields to update");
+        return;
+      }
+
+      const { error: updateError, data: updateData, count } = await supabase
         .from("tasks")
         .update(updatePayload)
         .eq("id", id)
         .eq("user_id", userId)
-        .select();
+        .select()
+        .maybeSingle();
 
-      console.log("Update result:", { updateError, updateData }); // Debug log
+      console.log("Update result:", { updateError, updateData, count }); // Debug log
 
       if (updateError) {
         console.error("Supabase update error:", updateError);
         throw updateError;
+      }
+
+      // If no rows were updated, the task might not exist for this user
+      if (!updateData) {
+        console.warn("Task not found or not owned by user:", id);
+        throw new Error("Task not found or unauthorized");
       }
 
       if (task.completed !== undefined && typeof window !== "undefined") {
@@ -765,6 +779,7 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
         writeTaskCompletionTimestamps(completionTimestamps);
       }
 
+      // Update local state
       setTasks((prev) =>
         prev.map((t) => (t.id === id ? { ...t, ...task } : t))
       );

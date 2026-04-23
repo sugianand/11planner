@@ -41,6 +41,7 @@ class TaskUpdate(BaseModel):
     task_type: str | None = None
     deadline_at: str | None = None
     status: str | None = None
+    user_id: str | None = None  # For validation purposes
 
 # Supabase client is used for all data operations
 _supabase_client: Client | None = None
@@ -438,6 +439,7 @@ async def update_task(task_id: str, task_data: TaskUpdate):
         
         return result.data[0]
     except Exception as e:
+        print(f"Error in update_task: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to update task: {str(e)}")
 
 # ========== SCHEDULE GENERATION ENDPOINTS ==========
