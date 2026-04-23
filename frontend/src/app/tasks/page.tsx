@@ -818,7 +818,7 @@ export default function TasksPage() {
 
                     <div className="flex gap-3 flex-wrap items-center">
                       {/* Checkbox for task completion */}
-                      <div className="flex items-center gap-2">
+                      <label className="flex items-center gap-2 cursor-pointer text-slate-500 dark:text-slate-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium py-1.5 px-3 -ml-3 rounded-lg transition hover:bg-emerald-50 dark:hover:bg-emerald-900/20">
                         <input
                           type="checkbox"
                           checked={task.completed}
@@ -827,10 +827,10 @@ export default function TasksPage() {
                           className="w-5 h-5 cursor-pointer accent-emerald-600 rounded disabled:opacity-50 disabled:cursor-not-allowed"
                           title={task.completed ? "Mark as pending" : "Mark as completed"}
                         />
-                        <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                        <span>
                           {togglingTaskId === task.id ? "Updating..." : task.completed ? "Completed" : "Mark complete"}
                         </span>
-                      </div>
+                      </label>
                       
                       <button
                         onClick={() => handleEstimateTaskTime(task)}

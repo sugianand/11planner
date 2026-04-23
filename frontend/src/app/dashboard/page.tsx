@@ -1478,9 +1478,10 @@ export default function Dashboard() {
                     key={category}
                     onClick={() => setActiveSoundCategory(category)}
                     className={`px-3 py-1.5 rounded-full text-xs font-semibold transition border ${category === activeSoundCategory
-                      ? "bg-emerald-600 text-white border-emerald-600"
+                      ? ""
                       : "bg-white/80 dark:bg-slate-900/70 text-slate-700 dark:text-slate-200 border-white/40 dark:border-slate-700/40 hover:bg-white"
                       }`}
+                    style={category === activeSoundCategory ? { backgroundColor: "var(--theme-accent-strong)", color: "white", borderColor: "var(--theme-accent-strong)" } : undefined}
                   >
                     {category}
                   </button>
@@ -1498,16 +1499,19 @@ export default function Dashboard() {
                         void handleSoundSelect(scene.id);
                       }}
                       className={`rounded-xl border p-3 text-left transition shadow-sm ${isActive
-                        ? "border-emerald-500 bg-emerald-50/90 dark:bg-emerald-900/30"
+                        ? ""
                         : "border-white/40 dark:border-slate-700/40 bg-white/75 dark:bg-slate-900/70 hover:bg-white dark:hover:bg-slate-800"
                         }`}
+                      style={isActive ? { borderColor: "var(--theme-accent-strong)", backgroundColor: "var(--theme-accent-soft)" } : undefined}
                     >
                       <div className="flex flex-col gap-2">
                         <div className="flex items-center justify-between gap-2">
                           <div className={`h-8 w-8 rounded-full flex items-center justify-center text-base ${isActive
-                            ? "bg-emerald-200/70 dark:bg-emerald-800/60"
+                            ? ""
                             : "bg-slate-200/70 dark:bg-slate-700/70"
-                            }`}>
+                            }`}
+                            style={isActive ? { backgroundColor: "var(--theme-accent-soft)", color: "var(--theme-accent-strong)" } : undefined}
+                          >
                             <span className="leading-none">{icon}</span>
                           </div>
                           <span className="text-[9px] uppercase tracking-wider font-semibold text-slate-500 dark:text-slate-400 bg-white/70 dark:bg-slate-800/70 px-1.5 py-0.5 rounded-full border border-white/50 dark:border-slate-700/50">
@@ -1516,7 +1520,9 @@ export default function Dashboard() {
                         </div>
 
                         <div>
-                          <p className={`text-sm font-semibold ${isActive ? "text-emerald-800 dark:text-emerald-200" : "text-slate-800 dark:text-slate-100"}`}>
+                          <p className={`text-sm font-semibold ${isActive ? "" : "text-slate-800 dark:text-slate-100"}`}
+                            style={isActive ? { color: "var(--theme-accent-strong)" } : undefined}
+                          >
                             {scene.label}
                           </p>
                           <p className={`text-[11px] text-slate-600 dark:text-slate-300 mt-0.5 ${expandedSoundId === scene.id ? '' : 'line-clamp-1'}`}>
@@ -1537,10 +1543,14 @@ export default function Dashboard() {
                         </div>
 
                         <div className="mt-0.5 flex items-center gap-2">
-                          <span className={`material-symbols-outlined text-base ${isActive && isPlaying ? "text-emerald-600" : "text-slate-400 dark:text-slate-500"}`}>
+                          <span className={`material-symbols-outlined text-base ${isActive && isPlaying ? "" : "text-slate-400 dark:text-slate-500"}`}
+                            style={isActive && isPlaying ? { color: "var(--theme-accent-strong)" } : undefined}
+                          >
                             {isActive && isPlaying ? "volume_up" : "volume_off"}
                           </span>
-                          <span className={`h-px flex-1 ${isActive ? "bg-emerald-400/80" : "bg-slate-400/50 dark:bg-slate-600/70"}`} />
+                          <span className={`h-px flex-1 ${isActive ? "" : "bg-slate-400/50 dark:bg-slate-600/70"}`}
+                            style={isActive ? { backgroundColor: "var(--theme-accent-strong)", opacity: 0.8 } : undefined}
+                          />
                         </div>
                       </div>
                     </button>
@@ -1549,7 +1559,9 @@ export default function Dashboard() {
               </div>
               <div className="flex flex-col items-center gap-3">
                 <div className="flex items-center gap-3">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+                  <span className="text-xs font-semibold uppercase tracking-wider"
+                    style={{ color: "var(--theme-accent-strong)" }}
+                  >
                     {isPlaying ? "Now Playing" : "Select a sound to play"}
                   </span>
                   <span className="text-sm text-slate-600 dark:text-slate-300">
@@ -1567,7 +1579,8 @@ export default function Dashboard() {
                     step={0.01}
                     value={volume}
                     onChange={(event) => handleVolumeChange(Number(event.target.value))}
-                    className="w-40 accent-emerald-600"
+                    className="w-40"
+                    style={{ accentColor: "var(--theme-accent-strong)" }}
                   />
                 </div>
               </div>

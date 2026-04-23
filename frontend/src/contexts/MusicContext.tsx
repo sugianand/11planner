@@ -1,10 +1,10 @@
 'use client';
 
-import { ReactNode, createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
+import { ReactNode, createContext, useContext, useEffect, useMemo, useState, Dispatch, SetStateAction } from 'react';
 
-type YouTubeMood = 'lofi' | 'synthwave' | 'coding';
+export type YouTubeMood = 'lofi' | 'synthwave' | 'coding';
 
-type YouTubeTrack = {
+export type YouTubeTrack = {
   title: string;
   artist: string;
   duration: string;
@@ -15,27 +15,27 @@ type YouTubeTrack = {
 interface MusicContextType {
   // Spotify state
   spotifyPlaylist: string;
-  setSpotifyPlaylist: (playlist: string) => void;
+  setSpotifyPlaylist: Dispatch<SetStateAction<string>>;
   spotifyConnected: boolean;
-  setSpotifyConnected: (connected: boolean) => void;
+  setSpotifyConnected: Dispatch<SetStateAction<boolean>>;
   spotifyConnecting: boolean;
-  setSpotifyConnecting: (connecting: boolean) => void;
+  setSpotifyConnecting: Dispatch<SetStateAction<boolean>>;
   connectMessage: string;
-  setConnectMessage: (message: string) => void;
+  setConnectMessage: Dispatch<SetStateAction<string>>;
 
   // YouTube state
   youtubeMood: YouTubeMood;
-  setYoutubeMood: (mood: YouTubeMood) => void;
+  setYoutubeMood: Dispatch<SetStateAction<YouTubeMood>>;
   activeYoutubeIndex: number;
-  setActiveYoutubeIndex: (index: number) => void;
+  setActiveYoutubeIndex: Dispatch<SetStateAction<number>>;
   isYoutubePlaying: boolean;
-  setIsYoutubePlaying: (playing: boolean) => void;
+  setIsYoutubePlaying: Dispatch<SetStateAction<boolean>>;
 
   // General music state
   musicProvider: 'spotify' | 'youtube';
-  setMusicProvider: (provider: 'spotify' | 'youtube') => void;
+  setMusicProvider: Dispatch<SetStateAction<'spotify' | 'youtube'>>;
   isMusicOpen: boolean;
-  setIsMusicOpen: (open: boolean) => void;
+  setIsMusicOpen: Dispatch<SetStateAction<boolean>>;
 
   // YouTube tracks
   youtubeTracks: YouTubeTrack[];
