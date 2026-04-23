@@ -1045,7 +1045,7 @@ export default function CoursesPage() {
                 return (
                 <div
                   key={course.id}
-                  className="min-h-[340px] bg-white/60 dark:bg-slate-800/55 backdrop-blur-md rounded-2xl shadow-sm p-6 border border-white/50 dark:border-slate-700/45 hover:bg-white/80 dark:hover:bg-slate-800/75 transition group relative overflow-hidden flex flex-col"
+                  className="h-[340px] bg-white/60 dark:bg-slate-800/55 backdrop-blur-md rounded-2xl shadow-sm p-6 border border-white/50 dark:border-slate-700/45 hover:bg-white/80 dark:hover:bg-slate-800/75 transition group relative overflow-hidden flex flex-col"
                 >
                   <div className="absolute top-0 left-0 w-1 h-full bg-[#306844]"></div>
                   <div className="mb-4 flex items-start justify-between gap-3">
@@ -1137,7 +1137,7 @@ export default function CoursesPage() {
                       </button>
                       <button
                         onClick={() => handleEdit(course)}
-                        className="flex-1 text-slate-600 dark:text-slate-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium py-1.5 px-3 rounded-lg transition hover:bg-emerald-50 dark:hover:bg-emerald-900/30"
+                        className="flex-1 text-slate-600 dark:text-slate-400 hover:text-[#002966] dark:hover:text-blue-300 font-medium py-1.5 px-3 rounded-lg transition hover:bg-blue-50 dark:hover:bg-blue-900/20"
                       >
                         Edit
                       </button>
