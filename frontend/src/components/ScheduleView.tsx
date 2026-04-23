@@ -23,6 +23,28 @@ interface ScheduleViewProps {
   onShowDialog?: (title: string, message: string) => void;
 }
 
+function getCalendarFeedBaseUrl(): string | null {
+  const configuredCalendarBase = process.env.NEXT_PUBLIC_CALENDAR_FEED_BASE_URL?.trim();
+  if (configuredCalendarBase && /^https?:\/\//i.test(configuredCalendarBase)) {
+    return configuredCalendarBase.replace(/\/$/, '');
+  }
+
+  const configuredApiBase = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (configuredApiBase && /^https?:\/\//i.test(configuredApiBase)) {
+    return configuredApiBase.replace(/\/$/, '');
+  }
+
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    const isLocalHost = /^(localhost|127\.0\.0\.1)$/i.test(host);
+    if (isLocalHost) {
+      return 'http://127.0.0.1:8000';
+    }
+  }
+
+  return null;
+}
+
 export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEventMove, colorBy = "priority", onColorByChange, errorMessage = null, onDismissError, onShowDialog }) => {
   const { userId, courses, loadCourses } = usePlanner();
   const { effectiveTheme } = useTheme();
@@ -271,18 +293,33 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ events = [], onEvent
       onShowDialog?.('Login required', 'Please log in to sync your calendar.');
       return;
     }
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
-    const httpUrl = `${backendUrl}/api/schedule-blocks/${userId}/calendar.ics`;
+
+    const backendUrl = getCalendarFeedBaseUrl();
+    if (!backendUrl) {
+      onShowDialog?.(
+        'Calendar feed is not configured',
+        'Subscribe (Live) needs a public backend URL. Set NEXT_PUBLIC_API_URL (or NEXT_PUBLIC_CALENDAR_FEED_BASE_URL) to your deployed backend URL, then redeploy the frontend.'
+      );
+      return;
+    }
+
+    const httpUrl = `${backendUrl}/api/schedule-blocks/${encodeURIComponent(userId)}/calendar.ics`;
     const webcalUrl = httpUrl
       .replace(/^https:\/\//, 'webcals://')
       .replace(/^http:\/\//, 'webcal://');
 
-    const isMac = /Mac|iPhone|iPad/i.test(navigator.userAgent);
+    const isAppleDevice = /Mac|iPhone|iPad/i.test(navigator.userAgent);
     const isLocalBackend = /localhost|127\.0\.0\.1/i.test(backendUrl);
 
-    if (isMac && isLocalBackend) {
+    if (isAppleDevice && isLocalBackend) {
       onShowDialog?.('Mac subscribe limitation in local dev', 'Apple Calendar cannot live-subscribe to localhost URLs. Use Export for local testing, or set NEXT_PUBLIC_API_URL to a public HTTPS URL for live subscribe.');
       exportEventsToICS(eventList, '11planner-schedule.ics');
+      return;
+    }
+
+    if (isAppleDevice) {
+      // Custom scheme handlers are most reliable when using same-tab navigation.
+      window.location.href = webcalUrl;
       return;
     }
 
