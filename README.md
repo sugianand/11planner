@@ -1,166 +1,102 @@
-# Schedule Views App
+# 11Planner
 
-A modern scheduling application built with **Next.js**, **React**, and **TypeScript** featuring daily, weekly, and monthly calendar views.
+An AI-powered academic scheduling and productivity web application for students. 11Planner helps you manage courses, assignments, and deadlines by automatically generating an optimized weekly study schedule tailored to your preferences.
+
+---
 
 ## Features
 
-- **Three Calendar Views**:
-  - **Daily View**: Hourly schedule with detailed event information
-  - **Weekly View**: Seven-day grid with time slots for better week planning
-  - **Monthly View**: Full month calendar with event previews
+- **Smart Schedule Generation** — AI-assisted task prioritization and time-blocking based on deadlines, estimated effort, and your study preferences
+- **Course Management** — Add courses with meeting times; upload a syllabus PDF to auto-fill details
+- **Task & Assignment Tracking** — Create, prioritize, and track tasks linked to courses
+- **Multiple Calendar Views** — Day, Week, Month, and Year views for your schedule
+- **Focus Dashboard** — Built-in Pomodoro timer, 30 video backgrounds, ambient soundscapes, and distraction-free UI modes
+- **Canvas LMS Sync** — Chrome extension to import courses and assignments directly from Canvas
+- **Notifications** — In-app toasts, browser push notifications, and weekly email summaries
+- **Customizable Settings** — Light/Dark/Auto themes, daily study hour cap, notification preferences
+- **Secure Auth** — Supabase authentication with email verification and JWT session management
 
-- **Navigation Controls**:
-  - Switch between different view modes
-  - Navigate to previous/next periods
-  - Quick "Today" button to jump to current date
+---
 
-- **Event Management**:
-  - Display events with customizable colors (blue, red, green, yellow, purple, pink)
-  - Event descriptions and time ranges
-  - Responsive event display across all views
+## Tech Stack
 
-- **Type-Safe**: Built with TypeScript for robust development
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js 16, React 19, TypeScript, Tailwind CSS v4 |
+| Backend | Python 3.11+, FastAPI 0.110 |
+| Database & Auth | Supabase (PostgreSQL) |
+| AI | OpenAI API, Google Gemini API |
+| PDF Parsing | pypdf |
+| Deployment | Vercel (frontend), Render (backend) |
 
-- **Styled with Tailwind CSS**: Modern, responsive UI
+---
 
 ## Project Structure
 
 ```
-src/
-├── app/
-│   ├── layout.tsx         # Root layout
-│   ├── page.tsx           # Home page with ScheduleView component
-│   └── globals.css        # Global styles
-├── components/
-│   ├── ScheduleView.tsx   # Main schedule container with view switcher
-│   ├── DayView.tsx        # Daily calendar component
-│   ├── WeekView.tsx       # Weekly calendar component
-│   └── MonthView.tsx      # Monthly calendar component
-├── types/
-│   └── schedule.ts        # TypeScript types and interfaces
-└── utils/
-    └── dateUtils.ts       # Date formatting and calculation utilities
+11Planner/
+├── backend/
+│   ├── app/
+│   │   ├── main.py                 # FastAPI app entry point
+│   │   ├── models.py               # Pydantic data models
+│   │   ├── schedule_generator.py   # Core scheduling algorithm
+│   │   ├── syllabus_parser.py      # PDF syllabus extraction
+│   │   ├── ai_task_estimator.py    # AI-assisted time estimation
+│   │   └── api/                    # Route handlers (tasks, courses, assignments, etc.)
+│   └── requirements.txt
+├── frontend/
+│   └── src/
+│       ├── app/                    # Next.js pages (dashboard, tasks, courses, schedule, etc.)
+│       ├── components/             # Reusable UI components
+│       ├── contexts/               # Global state (PlannerContext, ThemeContext, etc.)
+│       ├── lib/                    # Supabase client, API helpers
+│       ├── types/                  # Shared TypeScript interfaces
+│       └── utils/                  # Date and ICS utilities
+├── canvas-extension/               # Chrome extension for Canvas LMS sync
+└── RUN_INSTRUCTIONS.md             # Setup and run guide
 ```
+
+---
 
 ## Getting Started
 
-### Prerequisites
+See **[RUN_INSTRUCTIONS.md](./RUN_INSTRUCTIONS.md)** for the full setup guide.
 
-- Node.js 18+
-- npm (or yarn/pnpm/bun)
+**Quick summary:**
+1. Set up `.env` in `backend/` with your Supabase and API keys
+2. Set up `.env.local` in `frontend/` with your Supabase public keys
+3. Run `uvicorn app.main:app --reload` in the `backend/` directory
+4. Run `npm install && npm run dev` in the `frontend/` directory
+5. Open `http://localhost:3000`
 
-### Installation
+---
 
-```bash
-npm install
+## Environment Variables
+
+**Backend (`backend/.env`):**
+```
+SUPABASE_URL=
+SUPABASE_KEY=
+OPENAI_API_KEY=
+GEMINI_API_KEY=
 ```
 
-### Development
-
-```bash
-npm run dev
+**Frontend (`frontend/.env.local`):**
+```
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
+---
 
-### Production Build
+## Team
 
-```bash
-npm run build
-npm run start
-```
+| Name | Role |
+|---|---|
+| Tamana Gaur | Team Lead & Documentation Lead |
+| Suganeshwara Anand | Frontend, UX & Scheduling Engine Lead |
+| Ayham Huq | Backend Lead |
+| Aaraiz Sohail | Deployment & QA Lead |
 
-## Usage
-
-### Basic Implementation
-
-```tsx
-import { ScheduleView } from "@/components/ScheduleView";
-import { Event } from "@/types/schedule";
-
-const events: Event[] = [
-  {
-    id: "1",
-    title: "Team Meeting",
-    description: "Weekly sync",
-    start: new Date(2024, 0, 15, 10, 0),
-    end: new Date(2024, 0, 15, 11, 0),
-    color: "blue",
-  },
-];
-
-export default function App() {
-  return <ScheduleView events={events} />;
-}
-```
-
-### Event Object Structure
-
-```tsx
-interface Event {
-  id: string;
-  title: string;
-  description?: string;
-  start: Date;
-  end: Date;
-  color?: "blue" | "red" | "green" | "yellow" | "purple" | "pink";
-}
-```
-
-## Components
-
-### ScheduleView
-
-Main component that manages view state and provides navigation controls.
-
-**Props:**
-
-- `events?: Event[]` - Array of events to display
-
-### DayView
-
-Displays a single day with hourly time slots.
-
-**Props:**
-
-- `dayData: DayData` - Information about the selected day
-- `events: Event[]` - Events for the day
-
-### WeekView
-
-Displays a seven-day week with hourly time slots.
-
-**Props:**
-
-- `weekDays: DayData[]` - Array of 7 days in the week
-- `events: Event[]` - Events for the week
-
-### MonthView
-
-Displays a full month calendar grid.
-
-**Props:**
-
-- `daysInMonth: DayData[]` - All days in the month (42 cells for full grid)
-- `events: Event[]` - Events for the month
-
-## Utilities
-
-### Date Utilities
-
-- `getTimeSlots()` - Generate 24-hour time slots
-- `getDaysInMonth(date)` - Get all days for a month calendar grid
-- `getWeekDays(date)` - Get the 7 days of the week
-- `getDayData(date)` - Get data for a single day
-- `formatDateRange(startDate, endDate)` - Format date range as string
-- `getColorClass(color)` - Get Tailwind CSS classes for event color
-
-## Technologies Used
-
-- **Next.js 16** - React framework with server-side rendering
-- **React 19** - UI library
-- **TypeScript** - Type-safe JavaScript
-- **Tailwind CSS** - Utility-first CSS framework
-- **ESLint** - Code linting
-
-
+**Wayne State University — CSC 4996 Senior Capstone, 2026**
