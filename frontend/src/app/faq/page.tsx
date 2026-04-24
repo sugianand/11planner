@@ -4,11 +4,16 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import Footer from "@/components/Footer";
 import { usePlanner } from "@/contexts/PlannerContext";
+import { TOUR_VIDEOS } from "@/lib/tourVideos";
+import { useTheme } from "@/contexts/ThemeContext";
+
 // FAQ page with Q and A, collabsible sections, and reveal animations 
 export default function FaqPage() {
   const { userId } = usePlanner();
+  const { effectiveTheme } = useTheme();
   const isLoggedIn = userId !== "user_demo";
   const [openIndex, setOpenIndex] = useState<number | null>(0);
+  const [videoModal, setVideoModal] = useState<{ videoId: string } | null>(null);
 
   useEffect(() => {
     const revealElements = Array.from(document.querySelectorAll<HTMLElement>('[data-reveal]'));
@@ -35,22 +40,26 @@ export default function FaqPage() {
     {
       question: "What exactly does 11Planner do that a normal to-do list does not?",
       answer:
-        "11Planner is built for academic planning, not just task tracking. It breaks large assignments into time-boxed focus blocks, distributes them across your available week, and helps you finish before deadline pressure builds. A normal to-do list tells you what exists. 11Planner helps you decide what to do next and when to do it."
+        "11Planner is built for academic planning, not just task tracking. It breaks large assignments into time-boxed focus blocks, distributes them across your available week, and helps you finish before deadline pressure builds. A normal to-do list tells you what exists. 11Planner helps you decide what to do next and when to do it.",
+      videoId: "dashboard-tour"
     },
     {
       question: "Do I need to upload a syllabus before I can use 11Planner?",
       answer:
-        "No. You can start immediately by creating courses and tasks manually. Syllabus upload is optional and can be added later. Many users begin manually for week one, then import more detailed course data once they are comfortable with the workflow."
+        "No. You can start immediately by creating courses and tasks manually. Syllabus upload is optional and can be added later. Many users begin manually for week one, then import more detailed course data once they are comfortable with the workflow.",
+      videoId: "courses-tour"
     },
     {
       question: "Can I edit the schedule after blocks are generated?",
       answer:
-        "Yes. Generated blocks are fully editable. You can move, resize, split, or remove blocks to fit your energy and availability. The scheduler is meant to provide a strong first draft, not lock you into a rigid plan."
+        "Yes. Generated blocks are fully editable. You can move, resize, split, or remove blocks to fit your energy and availability. The scheduler is meant to provide a strong first draft, not lock you into a rigid plan.",
+      videoId: "schedule-tour"
     },
     {
       question: "What happens if I miss a focus block or fall behind for a day?",
       answer:
-        "Missing one block does not break your week. You can quickly reschedule unfinished work into open windows and continue. The system is designed around adjustment, so recovery is part of the workflow rather than a failure state."
+        "Missing one block does not break your week. You can quickly reschedule unfinished work into open windows and continue. The system is designed around adjustment, so recovery is part of the workflow rather than a failure state.",
+      videoId: "schedule-tour"
     },
     {
       question: "Is my planning data sold, shared, or used for advertising?",
@@ -60,12 +69,14 @@ export default function FaqPage() {
     {
       question: "How long does setup take for a new user?",
       answer:
-        "Most users can set up their first workable week in about 10 to 20 minutes. A quick setup usually includes adding current courses, entering the nearest deadlines, and generating the first set of focus blocks. You can refine details over time instead of doing everything on day one."
+        "Most users can set up their first workable week in about 10 to 20 minutes. A quick setup usually includes adding current courses, entering the nearest deadlines, and generating the first set of focus blocks. You can refine details over time instead of doing everything on day one.",
+      videoId: "dashboard-tour"
     },
     {
       question: "Does 11Planner replace my calendar app?",
       answer:
-        "Not necessarily. 11Planner focuses on academic execution planning and workload visibility. Many users still keep their existing calendar for meetings, events, and personal commitments while using 11Planner to stay on top of coursework."
+        "Not necessarily. 11Planner focuses on academic execution planning and workload visibility. Many users still keep their existing calendar for meetings, events, and personal commitments while using 11Planner to stay on top of coursework.",
+      videoId: "schedule-tour"
     },
     {
       question: "How quickly can I get support if something breaks?",
@@ -97,6 +108,7 @@ export default function FaqPage() {
           <section className="space-y-4">
             {faqItems.map((item, index) => {
               const isOpen = openIndex === index;
+              const video = item.videoId ? TOUR_VIDEOS.find((v) => v.id === item.videoId) : undefined;
 
               return (
               <article
@@ -126,6 +138,16 @@ export default function FaqPage() {
                   }`}
                 >
                   <p className="text-slate-700 dark:text-slate-300 leading-relaxed">{item.answer}</p>
+                  {video && (
+                    <button
+                      type="button"
+                      onClick={() => setVideoModal({ videoId: video.id })}
+                      className="mt-3 inline-flex items-center gap-2 rounded-full bg-emerald-600 hover:bg-emerald-700 px-4 py-2 text-xs font-semibold text-white transition"
+                    >
+                      <span className="material-symbols-outlined text-sm">play_circle</span>
+                      Watch: {video.title}
+                    </button>
+                  )}
                 </div>
               </article>
               );
@@ -161,6 +183,68 @@ export default function FaqPage() {
           )}
         </div>
       </div>
+
+      {/* Video Modal - Chatbot Style */}
+      {videoModal && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/50 backdrop-blur-md px-4 py-4">
+          <div
+            className="w-full max-w-2xl max-h-[80vh] overflow-hidden rounded-[32px] border border-white/70 dark:border-slate-700/80 shadow-[0_40px_90px_-35px_rgba(15,23,42,0.92)] flex flex-col animate-in fade-in zoom-in-95 transition-all duration-300 ease-out"
+            style={{
+              backgroundImage:
+                effectiveTheme === "dark"
+                  ? "linear-gradient(180deg, color-mix(in srgb, var(--theme-accent-soft) 32%, rgb(15, 23, 42)) 0%, color-mix(in srgb, var(--theme-accent-soft) 18%, rgb(15, 23, 42)) 38%, rgb(2, 6, 23) 100%)"
+                  : "linear-gradient(180deg, color-mix(in srgb, var(--theme-accent-soft) 78%, white) 0%, color-mix(in srgb, var(--theme-accent-soft) 46%, white) 38%, rgba(255,255,255,0.94) 100%)",
+              backgroundColor: effectiveTheme === "dark" ? "rgb(15, 23, 42)" : "#fff",
+            }}
+          >
+            {/* Header */}
+            <header className="relative overflow-hidden px-5 pt-4 pb-3 border-b border-slate-200/75 dark:border-slate-700/80 bg-white/85 dark:bg-slate-950/80 text-slate-900 dark:text-white backdrop-blur-xl flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-2xl fill-current" style={{ color: "var(--theme-accent-strong)" }}>play_circle</span>
+                <div>
+                  <h2 className="text-lg font-extrabold leading-none tracking-tight">Tour Video</h2>
+                  <p className="mt-1 text-[11px] uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">Learn how to use 11Planner</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setVideoModal(null)}
+                className="h-9 w-9 rounded-full border border-white/40 bg-white/10 transition hover:bg-white/20 dark:border-slate-600 dark:bg-slate-800/50 flex items-center justify-center"
+                aria-label="Close video"
+              >
+                <span className="material-symbols-outlined text-base">close</span>
+              </button>
+            </header>
+
+            {/* Video Content */}
+            <div className="relative flex-1 min-h-0 overflow-y-auto p-4">
+              {videoModal.videoId && (() => {
+                const video = TOUR_VIDEOS.find((v) => v.id === videoModal.videoId);
+                return video ? (
+                  <div className="flex flex-col gap-4 h-full">
+                    <video
+                      key={video.id}
+                      controls
+                      controlsList="nodownload"
+                      className="w-full rounded-xl bg-black shadow-lg"
+                      autoPlay
+                    >
+                      <source src={video.url} type="video/mp4" />
+                      Your browser does not support the video tag.
+                    </video>
+                    <div className="bg-white/70 dark:bg-slate-900/70 rounded-xl p-4">
+                      <h3 className="font-bold text-slate-900 dark:text-white">{video.title}</h3>
+                      <p className="text-sm text-slate-700 dark:text-slate-300 mt-2">{video.description}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">Duration: {video.duration}</p>
+                    </div>
+                  </div>
+                ) : null;
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
+
       <Footer />
     </div>
   );
