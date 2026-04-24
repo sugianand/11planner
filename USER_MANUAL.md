@@ -1,655 +1,807 @@
-# 11Planner User Manual
-
-**Version:** 1.0  
-**Last Updated:** March 2026  
-**For:** Wayne State University Students
-
----
-
 ## Table of Contents
 
-1. [Getting Started](#getting-started)
-2. [Account Management](#account-management)
-3. [Core Features](#core-features)
-4. [Dashboard](#dashboard)
-5. [Courses](#courses)
-6. [Tasks & Assignments](#tasks--assignments)
-7. [Schedule](#schedule)
-8. [Profile & Settings](#profile--settings)
-9. [Tips & Best Practices](#tips--best-practices)
-10. [Troubleshooting & FAQ](#troubleshooting--faq)
+1. [What is 11Planner?](#1-what-is-11planner)
+2. [Getting Started & Account Setup](#2-getting-started--account-setup)
+3. [Navigation](#3-navigation)
+4. [Courses](#4-courses)
+5. [Tasks](#5-tasks)
+6. [Schedule](#6-schedule)
+7. [Dashboard & Focus Mode](#7-dashboard--focus-mode)
+8. [Focus Music](#8-focus-music)
+9. [Connecting Spotify](#9-connecting-spotify)
+10. [Canvas LMS Sync (Chrome Extension)](#10-canvas-lms-sync-chrome-extension)
+11. [Profile & Preference Quiz](#11-profile--preference-quiz)
+12. [Settings & Notifications](#12-settings--notifications)
+13. [AI Support Assistant](#13-ai-support-assistant)
+14. [Exporting Your Schedule](#14-exporting-your-schedule)
+15. [Troubleshooting & FAQ](#15-troubleshooting--faq)
+16. [Keyboard Reference & Glossary](#16-keyboard-reference--glossary)
 
 ---
 
-## Getting Started
+## 1. What is 11Planner?
 
-### What is 11Planner?
+11Planner is an AI-powered academic scheduling tool. You enter your courses and tasks once, and the AI builds a complete, conflict-free weekly study schedule around your class times, deadlines, and personal preferences.
 
-11Planner is an AI-powered academic scheduling application designed to help students like you manage courses, assignments, and deadlines efficiently. The app analyzes your workload and generates an optimized study schedule tailored to your preferences and learning pace.
-
-### System Requirements
-
-- **Browser:** Chrome, Firefox, Safari, or Edge (latest versions)
-- **Device:** Desktop, tablet, or smartphone
-- **Internet:** Stable internet connection required
-- **Storage:** ~50 MB free space for browser cache
-
-### Accessing 11Planner
-
-1. Open your web browser and navigate to the 11Planner application URL
-2. You should see the login page with the 11Planner logo
-3. Proceed to [Account Management](#account-management) to create or access your account
+Beyond scheduling, 11Planner includes:
+- A full-screen focus environment with animated video backgrounds
+- 30+ ambient soundscapes (rain, café, ocean, brainwaves, white noise, and more)
+- A customizable Pomodoro timer
+- Integrated Spotify and YouTube music players
+- Real-time progress stats and a daily checklist
+- Syllabus PDF parsing to extract assignment dates automatically
+- A Canvas LMS Chrome extension for one-click assignment sync
 
 ---
 
-## Account Management
+## 2. Getting Started & Account Setup
 
 ### Creating a New Account
 
-1. On the login page, click **"Don't have an account? Register"** button at the bottom
-2. Enter the following information:
-   - **Email:** Your Wayne State or personal email address
-   - **First Name:** Your first name
-   - **Last Name:** Your last name
-   - **Password:** Create a strong password (minimum 8 characters, include letters and numbers)
-3. Click **"Create Account"** button
-4. You'll receive a confirmation and be redirected to the dashboard
+1. Go to the 11Planner login page at `/auth`.
+2. Click **"Don't have an account? Register"** at the bottom of the login form.
+3. Enter your:
+   - **Email address** (Wayne State or personal)
+   - **First name**
+   - **Last name**
+   - **Password** (minimum 8 characters, letters and numbers)
+4. Click **Create Account**. You will be redirected to your dashboard.
 
-### Logging In
+### Signing In with Google
 
-1. On the login page, enter your email and password
-2. Click **"Login"** button
-3. You'll be redirected to your personalized dashboard
+1. On the login page, click **"Continue with Google"**.
+2. Authorize access using your Google account.
+3. You will be redirected to your dashboard after authentication completes.
+
+> **Note:** If your browser blocks the Google popup, allow popups for the 11Planner domain and try again.
+
+### Logging In with Email & Password
+
+1. Enter your registered email and password on the login page.
+2. Click **Login**.
+3. You will land on your Dashboard.
 
 ### Resetting Your Password
 
-1. On the login page, click **"Forgot your password?"** link
-2. Enter your email address
-3. Check your email for a password reset link
-4. Click the link and follow instructions to set a new password
-5. Log in with your new password
+1. On the login page, click **"Forgot your password?"**.
+2. Enter your email address and submit the form.
+3. Check your inbox for a reset link from 11Planner.
+4. Click the link in the email to open the password reset page.
+5. Enter and confirm your new password, then submit.
+6. Log in with your new password.
 
 ### Logging Out
 
-1. Click **"Logout"** button in the top-right navigation bar
-2. You'll be returned to the login page
+Click **Logout** in the top-right navigation bar. You will be returned to the login page.
 
 ---
 
-## Core Features
+## 3. Navigation
 
-### Navigation Bar
+The navigation bar appears at the top of every page with the following links:
 
-At the top of every page, you'll find:
+| Link | Destination |
+|------|-------------|
+| **Home** | Landing page |
+| **Dashboard** | Focus environment, timer, stats, and music |
+| **Tasks** | Create and manage tasks and assignments |
+| **Courses** | Add and manage your courses |
+| **Schedule** | View your AI-generated schedule |
+| **Profile** | Your stats, quiz, and account settings |
+| **Settings** | Schedule preferences and notification settings |
+| **Logout** | Sign out |
 
-| Button | Function |
-|--------|----------|
-| **Home** | Returns to dashboard |
-| **Dashboard** | View your focus area and progress |
-| **Tasks** | Manage individual tasks |
-| **Courses** | Manage all your courses |
-| **Schedule** | View your generated schedule |
-| **Profile** | View your profile and progress |
-| **Settings** | Customize preferences |
-| **Logout** | Sign out of your account |
-
----
-
-## Dashboard
-
-### Overview
-
-The Dashboard is your personalized study environment. It displays:
-- **Current Timer:** Visual countdown (default 25 minutes for Pomodoro)
-- **Progress Stats:** Total tasks, completed tasks, overall progress
-- **Quick Actions:** Buttons to add tasks, courses, or view schedule
-- **Environment Customization:** Background and sound options
-
-### Using the Timer
-
-1. The timer displays your focus session time (default: 25 minutes)
-2. Control buttons below the timer:
-   - **Reset:** Return timer to starting time
-   - **Short Break:** Switch to 5-minute break (10 minutes)
-   - **Long Break:** Switch to 15-minute break
-
-3. The timer helps you practice the Pomodoro Technique:
-   - Study for focused 25-minute blocks
-   - Take short breaks between sessions
-   - Take longer breaks after 4 sessions
-
-### Customizing Your Study Environment
-
-**Background Sounds:**
-- Click the **sound icon** to access audio options
-- Choose from: Ambient sounds, Binaural beats, Nature sounds, White noise, Weather sounds, Workspace ambiance
-- Adjust volume as needed
-
-**Visual Themes:**
-- Click the **settings icon** to customize background images
-- Choose from: Abstract, Anime, Cafe, City, Nature themes
-
-### Progress Tracking
-
-View real-time statistics:
-- **Total Tasks:** Count of all tasks created
-- **Completed Tasks:** Number of finished tasks
-- **Overall Progress:** Percentage of tasks completed this semester
+A persistent **AI Support Assistant** chat bubble appears in the bottom-right corner of every page.
 
 ---
 
-## Courses
+## 4. Courses
 
-### Adding a Course
+Courses are the foundation of 11Planner. You must add at least one course before you can create tasks or generate a schedule.
 
-1. Navigate to **Courses** page using the navigation bar
-2. Click **"Create New Course"** button
-3. Fill in the course details:
+Navigate to **Courses** from the navigation bar.
 
-   **Required Fields:**
-   - **Course Name:** (e.g., "CSC 450 - Software Engineering")
-   - **Course Code:** (e.g., "CSC450")
-   - **Professor Name:** (e.g., "Dr. Smith")
-   - **Start Time:** Class meeting start time (e.g., "10:00 AM")
-   - **End Time:** Class meeting end time (e.g., "11:15 AM")
+### The Courses Header
 
-   **Optional Fields:**
-   - **Meeting Days:** Select which days the course meets (M, T, W, Th, F)
-   - **Location:** Classroom location (e.g., "Science Hall 201")
-   - **Description:** Course details or notes
+The header shows live counts of your course breakdown:
+- **Total** — total number of courses
+- **Online** — courses marked as online/asynchronous
+- **In-Person** — courses with scheduled meeting times
+- **Labs** — courses with a lab component
 
-4. **Syllabus Upload (Optional but Recommended):**
-   - Click **"Upload Syllabus PDF"** to extract course information automatically
-   - The AI will extract assignments, deadlines, and professor info
-   - This saves time and improves schedule accuracy
+### Creating a New Course
 
-5. Click **"Create Course"** button
+Click **New Course** (top right of the header).
+
+The form expands with the following sections:
+
+---
+
+#### Syllabus Upload (Optional — Do This First)
+
+At the top of the form is a **dashed upload area** labeled "Upload Syllabus PDF to auto-fill information." Click it and select a PDF.
+
+The AI will parse the syllabus and automatically fill in as many fields as it can detect: course name, code, professor, days, start time, end time, and lab details. Review the auto-filled values and correct anything that looks wrong before saving.
+
+> **Tip:** This is the fastest way to add a course. Most syllabi will fill 80–100% of the fields automatically.
+
+---
+
+#### Required Fields
+
+| Field | Label | Notes |
+|-------|-------|-------|
+| **Course Name** | "Course Name *" | e.g., "Calculus II" |
+| **Course Code** | "Course Code *" | e.g., "MATH 241" |
+
+#### Optional Fields
+
+| Field | Label | Notes |
+|-------|-------|-------|
+| **Professor** | "Professor" | e.g., "Dr. Smith" |
+| **Course Days** | "Course Days *" | Multi-select dropdown. Select any combination of Monday–Friday. Hidden if online. |
+| **Start Time** | "Start Time *" | Time picker. Hidden if online. |
+| **End Time** | "End Time *" | Time picker. Hidden if online. |
+| **Description** | "Description" | Free text — course notes, location, etc. |
+
+#### Online Course Checkbox
+
+- **"This is an online/asynchronous class"** — Check this if the course has no fixed meeting time. When checked, the Course Days, Start Time, and End Time fields are hidden and not required.
+
+#### Lab Component Checkbox
+
+- **"This course has a lab component"** — Check this to reveal the Lab Information section.
+
+---
+
+#### Lab Information (appears when "Has Lab" is checked)
+
+| Field | Label | Notes |
+|-------|-------|-------|
+| **Lab Syllabus** | "Upload lab syllabus PDF (optional)" | Separate upload to auto-fill lab fields |
+| **Lab Day** | "Lab Day *" | Single dropdown: Monday–Friday |
+| **Lab Start Time** | "Lab Start Time *" | Time picker |
+| **Lab End Time** | "Lab End Time *" | Time picker |
+| **Lab Online** | "Lab is online/asynchronous" | Checkbox. Hides lab day and time fields if checked. |
+
+---
+
+#### Validation Rules
+
+- Course Name and Course Code are always required.
+- For in-person courses: Course Days, Start Time, and End Time are required.
+- Start time must be earlier than end time or a dialog appears: "The start time must be earlier than the end time."
+- If the course has a non-online lab: Lab Day, Lab Start Time, and Lab End Time are required, and lab start must precede lab end.
+
+#### Saving
+
+Click **Create Course** to save. Click **Cancel** to close the form without saving.
+
+---
+
+### Searching and Filtering Courses
+
+Below the header there is a search and filter bar:
+
+- **Search field** — Searches course name, code, professor, description, and day.
+- **Type filter dropdown** — Options: All Types / Online / In-Person / Has Lab
+- **Sort dropdown** — Name (A-Z), Name (Z-A), Time (earliest), Time (latest)
+
+The result count shows "Showing X of Y courses."
+
+---
+
+### Course Cards
+
+Each course displays as a card in a grid (1–3 columns depending on screen width). Each card shows:
+
+- **Green left border accent**
+- Course name (bold, up to 2 lines)
+- Course code (green, uppercase)
+- "Lab" badge (emerald pill) if the course has a lab
+- Professor name (with person icon)
+- Schedule: days + start time – end time (e.g., "Monday Wednesday • 10:00 AM - 11:15 AM")
+- For online courses: "Online/Asynchronous" label
+- Description (up to 2 lines, with left border accent)
+- Lab details (emerald info box, shown if lab exists)
+- If schedule is missing: "Schedule not added yet — Upload syllabus or tap Edit to add days and time."
+
+#### Card Actions (bottom of each card)
+
+| Button | Action |
+|--------|--------|
+| **Upload Syllabus** | Opens a hidden file picker. Select a PDF to parse and update this existing course's details. |
+| **Edit** | Opens the form pre-filled with this course's data. |
+| **Delete** | Opens a confirmation dialog: "Delete course? This course will be permanently removed." — **Delete** or **Keep** |
+
+---
 
 ### Editing a Course
 
-1. Go to **Courses** page
-2. Find the course you want to edit
-3. Click the **edit icon** next to the course
-4. Modify any course details
-5. Click **"Save Changes"** button
-
-### Deleting a Course
-
-1. Go to **Courses** page
-2. Find the course to delete
-3. Click the **delete icon** (trash bin) next to the course
-4. Confirm deletion in the popup dialog
-5. The course and all related assignments will be removed
-
-### Tips for Adding Courses
-
-- **Add courses early:** The more lead time you give the AI, the better it can plan your schedule
-- **Be accurate with meeting times:** Incorrect times can create schedule conflicts
-- **Use syllabus upload:** Automatically extracts assignments and deadlines
-- **Keep course descriptions:** Helps in sorting and organizing tasks by course
+Click **Edit** on a course card. The form opens with all existing values pre-filled. Make changes and click **Update Course** to save, or **Cancel** to discard.
 
 ---
 
-## Tasks & Assignments
+## 5. Tasks
 
-### Understanding Tasks vs. Assignments
+Navigate to **Tasks** from the navigation bar.
 
-- **Tasks:** Study activities you create independently (e.g., "Review Chapter 3", "Practice Problem Set")
-- **Assignments:** Graded coursework given by professors (e.g., "Essay Due", "Project 1")
+> **Prerequisite:** You must add at least one course before tasks can be created. If no courses exist, you will see a warning with a **"Go to Courses"** button.
 
-Both are scheduled into your calendar by the AI.
+### The Tasks Header
 
-### Adding an Assignment
-
-1. Navigate to **Assignments** page
-2. Click **"New Assignment"** button
-3. Select the **course** this assignment belongs to
-4. Enter assignment details:
-
-   **Required:**
-   - **Title:** Assignment name (e.g., "Design Document")
-   - **Due Date:** When the assignment is due
-   - **Estimated Time:** Hours needed to complete (e.g., "8 hours")
-
-   **Optional:**
-   - **Priority Level:** Low, Medium, or High
-   - **Type:** Homework, Essay, Project, Exam, or Other
-   - **Description:** Assignment details and requirements
-
-5. Click **"Save Assignment"**
-6. The AI will automatically schedule study blocks before the due date
-
-### Creating a Study Task
-
-1. Go to **Tasks** page
-2. Click **"New Task"** button
-3. Enter task details:
-
-   **Required:**
-   - **Task Title:** (e.g., "Math Chapter 3-4 Review")
-   - **Course:** Which course this relates to
-   - **Duration:** How long you estimate it will take (in hours)
-   - **Target Date:** When you want to complete it by
-
-   **Optional:**
-   - **Priority:** Low, Medium, or High
-   - **Description:** Specific topics or focus areas
-
-4. Click **"Save Task"**
-
-### Editing Tasks/Assignments
-
-1. Find the task/assignment on the **Tasks** or **Assignments** page
-2. Click the **edit icon** next to it
-3. Modify the details
-4. Click **"Save Changes"**
-
-### Marking Tasks Complete
-
-1. Find the task on the **Tasks** page
-2. Click the **checkbox** next to the task to mark it complete
-3. The task status updates immediately
-4. Your progress statistics on the Dashboard update automatically
-
-### Deleting Tasks/Assignments
-
-1. Find the item you want to delete
-2. Click the **delete icon** (trash bin)
-3. Confirm deletion
-4. The item is removed and schedule is updated
-
-### Setting Reminders
-
-1. Click on any assignment or task to view details
-2. Click **"Set Reminder"** or **"Configure Alerts"**
-3. Choose reminder timing:
-   - 1 week before due date
-   - 3 days before due date
-   - 1 day before due date
-   - 1 hour before start time
-
-4. Select notification method:
-   - In-app notification
-   - Email
-   - Push notification (if enabled)
-
-5. Click **"Save Reminders"**
+Shows live badge counts:
+- **Total** — all tasks
+- **Pending** — incomplete tasks
+- **Completed** — finished tasks
+- **Overdue** — past their deadline and not completed (red)
+- **Assignments** (blue badge) / **Exams** (rose badge) / **Projects** (violet badge)
 
 ---
 
-## Schedule
+### Creating a New Task
 
-### Viewing Your Schedule
+Click **New Task** in the header (disabled if no courses exist; hovering shows tooltip "Add a course first to create tasks").
 
-1. Navigate to **Schedule** page
-2. Your AI-generated schedule displays automatically
-3. View options appear at the top: **Day**, **Week**, **Month**, **Year**
+The form opens with these fields:
 
-### Understanding Schedule Blocks
+#### Required Fields
 
-Each colored block on your schedule represents:
-- **Study Block:** Dedicated focus time for specific course/task
-- **Duration:** Usually 2-4 hours with 15-minute breaks built in
-- **Color:** Different color for each course helps visual organization
+| Field | Label | Notes |
+|-------|-------|-------|
+| **Title** | "Task Title *" | e.g., "Finish calculus worksheet" |
+| **Course** | "Course *" | Dropdown of your existing courses |
+| **Deadline** | "Deadline *" | Date and time picker (datetime-local input) |
 
-### Different View Modes
+#### Optional Fields
 
-#### Day View
-- Shows hourly breakdown for a single day
-- Ideal for checking today's schedule
-- Use **"Today"** button to jump to current date
+| Field | Label | Default | Notes |
+|-------|-------|---------|-------|
+| **Type** | "Type" | Assignment | Dropdown: Assignment / Exam / Project |
+| **Estimated Hours** | "Estimated Hours" | 2 | Number input, min 0.5, step 0.5 |
+| **Priority** | "Priority" | Low (2) | Dropdown: Very Low (1) / Low (2) / Medium (3) / High (4) / Critical (5) |
+| **Description** | "Description" | — | Textarea, 3 rows. URLs in descriptions become clickable links. |
 
-#### Week View (Default)
-- Shows 7-day calendar grid
-- Best for planning the upcoming week
-- Indicates your workload distribution
+Click **Create Task** to save, or **Cancel** to close.
 
-#### Month View
-- Shows entire month overview
-- Helps identify peak deadline periods
-- Great for long-term planning
+---
 
-#### Year View
-- High-level view of entire semester
-- Shows busiest periods at a glance
+### Task List
+
+#### Tabs
+
+- **Pending (N)** — Shows incomplete tasks
+- **Completed (N)** — Shows finished tasks
+
+#### Type Filter (row of pill buttons)
+
+All Types / Assignment / Exam / Project
+
+#### Search & Filters (in the filter bar)
+
+| Control | Options |
+|---------|---------|
+| **Search** | Searches title, course name, and description (placeholder: "Search by title, course, or description") |
+| **Sort** | Deadline (earliest) / Deadline (latest) / Name (A-Z) / Name (Z-A) / Priority (high to low) |
+| **Course filter** | All courses / individual course names |
+| **Deadline filter** | All deadlines / Due today / Due in next 7 days / Due in next 30 days / Overdue |
+| **Tasks per page** | 10 / 25 / 50 |
+
+The filter bar shows "Showing X–Y of Z" and pagination controls (Previous / Page X of Y / Next).
+
+---
+
+### Task Cards
+
+Each task card shows:
+- **Task title** (large, bold)
+- **Course name** (smaller, below title)
+- **Type badge** — Assignment (blue) / Exam (rose) / Project (violet)
+- **Priority badge** — Very Low (green) / Low (blue) / Medium (yellow) / High (orange) / Critical (red)
+- **Description** (if set) — truncated at 160 characters with a **"Show more"** / **"Show less"** toggle. URLs in descriptions are rendered as clickable links.
+- **Deadline** — formatted as date and time
+- **Estimated hours**
+- **Status** — "Completed" (green) or "Pending" (orange)
+
+#### Task Actions
+
+| Button | Action |
+|--------|--------|
+| **Get AI Estimated Time** | Sends the task to the AI for time estimation. Shows a dialog with the result (e.g., "AI estimate: 3 hours") and options: **Update Estimated Time** or **Keep Current**. Shows "Estimating..." while loading. Requires a logged-in account (not demo). |
+| **Edit** | Opens the form pre-filled with the task's current data. |
+| **Delete** | Opens dialog: "Delete task? This task will be permanently removed." — **Delete** or **Keep** |
+| **Complete** / **Undo** | Toggles completion status instantly. |
+
+---
+
+### Editing a Task
+
+Click **Edit** on any task card. The form scrolls into view pre-filled with the task's data. Make changes and click **Update Task** to save.
+
+---
+
+## 6. Schedule
+
+Navigate to **Schedule** from the navigation bar.
+
+### Schedule Views
+
+Four views are available via tabs at the top:
+
+| View | Best For |
+|------|----------|
+| **Day** | Hourly breakdown of a single day — detailed view of today's blocks |
+| **Week** | 7-day grid with time slots — default view for weekly planning |
+| **Month** | Full month calendar — spot deadline clusters and busy periods |
+| **Year** | Full semester overview — identify the heaviest stretches at a glance |
 
 ### Navigation Controls
 
-- **Previous/Next Buttons:** Move to previous/next time period
-- **Today Button:** Jump to current date
-- **Generate Schedule:** Create a new optimized schedule
-- **View Details:** Click any block to see task/assignment details
+- **Previous / Next arrows** — Move backward or forward by one time period
+- **Today button** — Jump back to the current date
+- **Generate Schedule button** — Triggers AI schedule generation (see below)
 
-### Generating a New Schedule
+### Generating Your AI Schedule
 
-1. Click **"Generate Schedule"** button
-2. The system analyzes:
-   - All your courses and meeting times
-   - All assignments with deadlines
-   - Your personal preferences and constraints
-3. AI generates an optimized schedule
-4. New schedule displays automatically (usually within 5 seconds)
+1. Click **Generate Schedule**.
+2. The AI analyzes:
+   - All of your courses and their meeting times
+   - All tasks with their deadlines, estimated hours, and priorities
+   - Your personal preferences from the onboarding quiz (preferred study times, daily hour limits, etc.)
+3. Study blocks are placed on the calendar, fitting around your class times.
+4. Generation typically takes a few seconds.
+5. The new schedule appears on the calendar automatically.
 
-### Customizing Schedule Preferences
+> **Re-generate whenever your workload changes** — after adding new tasks, after finishing a big project, or at the start of each week.
 
-1. Go to **Settings** page
-2. Click **"Schedule Preferences"** section
-3. Adjust settings:
+### Schedule Blocks
 
-   **Study Preferences:**
-   - Maximum daily study hours (e.g., 6 hours)
-   - Preferred study start time (e.g., 9:00 AM)
-   - Preferred study end time (e.g., 10:00 PM)
-   - Session duration (e.g., 50 minutes with 10-minute breaks)
+Each block on the calendar represents a scheduled study session for a specific task. Clicking a block shows its details: task name, course, start/end time, and duration.
 
-   **Prioritization:**
-   - Courses/subjects to prioritize
-   - Difficulty preference: Conservative, Balanced, or Aggressive
+### Drag and Drop
 
-   **Notifications:**
-   - Email preferences
-   - In-app preferences
-   - SMS preferences
+On the Week view, you can drag a block to a different time slot to manually reschedule it.
 
-4. Click **"Save Preferences"**
-5. System suggests regenerating schedule to apply new preferences
+### Conflict Detection
 
-### Resolving Schedule Conflicts
+If the schedule detects overlapping blocks or an impossible deadline, a conflict alert appears. Review the flagged items and either drag blocks to resolve the overlap, adjust task deadlines, or regenerate.
 
-If the system detects conflicts (overlapping blocks, unrealistic deadlines):
+### Exporting Your Schedule
 
-1. A conflict alert appears on the Schedule page
-2. Click the alert to see details
-3. Review suggested resolutions:
-   - Postpone non-urgent tasks
-   - Extend deadlines if possible
-   - Reduce task scope
-4. Accept the system suggestion or manually adjust
-5. Regenerate schedule
+From the Schedule page:
+- **PDF Export** — Click the download icon (top-right) and select "Export as PDF." A formatted PDF of your current view downloads.
+- **Calendar (.ics) Export** — Click "Export to Calendar" to download an `.ics` file compatible with Google Calendar, Apple Calendar, and Outlook.
 
 ---
 
-## Profile & Settings
+## 7. Dashboard & Focus Mode
 
-### Profile Page
+Navigate to **Dashboard** from the navigation bar. This is your full-screen focus environment.
 
-Access your profile by clicking **Profile** in the navigation bar.
+### Stats Panel (left column)
 
-#### Profile Information
-- **Name:** Your full name
-- **Email:** Your registered email address
-- **Account Created:** When you joined 11Planner
+Four stat cards display your current standing:
 
-#### Progress Overview
-- **Total Tasks:** All tasks created
-- **Completed Tasks:** Finished tasks
-- **Overall Completion:** Percentage completed
-- **Total Courses:** Number of courses this semester
+| Card | What It Shows |
+|------|---------------|
+| **Total Tasks** | Total task count + "X completed" subtext |
+| **Total Hours** | Total estimated hours across all tasks + "X hrs scheduled" |
+| **Productivity Score** | Percentage of tasks completed. Green ≥80%, Yellow ≥50%, Red <50% |
+| **Overdue** | Count of past-deadline incomplete tasks. Red if any, green if none. |
 
-#### Preference Quiz
-1. Click **"Take Preference Quiz"** button
-2. Answer questions about your:
-   - Learning style (Visual, Auditory, Reading, Kinesthetic)
-   - Work preferences (morning vs. evening, session length, break frequency)
-   - Study habits and productivity patterns
-3. The system uses this to optimize future schedules
+### Today's Checklist (right column)
 
-#### Account Actions
-- **Change Password:** Update your password
-- **Delete Account:** Permanently remove your account and all data (cannot be undone)
+Shows two sections:
 
-### Settings Page
+**Scheduled** — Tasks that have a schedule block today. Each item shows:
+- Checkbox (click to complete/uncomplete instantly)
+- Task title (strikes through when complete)
+- Start and end time of the scheduled block
 
-#### Schedule Preferences
+**Due Today** — Tasks with a deadline today (amber background). Each shows:
+- Checkbox (click to complete/uncomplete)
+- Task title
+- Due time
 
-**Daily Limits:**
-- Set maximum study hours per day
-- Prevents burnout and unrealistic schedules
-
-**Time Preferences:**
-- Choose when you prefer to study (e.g., 9 AM - 10 PM)
-- System avoids scheduling outside these hours
-
-**Break Settings:**
-- Adjust how often you want breaks
-- Customize break duration (5-15 minutes)
-
-#### Notification Settings
-
-**Email Notifications:**
-- Receive email reminders for upcoming deadlines
-- Daily digest of tasks due that week
-- Completion milestones
-
-**In-App Notifications:**
-- Browser notifications for reminders
-- Progress updates
-- Conflict alerts
-
-**SMS Notifications** (if available):
-- Text message alerts for critical deadlines
-- Requires phone number verification
-
-#### Learning Preferences
-
-**Learning Style:**
-- Visual: Uses colors, diagrams, charts
-- Auditory: Suggests voice notes, discussion groups
-- Reading: Emphasizes written materials
-- Kinesthetic: Hands-on practice and projects
-
-**Subject Preferences:**
-- Mark subjects as easy, moderate, or difficult
-- AI adjusts study time allocation accordingly
-
-#### Theme & Display
-
-##### Color Themes
-
-Choose from six beautifully designed color themes to personalize your planner:
-
-- **🌿 Emerald** - A calming green theme that promotes focus and concentration. Perfect for long study sessions with its natural, soothing aesthetic.
-
-- **🌊 Ocean** - A refreshing blue theme inspired by the sea. Great for creating a peaceful study environment and maintaining mental clarity.
-
-- **🌹 Rose** - A warm, elegant pink theme that adds a touch of sophistication to your planning experience. Creates a cozy, approachable interface.
-
-- **🩶 Slate** - A neutral gray theme for a professional, minimalist look. Ideal for users who prefer a clean, distraction-free interface.
-
-- **🟡 Amber** - A warm, energizing golden theme that evokes productivity and warmth. Excellent for motivation during study sessions.
-
-- **💜 Violet** - A rich purple theme that inspires creativity and focus. Perfect for creative work and brainstorming sessions.
-
-##### Light & Dark Modes
-
-Each color theme works seamlessly in both light and dark modes:
-
-- **Dark Mode:** Easier on eyes during evening study
-- **Light Mode:** Standard interface for daytime use
-- **System Default:** Matches your device settings
-
-##### How to Change Your Theme
-
-1. Click on your **Profile** icon in the top navigation
-2. Go to **Settings**
-3. In the **Theme & Display** section, select your preferred color theme
-4. Your choice is automatically saved and will persist across all sessions
+When no tasks or blocks are scheduled today: "No tasks or assignments for today."
 
 ---
 
-## Tips & Best Practices
+### Pomodoro Timer (center)
 
-### Getting Started Tips
+The main timer sits in the center of the dashboard. It supports three modes, switchable at any time:
 
-1. **Add all courses first:** Before generating a schedule, input all your courses with accurate meeting times
-2. **Upload syllabi:** Use the syllabus upload feature for automatic assignment extraction
-3. **Be realistic with time estimates:** Accurate duration estimates lead to better schedules
-4. **Set priorities:** Mark high-priority courses so AI prioritizes them appropriately
+| Mode | Default Duration | Label |
+|------|-----------------|-------|
+| **Pomodoro** | 25 minutes | "Focus Session" |
+| **Short Break** | 5 minutes | "Short Break" |
+| **Long Break** | 15 minutes | "Long Break" |
 
-### Schedule Management
+#### Timer Controls
 
-5. **Generate schedules regularly:** After adding new assignments or courses, regenerate your schedule
-6. **Review weekly:** Check your schedule every Sunday to plan the week ahead
-7. **Track progress:** Mark tasks complete to get accurate progress analytics
-8. **Adjust preferences as needed:** If the schedule doesn't work, adjust your preferences and regenerate
+| Button | Action |
+|--------|--------|
+| **Play/Pause** (green circle) | Start or pause the current session |
+| **Reset** (restart icon) | Reset timer to the start of the current mode |
+| **Mode buttons** (Focus / Short Break / Long Break) | Switch between timer modes |
+| **Settings** (gear icon) | Opens the Timer Settings dialog |
 
-### Time Management
+#### Timer Settings Dialog
 
-9. **Use the timer effectively:** Practice Pomodoro Technique (25 min focus + 5 min break)
-10. **Take breaks:** Your brain needs rest—don't skip the scheduled breaks
-11. **Avoid overloading:** If daily hours exceed 8, consider spreading work across more days
-12. **Front-load work:** Start assignments early rather than cramming before deadlines
+Click the gear icon to open the "Focus Setup — Timer Settings" dialog. You can set custom durations for all three modes:
 
-### Course Management
+| Field | Range | Label |
+|-------|-------|-------|
+| **Focus Duration** | 1–60 min | "Focus Duration" |
+| **Short Break** | 1–30 min | "Short Break" |
+| **Long Break** | 1–60 min | "Long Break" |
 
-13. **Use accurate meeting times:** Errors here create schedule conflicts
-14. **Update course info promptly:** Changes to course meeting times should be updated immediately
-15. **Keep course descriptions:** Helpful for context when reviewing tasks
-16. **Mark courses as complete:** At semester end, archive completed courses
+Fields accept numbers only. Values snap to their allowed range on blur. Click **Save Settings** to apply. The timer resets to your new durations immediately. Click **Cancel** to discard.
 
-### Task Management
-
-17. **Be specific with task titles:** "Chapter 3 Review Questions 1-15" vs. "Study for exam"
-18. **Break large projects into subtasks:** Instead of one 20-hour project, create 4-5 smaller 4-hour tasks
-19. **Use priority levels strategically:** Reserve "High" for truly urgent items
-20. **Review completed tasks:** Helps the system learn your actual work pace
+> Your custom timer durations persist across sessions. Default values (25/5/15) are always shown in the field hints.
 
 ---
 
-## Troubleshooting & FAQ
+### Focus Atmosphere Panel
 
-### Frequently Asked Questions
+Below the timer and stats is the **Focus Atmosphere** panel. It has two controls in the header:
 
-**Q: Why isn't my schedule generating?**
-A: Make sure you have:
-- At least one course with correct meeting times
-- At least one assignment or task with a due date
-- Internet connection is stable
-- Your preferences don't have conflicting constraints
+| Button | Action |
+|--------|--------|
+| **Show / Hide** | Expand or collapse the atmosphere selector grid |
+| **Glass / Solid** | Toggle UI transparency (Glass = semi-transparent panel style) |
+| **Hide All UI** | Hides all UI elements, leaving only the background video playing. A subtle **Show UI** button and a **Mini Timer toggle** (timer icon) appear at the bottom-left. |
 
-Try refreshing the page or clearing your browser cache.
+#### Hide All UI Mode
 
----
+When you click **Hide All UI**, the entire interface fades away. You are left with:
+- The full-screen animated background playing unobstructed
+- A small timer icon (bottom-left) — click to show the **draggable Mini Timer**
+- A **Show UI** button (bottom-left) — click to restore the full interface
 
-**Q: How accurate is the AI schedule?**
-A: The AI learns from your behavior over time. Initially, schedule accuracy improves as you:
-- Mark tasks complete as you finish them
-- Provide accurate time estimates
-- Use the system consistently
-- Adjust your preferences based on real experience
+#### Draggable Mini Timer
 
----
+While in Hide All UI mode, click the timer icon to open the Mini Timer — a floating, draggable panel showing:
+- Current timer mode label
+- Countdown in MM:SS format
+- Reset button, Play/Pause button, Settings gear
+- Focus / Short / Long mode switcher pills
 
-**Q: Can I manually edit my schedule?**
-A: Currently, you can mark tasks complete or regenerate the entire schedule. To modify specific blocks, adjust your preferences and regenerate, or create new tasks with different target dates.
-
----
-
-**Q: What if I have a time conflict in my schedule?**
-A: The system detects conflicts and alerts you. You can:
-- Extend the deadline of non-critical assignments
-- Reduce task scope
-- Adjust your daily study hour limits
-- Regenerate the schedule
+Drag the panel anywhere on the screen by clicking and dragging its body. Settings opens the same Timer Settings dialog as the main timer.
 
 ---
 
-**Q: How do I export my schedule?**
-A: From the Schedule page, you can:
-- Take a screenshot (works on all devices)
-- Print the current view (Ctrl+P or Cmd+P)
-- Export to iCal format (if available in your settings)
+### Live Backgrounds
+
+In the Atmosphere panel, click **Live Backgrounds** to open the background picker.
+
+#### Category Filter
+
+Filter by: All / Nature / Cafe / City / Anime / Abstract
+
+#### Live Preview Toggle
+
+A **"Live Previews: Smart / All"** button in the top-right of the grid controls thumbnail animation:
+- **Smart** (default) — only the hovered or active thumbnail animates (better performance)
+- **All** — all thumbnails animate simultaneously (more visually rich, heavier on resources)
+
+#### Available Backgrounds
+
+| Category | Options |
+|----------|---------|
+| **Default** | Static app background |
+| **Nature** | Waterfall Forest, Reeds in Wind, Flower Bloom, Forest Water River, Moving Through Forest, Mountains Clouds |
+| **Anime** | Girl Coding Dark, Guy Music, Night Time Japan, Girl Studying Night, Girl Studying Day, Train Anime |
+| **Cafe** | Moka Pot Leaves, Espresso Beans Falling, Coffee Machine, Boiling Coffee, Coffee with Hot Water, Outside Cafe |
+| **City** | Speed City, Slow Skyscrapers, Speed Night City Cars, Eagle Drone Roundabout, Slow Evening Highway, New York City Highways |
+| **Abstract** | Blue Lines, Orange Leaves Motion, Particles Plexus Network, Ink Water Underwater, Pink Ink Paint, Sea Waves Reflection |
+
+Hover over a thumbnail to preview the animation. Click to select it as the active background. The active background is highlighted with a green border.
+
+Your selected background is saved automatically and restored the next time you visit the Dashboard.
 
 ---
 
-**Q: Can I share my schedule with my professor?**
-A: You can:
-- Export/print your schedule
-- Share the PDF with your professor
-- Use the information when discussing deadlines or asking for extensions
+### Soundscapes
+
+In the Atmosphere panel, click **Sounds** to open the soundscape picker.
+
+#### Sound Category Filter
+
+Filter by: All / Ambiance / Workspace / Nature Sounds / Weather / Urban / Brainwaves / Noise
+
+#### Full Soundscape List
+
+| Category | Soundscapes |
+|----------|-------------|
+| **Ambiance** | Cafe, Fireplace, Lava, Restaurant, Outer Space |
+| **Workspace** | Keyboard Typing, Design Lab, Office |
+| **Nature Sounds** | Ocean, Wind Chimes, Park, Jungle, Lake Pier, Birds Chirping |
+| **Weather** | Rain, Rain Car Roof, Splatty Rain, Thunderstorm |
+| **Urban** | City Rooftop, Street |
+| **Brainwaves** | Delta Waves, Theta Waves, Alpha Waves, Beta Waves, Gamma Waves |
+| **Noise** | White Noise, Pink Noise, Brown Noise, Gray Noise, Blue Noise |
+| **Special** | No Sound (silence / stop all audio) |
+
+Each card shows the sound's icon, category label, name, and a short description of what it sounds like. A speaker icon indicates whether that sound is currently playing.
+
+#### Playing a Soundscape
+
+Click any soundscape card to start playing it. Clicking the currently playing sound again stops it. Only one sound plays at a time.
+
+#### Volume Control
+
+At the bottom of the Sounds panel, a volume slider labeled **"Volume"** (range 0–1) adjusts playback in real time. The current sound's description is shown next to a "Now Playing" or "Select a sound to play" label.
+
+Your selected soundscape and volume level are saved automatically per user.
 
 ---
 
-**Q: What happens if I don't log in for a while?**
-A: Your account remains active, but:
-- Session tokens expire after 7 days of inactivity
-- You'll need to log in again for security
-- All your data is preserved
+## 8. Focus Music
+
+In the left column of the Dashboard, below the stat cards, is the **Focus Music** panel.
+
+Click **Show** to expand it. A provider selector appears with two options:
+
+### Spotify Provider
+
+Select "Spotify" from the provider dropdown. A playlist dropdown offers:
+- **Lofi Beats**
+- **Deep Focus**
+- **Ambient**
+
+The selected Spotify playlist embeds directly in the panel via an iframe player.
+
+Below the player:
+- **Connect Spotify** — Initiates the Spotify OAuth popup flow (see Section 9)
+- **Open Spotify** — Opens Spotify in a new browser tab
+
+### YouTube Provider
+
+Select "YouTube" from the provider dropdown. A mood dropdown offers:
+- **Lofi Beats** — "Deep Focus Lofi" by Lofi Girl (live stream)
+- **Synthwave** — "Synthwave Radio" by Lofi Geek (live stream)
+- **Coding Mix** — "Coding Mix" by Chill Music Lab
+
+A YouTube embed shows the selected video. Controls:
+- **Previous / Play-Pause / Next** buttons
+- A **Queue** section listing all three tracks — click any to switch to it and start playback
+- **Open YouTube Music** — Opens YouTube Music in a new tab
+- **Connect YouTube** — Opens Google sign-in in a new tab
 
 ---
 
-**Q: How is my data stored?**
-A: Your data is:
-- Stored on secure PostgreSQL database servers
-- Encrypted at rest and in transit (HTTPS)
-- Isolated per user (cannot see other students' data)
-- Backed up regularly
+## 9. Connecting Spotify
+
+Connecting Spotify allows you to control playback within 11Planner. The connection uses the official Spotify OAuth PKCE flow.
+
+1. In the Focus Music panel (Dashboard), ensure "Spotify" is the selected provider and click **Show**.
+2. Click **Connect Spotify**.
+3. A Spotify authorization popup opens (520×760 px). If it is blocked by your browser, allow popups for this site and try again.
+4. Log in to Spotify and grant access.
+5. The popup closes automatically and the panel shows a green **"Connected"** badge.
+
+**Error states:**
+- "Popup was blocked. Allow popups and try again." — Browser blocked the authorization window.
+- "Spotify connect window was closed before finishing." — You closed the popup early; try again.
+- "Spotify authorization was canceled or failed." — You denied access or an error occurred in Spotify.
+- "Spotify token exchange failed. Check Spotify redirect URI and backend server." — Backend configuration issue; contact support.
+
+> **Note:** A Spotify Premium account is required for in-app playback control. Free accounts can still open Spotify in a new tab via the "Open Spotify" button.
 
 ---
 
-**Q: Can I delete my account?**
-A: Yes, from your Profile page, but:
-- This action cannot be undone
-- All your data will be permanently deleted
-- You'll need to create a new account to use the service again
+## 10. Canvas LMS Sync (Chrome Extension)
+
+11Planner includes a Chrome extension that pulls your assignments directly from Canvas into your task list.
+
+### Installing the Extension
+
+1. Download the extension files from the **Courses** page (link provided in the app).
+2. Open Chrome and go to `chrome://extensions`.
+3. Toggle **Developer Mode** on (top-right).
+4. Click **Load Unpacked** and select the downloaded `canvas-extension/` folder.
+5. The 11Planner extension icon appears in your Chrome toolbar.
+
+### Syncing Assignments
+
+1. In Chrome, navigate to any of your Canvas LMS course pages.
+2. Click the 11Planner extension icon in the toolbar.
+3. Click **Sync to 11Planner**.
+4. Your assignments and syllabus-derived deadlines will appear in your Tasks list within seconds.
 
 ---
 
-### Common Issues & Solutions
+## 11. Profile & Preference Quiz
+
+Navigate to **Profile** from the navigation bar.
+
+### Profile Overview
+
+Your profile page shows:
+- **Your name and email address**
+- **Account creation date**
+- **Total Tasks** — count of all tasks created
+- **Completed Tasks** — count of finished tasks
+- **Overall Completion** — percentage of tasks completed
+- **Total Courses** — number of courses this semester
+
+### Preference Quiz
+
+Click **"Take Preference Quiz"** to open the onboarding questionnaire. This quiz asks about:
+- Your year of study and major
+- Preferred study times (morning, afternoon, evening)
+- Learning style preferences (Visual, Auditory, Reading, Kinesthetic)
+- Preferred study session length and break frequency
+- Workload tolerance per week
+
+The AI uses these preferences when generating your schedule to fit your lifestyle. You can retake the quiz at any time to update your preferences.
+
+After submitting, you are redirected to the **Quiz Submitted** confirmation page.
+
+### Account Actions
+
+From your Profile page:
+- **Change Password** — navigate to Settings → Security
+- **Delete Account** — permanently removes your account and all data. This action cannot be undone. Contact support if needed.
+
+---
+
+## 12. Settings & Notifications
+
+Navigate to **Settings** from the navigation bar.
+
+### Schedule Preferences
+
+| Setting | Description |
+|---------|-------------|
+| **Maximum daily study hours** | Caps how many hours the AI will schedule in a single day to prevent burnout |
+| **Preferred study start time** | Earliest time the AI will place a study block |
+| **Preferred study end time** | Latest time the AI will place a study block |
+| **Session duration** | Preferred length of each study block (e.g., 50 minutes) |
+| **Break frequency** | How often the AI inserts breaks between blocks |
+| **Difficulty preference** | Conservative / Balanced / Aggressive — controls how tightly the AI packs your schedule |
+
+Click **Save Preferences** to apply. The app will suggest regenerating your schedule to reflect the changes.
+
+### Notification Settings
+
+Navigate to **Notifications** from the navigation bar (or Settings → Notifications).
+
+| Option | Description |
+|--------|-------------|
+| **Email reminders** | Receive email alerts for upcoming deadlines |
+| **Daily digest** | A daily email summarizing tasks due that week |
+| **Completion milestones** | Notifications when you hit progress milestones |
+| **In-app notifications** | Browser notifications for reminders and alerts |
+| **Focus session alerts** | Notification when a Pomodoro session or break ends |
+
+### Theme & Display
+
+| Option | Options |
+|--------|---------|
+| **Dark Mode** | Toggles between light and dark UI themes |
+| **System Default** | Follows your device's system theme setting |
+
+---
+
+## 13. AI Support Assistant
+
+A chat bubble labeled with a headset icon is fixed in the bottom-right corner of every page.
+
+### Opening the Assistant
+
+Click the chat bubble icon to expand the panel. The assistant greets you and waits for your input.
+
+### What You Can Ask
+
+- **How-to questions** — "How do I generate a schedule?" / "Where do I add a course?"
+- **Study advice** — "I have a final exam on Friday, can you help me plan?"
+- **Task guidance** — "What tasks are overdue?"
+- **General questions** about 11Planner features
+
+The assistant has awareness of your current courses and tasks, so it can give context-relevant answers.
+
+### Closing the Assistant
+
+Click the **X** on the chat panel to close it.
+
+---
+
+## 14. Exporting Your Schedule
+
+From the **Schedule** page, two export options are available:
+
+### PDF Export
+1. Click the **download icon** in the top-right of the Schedule page.
+2. Select **"Export as PDF"**.
+3. A formatted PDF of your current view downloads to your device.
+4. Share this with professors or print it for your planner.
+
+### Calendar Export (.ics)
+1. Click **"Export to Calendar"**.
+2. An `.ics` file downloads.
+3. Import it into:
+   - **Google Calendar** — Settings → Import & Export → Import
+   - **Apple Calendar** — File → Import
+   - **Outlook** — File → Open & Export → Import/Export
+
+---
+
+## 15. Troubleshooting & FAQ
+
+**Q: Why can't I create a task?**  
+A: The "New Task" button is disabled until you have at least one course. Navigate to Courses and add one first.
+
+**Q: My schedule isn't generating.**  
+A: Confirm you have at least one course and one task with a due date and estimated hours. Check that your internet connection is stable and the backend server is running.
+
+**Q: The AI time estimate is unavailable.**  
+A: This feature requires a signed-in account (not the demo mode) and a running backend server with a valid OpenAI API key configured.
+
+**Q: The Spotify popup was blocked.**  
+A: Allow popups for the 11Planner domain in your browser settings (usually found under Settings → Privacy → Site Settings → Pop-ups).
+
+**Q: My background video failed to load.**  
+A: A small toast notification appears in the bottom-right: "Video failed to load. Showing static fallback." This is typically a slow connection or cached file issue. Refresh the page to retry.
+
+**Q: My saved soundscape or background isn't loading on the Dashboard.**  
+A: Preferences are saved in your browser's localStorage per user. Clearing browser data will reset them. Switching accounts also resets the atmosphere to defaults.
+
+**Q: My course days are saving in the wrong order.**  
+A: Days are always stored and displayed in Monday–Friday order regardless of the order you selected them.
+
+**Q: I uploaded a syllabus but the fields didn't fill in.**  
+A: Some syllabi have non-standard formatting that the AI cannot parse reliably. A dialog will explain what went wrong. Fill in the fields manually and save.
+
+**Q: I can't log out.**  
+A: Click **Logout** in the top navigation. If this doesn't work, clear your browser cookies for the site and reload.
+
+---
+
+### Common Issues Quick Reference
 
 | Issue | Solution |
 |-------|----------|
-| **Login fails** | Check internet connection; reset password if needed; clear browser cache |
-| **Schedule not updating** | Refresh the page; check that you've added courses and assignments |
-| **Notifications not working** | Check browser notification settings; ensure email address is correct |
-| **Slow performance** | Check internet speed; close other browser tabs; try a different browser |
-| **Timer not working on Dashboard** | Refresh page; ensure browser supports timers; check system volume |
-| **Course not appearing** | Verify course was saved; check that meeting times are filled in |
-| **Assignment not scheduled** | Make sure assignment has a due date and duration; regenerate schedule |
+| Login fails | Check password; use "Forgot password?" if needed; clear browser cache |
+| Tasks not appearing | Refresh the page; check that the backend is running |
+| Schedule empty after generate | Verify you have courses with times and tasks with deadlines |
+| Notifications not arriving | Check browser notification permissions; confirm email address is correct |
+| Timer not working | Refresh; check that JavaScript is enabled; try a different browser |
+| Slow performance | Close excess browser tabs; try a different browser |
+| Canvas sync not working | Make sure you are logged into Canvas in the same Chrome session |
 
 ---
 
-### Getting Help
+## 16. Keyboard Reference & Glossary
 
-**In-App Support:**
-- Click the **Support** link in the footer of any page
-- Submit a ticket describing your issue
-- Check FAQ section for common questions
-
-**Contact Support Team:**
-- Email: support@11planner.com
-- Response time: 24-48 hours during business days
-
-**Know an Issue?**
-- Feedback helps us improve 11Planner
-- Report bugs or suggest features through the Support page
-
----
-
-## Appendix: Keyboard Shortcuts
+### Keyboard Shortcuts
 
 | Shortcut | Action |
 |----------|--------|
-| `Ctrl/Cmd + P` | Print current page/schedule |
-| `Ctrl/Cmd + S` | Save (most forms auto-save) |
-| `Ctrl/Cmd + Z` | Undo (in some forms) |
-| `Escape` | Close dialogs or cancel operations |
+| `Ctrl/Cmd + P` | Print current page or schedule view |
+| `Escape` | Close open dialogs and modals |
 | `Tab` | Navigate between form fields |
-| `Enter` | Submit forms or confirm actions |
+| `Enter` | Submit forms or confirm dialogs |
 
 ---
 
+### Glossary
 
----
-
-## Additional Resources
-
-- **Privacy Policy:** See PRIVACY.md for data handling practices
-- **Terms of Service:** See TERMS.md for account policies
+| Term | Definition |
+|------|------------|
+| **Schedule Block** | A time slot on the calendar dedicated to studying a specific task |
+| **Pomodoro** | A time management method: 25 minutes focused work + 5-minute break, repeat 4× then take a 15-minute break |
+| **Soundscape** | An ambient audio environment generated or streamed for background listening during focus sessions |
+| **Priority Level** | A 1–5 rating indicating how urgent a task is: Very Low → Low → Medium → High → Critical |
+| **Productivity Score** | Completed tasks ÷ total tasks, expressed as a percentage |
+| **Syllabus Parsing** | AI extraction of course details (name, code, professor, times, assignments) from an uploaded PDF |
+| **PKCE** | Proof Key for Code Exchange — the secure OAuth flow used for Spotify authentication |
+| **Canvas LMS** | The learning management system used by Wayne State University for course materials and assignments |
+| **Conflict** | Two schedule blocks occupying the same time slot, or a deadline that cannot be met given available hours |
+| **Overdue** | A task whose deadline has passed and which has not been marked complete |
 
 ---
 
 **11Planner Development Team**  
-Wayne State University
-
-For feedback or corrections to this manual, please contact the support team.
+Wayne State University — For feedback or corrections, visit the Support page.
