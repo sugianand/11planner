@@ -136,11 +136,6 @@ export default function TasksPage() {
       setTogglingTaskId(taskId);
       await updateTask(taskId, { completed: !currentCompleted });
       setTogglingTaskId(null);
-      
-      // Auto-switch tab when marking complete
-      if (!currentCompleted) {
-        setTimeout(() => setActiveTab("completed"), 300);
-      }
     } catch (err) {
       setTogglingTaskId(null);
       setDialog({
