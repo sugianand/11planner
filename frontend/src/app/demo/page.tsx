@@ -34,8 +34,9 @@ export default function DemoPage() {
             <video
               controls
               controlsList="nodownload"
-              className="w-full h-auto"
-              poster="/images/background.png"
+              className="w-full h-auto block"
+              preload="auto"
+              playsInline
             >
               <source src="/tours/dashboard_page_video.mp4" type="video/mp4" />
               Your browser does not support the video tag.
