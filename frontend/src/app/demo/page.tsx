@@ -35,8 +35,7 @@ export default function DemoPage() {
               controls
               controlsList="nodownload"
               className="w-full h-auto block"
-              preload="auto"
-              playsInline
+              crossOrigin="anonymous"
             >
               <source src="/tours/dashboard_page_video.mp4" type="video/mp4" />
               Your browser does not support the video tag.

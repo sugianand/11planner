@@ -228,8 +228,7 @@ export default function FaqPage() {
                       controlsList="nodownload"
                       className="w-full rounded-xl bg-black shadow-lg block"
                       autoPlay
-                      preload="auto"
-                      playsInline
+                      crossOrigin="anonymous"
                     >
                       <source src={video.url} type="video/mp4" />
                       Your browser does not support the video tag.
