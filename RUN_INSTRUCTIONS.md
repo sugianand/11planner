@@ -4,7 +4,7 @@
 - **Backend** — FastAPI server (Python) on port `8000`
 - **Frontend** — Next.js app on port `3000`
 
-Both must be running at the same time for the app to work.
+Both the frontend and backend must be running at the same time for the app to work.
 
 ---
 
