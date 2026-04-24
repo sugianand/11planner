@@ -34,8 +34,10 @@ export default function DemoPage() {
             <video
               controls
               controlsList="nodownload"
-              className="w-full h-auto block"
+              style={{ width: '100%', height: 'auto', display: 'block' }}
               crossOrigin="anonymous"
+              width="1920"
+              height="1080"
             >
               <source src="/tours/dashboard_page_video.mp4" type="video/mp4" />
               Your browser does not support the video tag.
