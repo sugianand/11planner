@@ -226,8 +226,10 @@ export default function FaqPage() {
                       key={video.id}
                       controls
                       controlsList="nodownload"
-                      className="w-full rounded-xl bg-black shadow-lg"
+                      className="w-full rounded-xl bg-black shadow-lg block"
                       autoPlay
+                      preload="auto"
+                      playsInline
                     >
                       <source src={video.url} type="video/mp4" />
                       Your browser does not support the video tag.
