@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMusic } from "@/contexts/MusicContext";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 // Renders a floating music player outside dashboard so focus music can continue across routes.
 export default function GlobalMusicPlayer() {
@@ -34,6 +34,11 @@ export default function GlobalMusicPlayer() {
   // The timer/soundscapes component should dispatch this event when mounted/unmounted or state changes:
   // window.dispatchEvent(new CustomEvent("floating-ui-active", { detail: { active: true/false } }));
 
+  // Dragging logic
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragRef = useRef({ startX: 0, startY: 0 });
+
   if (pathname?.startsWith("/dashboard") || !isMusicOpen) {
     return null;
   }
@@ -49,15 +54,49 @@ export default function GlobalMusicPlayer() {
     ? `https://www.youtube.com/embed/${activeYoutubeTrack.youtubeId}?autoplay=${isYoutubePlaying ? 1 : 0}&controls=1&rel=0&modestbranding=1`
     : "";
 
-  // Move lower if timer/sound is active
+  // Default to bottom-left so it stays completely out of the way of the top-aligned focus timer
   const playerPosition = hasFloatingTimerOrSound
-    ? "left-2 top-56 md:left-4" // lower if timer/sound is present
-    : "left-2 top-24 md:left-4";
+    ? "left-2 bottom-6 md:left-6 md:bottom-8" 
+    : "left-2 bottom-6 md:left-6 md:bottom-8";
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if ((e.target as HTMLElement).closest("button") || (e.target as HTMLElement).closest("a")) {
+      return;
+    }
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setIsDragging(true);
+    dragRef.current = {
+      startX: e.clientX - position.x,
+      startY: e.clientY - position.y,
+    };
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDragging) return;
+    setPosition({
+      x: e.clientX - dragRef.current.startX,
+      y: e.clientY - dragRef.current.startY,
+    });
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    setIsDragging(false);
+    e.currentTarget.releasePointerCapture(e.pointerId);
+  };
 
   return (
-    <div className={`fixed ${playerPosition} z-[75] w-[260px] max-w-[calc(100vw-1rem)] md:w-[300px]`}>
+    <div 
+      className={`fixed ${playerPosition} z-[75] w-[260px] max-w-[calc(100vw-1rem)] md:w-[300px] transition-transform ${isDragging ? "duration-0" : "duration-200"}`}
+      style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
+    >
       <div className="overflow-hidden rounded-2xl border border-white/60 bg-white/88 shadow-[0_18px_45px_-28px_rgba(15,23,42,0.6)] backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-900/88">
-        <div className="flex items-center justify-between border-b border-slate-200/80 px-2.5 py-2 dark:border-slate-700/70">
+        <div 
+          className="flex items-center justify-between border-b border-slate-200/80 px-2.5 py-2 dark:border-slate-700/70 cursor-grab active:cursor-grabbing select-none"
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+        >
           <div className="min-w-0">
             <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               Focus Music
