@@ -38,6 +38,24 @@ export default function FaqPage() {
 
   const faqItems = [
     {
+      question: "How does the Canvas Extension work?",
+      answer:
+        "The Canvas Extension allows you to sync assignments directly from your Canvas courses into 11Planner. Install the extension, authorize your Canvas account, and assignments will automatically appear in your 11Planner tasks. This eliminates manual entry and keeps your workload in sync across both platforms.",
+      videoId: "canvas-extension-tour"
+    },
+    {
+      question: "How does the Courses page work?",
+      answer:
+        "The Courses page is where you manage all your classes. You can upload syllabi to auto-extract assignment deadlines, manually add courses with meeting times, mark courses as online or in-person, and add lab information. Use search and filters to find courses quickly, and organize your schedule efficiently.",
+      videoId: "courses-tour"
+    },
+    {
+      question: "How does the Schedule Generation page work?",
+      answer:
+        "The Schedule page generates personalized study blocks across your week based on your tasks, deadlines, and preferences. Switch between Day, Week, Month, and Year views to plan at different scales. You can drag blocks to adjust them, subscribe for live updates, export your schedule, and move blocks around to fit your rhythm.",
+      videoId: "schedule-tour"
+    },
+    {
       question: "What exactly does 11Planner do that a normal to-do list does not?",
       answer:
         "11Planner is built for academic planning, not just task tracking. It breaks large assignments into time-boxed focus blocks, distributes them across your available week, and helps you finish before deadline pressure builds. A normal to-do list tells you what exists. 11Planner helps you decide what to do next and when to do it.",
@@ -46,20 +64,17 @@ export default function FaqPage() {
     {
       question: "Do I need to upload a syllabus before I can use 11Planner?",
       answer:
-        "No. You can start immediately by creating courses and tasks manually. Syllabus upload is optional and can be added later. Many users begin manually for week one, then import more detailed course data once they are comfortable with the workflow.",
-      videoId: "courses-tour"
+        "No. You can start immediately by creating courses and tasks manually. Syllabus upload is optional and can be added later. Many users begin manually for week one, then import more detailed course data once they are comfortable with the workflow."
     },
     {
       question: "Can I edit the schedule after blocks are generated?",
       answer:
-        "Yes. Generated blocks are fully editable. You can move, resize, split, or remove blocks to fit your energy and availability. The scheduler is meant to provide a strong first draft, not lock you into a rigid plan.",
-      videoId: "schedule-tour"
+        "Yes. Generated blocks are fully editable. You can move, resize, split, or remove blocks to fit your energy and availability. The scheduler is meant to provide a strong first draft, not lock you into a rigid plan."
     },
     {
       question: "What happens if I miss a focus block or fall behind for a day?",
       answer:
-        "Missing one block does not break your week. You can quickly reschedule unfinished work into open windows and continue. The system is designed around adjustment, so recovery is part of the workflow rather than a failure state.",
-      videoId: "schedule-tour"
+        "Missing one block does not break your week. You can quickly reschedule unfinished work into open windows and continue. The system is designed around adjustment, so recovery is part of the workflow rather than a failure state."
     },
     {
       question: "Is my planning data sold, shared, or used for advertising?",
@@ -69,14 +84,12 @@ export default function FaqPage() {
     {
       question: "How long does setup take for a new user?",
       answer:
-        "Most users can set up their first workable week in about 10 to 20 minutes. A quick setup usually includes adding current courses, entering the nearest deadlines, and generating the first set of focus blocks. You can refine details over time instead of doing everything on day one.",
-      videoId: "dashboard-tour"
+        "Most users can set up their first workable week in about 10 to 20 minutes. A quick setup usually includes adding current courses, entering the nearest deadlines, and generating the first set of focus blocks. You can refine details over time instead of doing everything on day one."
     },
     {
       question: "Does 11Planner replace my calendar app?",
       answer:
-        "Not necessarily. 11Planner focuses on academic execution planning and workload visibility. Many users still keep their existing calendar for meetings, events, and personal commitments while using 11Planner to stay on top of coursework.",
-      videoId: "schedule-tour"
+        "Not necessarily. 11Planner focuses on academic execution planning and workload visibility. Many users still keep their existing calendar for meetings, events, and personal commitments while using 11Planner to stay on top of coursework."
     },
     {
       question: "How quickly can I get support if something breaks?",
