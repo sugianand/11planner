@@ -39,7 +39,7 @@ export default function DemoPage() {
               width="1920"
               height="1080"
             >
-              <source src="/tours/dashboard_page_video.mp4" type="video/mp4" />
+              <source src="/tours/11planner-demo.mp4" type="video/mp4" />
               Your browser does not support the video tag.
             </video>
           </div>
