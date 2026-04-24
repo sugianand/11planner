@@ -1,65 +1,130 @@
-# How to Run the 11Planner Application
+# How to Run 11Planner
 
-This application consists of a **FastAPI backend** and a **Next.js frontend**. 
-Currently, the backend uses an **in-memory database**, so no external database setup (like PostgreSQL) is required.
+11Planner has two parts that run simultaneously:
+- **Backend** — FastAPI server (Python) on port `8000`
+- **Frontend** — Next.js app on port `3000`
+
+Both must be running at the same time for the app to work.
+
+---
 
 ## Prerequisites
-- **Python** (3.8+)
-- **Node.js** (18+)
-- **npm**
-- **OpenAI API Key** (for AI schedule optimization)
 
-## Quick Start
+| Tool | Version | Check with |
+|---|---|---|
+| Python | 3.11+ | `python --version` |
+| Node.js | 18+ | `node --version` |
+| npm | Any recent | `npm --version` |
 
-### 0. Get an OpenAI API Key (Required for AI Features)
-1. Go to [OpenAI Platform](https://platform.openai.com/api-keys)
-2. Sign up or log in to your OpenAI account
-3. Create a new API key
-4. Copy the key (you won't see it again!)
+You will also need:
+- A **Supabase account** — for auth and database ([supabase.com](https://supabase.com))
+- An **OpenAI API key** — for AI schedule optimization ([platform.openai.com](https://platform.openai.com/api-keys))
+- A **Google Gemini API key** — for syllabus PDF parsing ([aistudio.google.com](https://aistudio.google.com/app/apikey))
 
-### 1. Backend Setup (Terminal 1)
-Navigate to the `backend` directory and set up the Python environment:
+---
+
+## Step 1 — Backend Setup (Terminal 1)
 
 ```powershell
 cd backend
-
-# Create .env file with your OpenAI API key
-# Copy from .env.example and add your actual API key
-copy .env.example .env
-# Then edit .env and replace "your_api_key_here" with your actual OpenAI API key
-notepad .env
-
-# Create virtual environment
-python -m venv .venv
-
-# Activate virtual environment
-.\.venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Start the server (use either command)
-uvicorn app.main:app --reload
 ```
-The backend will run at `http://127.0.0.1:8000`.
-API Docs available at: `http://127.0.0.1:8000/docs`
 
-### 2. Frontend (Next.js)
-Navigate to the `frontend` directory:
+**Create your `.env` file:**
 
 ```powershell
-    cd frontend
-# Install dependencies
-npm install
+copy .env.example .env
+notepad .env
+```
 
-# Start the frontend
+Fill in the following values in `.env`:
+
+```
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_KEY=your-supabase-anon-or-service-key
+OPENAI_API_KEY=your-openai-api-key
+GEMINI_API_KEY=your-gemini-api-key
+```
+
+**Create and activate a virtual environment:**
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\activate
+```
+
+**Install dependencies:**
+
+```powershell
+pip install -r requirements.txt
+```
+
+**Start the backend server:**
+
+```powershell
+uvicorn app.main:app --reload
+```
+
+The backend will be running at `http://127.0.0.1:8000`  
+Interactive API docs: `http://127.0.0.1:8000/docs`
+
+---
+
+## Step 2 — Frontend Setup (Terminal 2)
+
+Open a **second terminal window**, then:
+
+```powershell
+cd frontend
+```
+
+**Create your `.env.local` file** in the `frontend/` folder:
+
+```
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
+
+**Install dependencies:**
+
+```powershell
+npm install
+```
+
+**Start the frontend:**
+
+```powershell
 npm run dev
 ```
-The frontend will run at `http://localhost:3000`.
+
+The frontend will be running at `http://localhost:3000`
+
+---
+
+## Step 3 — Open the App
+
+Go to `http://localhost:3000` in your browser.  
+Register an account, verify your email, and you're in.
+
+---
+
+## Canvas Extension (Optional)
+
+To enable Canvas LMS sync, load the Chrome extension manually:
+
+1. Open Chrome and go to `chrome://extensions/`
+2. Enable **Developer mode** (top right toggle)
+3. Click **Load unpacked**
+4. Select the `canvas-extension/` folder in the project root
+5. Navigate to Canvas in your browser — the extension will appear automatically
+
+---
 
 ## Notes
-- The **OpenAI API key is required** for AI schedule optimization to work. Without it, schedules will be generated using basic urgency scoring only.
-- Since the database is **in-memory**, restarting the backend will **reset all data** (tasks, courses, etc.).
-- The backend configuration is in `backend/app/main.py`.
-- The frontend configuration is in `next.config.ts`.
-- If you don't have an OpenAI account, sign up for free at [OpenAI Platform](https://platform.openai.com)
+
+- **Both servers must be running** at the same time. The frontend calls the backend for schedule generation and syllabus parsing.
+- **OpenAI key is optional** — without it, schedules are generated using urgency-based scoring only (no AI ordering hints).
+- **Gemini key is optional** — without it, syllabus PDF parsing uses regex extraction only (no AI enrichment).
+- **All data persists** in Supabase — restarting the backend does not reset any data.
+- Backend config: `backend/app/main.py`
+- Frontend config: `frontend/next.config.ts`
