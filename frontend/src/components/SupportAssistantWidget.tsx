@@ -1124,16 +1124,31 @@ export default function SupportAssistantWidget() {
                           {video && (
                             <div className="mt-3 pt-3 border-t border-slate-300 dark:border-slate-600">
                               <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-2">{video.title}</p>
-                              <video
-                                key={video.id}
-                                controls
-                                controlsList="nodownload"
-                                className="w-full rounded-lg max-h-64 bg-black block"
-                                crossOrigin="anonymous"
-                              >
-                                <source src={video.url} type="video/mp4" />
-                                Your browser does not support the video tag.
-                              </video>
+                              {video.type === "youtube" ? (
+                                <div className="w-full rounded-lg max-h-64 bg-black block overflow-hidden aspect-video">
+                                  <iframe
+                                    width="100%"
+                                    height="100%"
+                                    src={video.url}
+                                    title={video.title}
+                                    frameBorder="0"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                    allowFullScreen
+                                    className="block"
+                                  />
+                                </div>
+                              ) : (
+                                <video
+                                  key={video.id}
+                                  controls
+                                  controlsList="nodownload"
+                                  className="w-full rounded-lg max-h-64 bg-black block"
+                                  crossOrigin="anonymous"
+                                >
+                                  <source src={video.url} type="video/mp4" />
+                                  Your browser does not support the video tag.
+                                </video>
+                              )}
                             </div>
                           )}
                         </div>

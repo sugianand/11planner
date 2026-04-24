@@ -30,18 +30,17 @@ export default function DemoPage() {
           </p>
 
           {/* Video player — embedded product tour walkthrough */}
-          <div className="mt-8 rounded-3xl border border-slate-200/70 dark:border-slate-700/80 bg-black shadow-xl overflow-hidden max-w-[960px] mx-auto">
-            <video
-              controls
-              controlsList="nodownload"
-              style={{ width: '100%', height: 'auto', display: 'block' }}
-              crossOrigin="anonymous"
-              width="1920"
-              height="1080"
-            >
-              <source src="/tours/11planner-demo.mp4" type="video/mp4" />
-              Your browser does not support the video tag.
-            </video>
+          <div className="mt-8 rounded-3xl border border-slate-200/70 dark:border-slate-700/80 shadow-xl overflow-hidden max-w-[960px] mx-auto aspect-video">
+            <iframe
+              width="100%"
+              height="100%"
+              src="https://www.youtube.com/embed/rtB3i8MW_7g"
+              title="11Planner Demo Walkthrough"
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+              className="block"
+            />
           </div>
 
           {/* Navigation links — back to home or open the app */}

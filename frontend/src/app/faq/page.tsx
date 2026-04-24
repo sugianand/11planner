@@ -235,17 +235,32 @@ export default function FaqPage() {
                 const video = TOUR_VIDEOS.find((v) => v.id === videoModal.videoId);
                 return video ? (
                   <div className="flex flex-col gap-4 h-full">
-                    <video
-                      key={video.id}
-                      controls
-                      controlsList="nodownload"
-                      className="w-full rounded-xl bg-black shadow-lg block"
-                      autoPlay
-                      crossOrigin="anonymous"
-                    >
-                      <source src={video.url} type="video/mp4" />
-                      Your browser does not support the video tag.
-                    </video>
+                    {video.type === "youtube" ? (
+                      <div className="w-full rounded-xl overflow-hidden bg-black shadow-lg block aspect-video">
+                        <iframe
+                          width="100%"
+                          height="100%"
+                          src={video.url}
+                          title={video.title}
+                          frameBorder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                          allowFullScreen
+                          className="block"
+                        />
+                      </div>
+                    ) : (
+                      <video
+                        key={video.id}
+                        controls
+                        controlsList="nodownload"
+                        className="w-full rounded-xl bg-black shadow-lg block"
+                        autoPlay
+                        crossOrigin="anonymous"
+                      >
+                        <source src={video.url} type="video/mp4" />
+                        Your browser does not support the video tag.
+                      </video>
+                    )}
                     <div className="bg-white/70 dark:bg-slate-900/70 rounded-xl p-4">
                       <h3 className="font-bold text-slate-900 dark:text-white">{video.title}</h3>
                       <p className="text-sm text-slate-700 dark:text-slate-300 mt-2">{video.description}</p>

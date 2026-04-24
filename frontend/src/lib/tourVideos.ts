@@ -9,6 +9,7 @@ export type TourVideo = {
   title: string;
   description: string;
   url: string;
+  type: "youtube" | "mp4";
   keywords: string[];
   duration: string;
 };
@@ -19,7 +20,8 @@ export const TOUR_VIDEOS: TourVideo[] = [
     page: "dashboard",
     title: "Dashboard Tour",
     description: "Learn how to use the Dashboard: pick Focus Atmospheres, select music, run the timer, and track your productivity.",
-    url: "/tours/dashboard_page_video.mp4",
+    url: "https://www.youtube.com/embed/MNhLuTc_dSQ",
+    type: "youtube",
     keywords: ["dashboard", "focus", "timer", "music", "productivity", "stats", "checklist", "atmosphere", "background"],
     duration: "30s",
   },
@@ -28,7 +30,8 @@ export const TOUR_VIDEOS: TourVideo[] = [
     page: "tasks",
     title: "Tasks Page Tour",
     description: "Discover how to manage your tasks using Pending and Completed tabs, filters, sorts, and mark tasks complete.",
-    url: "/tours/tasks.mp4",
+    url: "https://www.youtube.com/embed/90SOmqllgJ0",
+    type: "youtube",
     keywords: ["tasks", "pending", "completed", "filter", "sort", "mark complete", "assignments", "exams", "projects"],
     duration: "25s",
   },
@@ -37,7 +40,8 @@ export const TOUR_VIDEOS: TourVideo[] = [
     page: "courses",
     title: "Courses Page Tour",
     description: "Explore the Courses page: upload syllabi, search courses, filter by type, and sort by name or time.",
-    url: "/tours/courses.mp4",
+    url: "https://www.youtube.com/embed/mOjiTICO2-U",
+    type: "youtube",
     keywords: ["courses", "syllabus", "syllabi", "search", "filter", "lab", "online", "in-person", "sort"],
     duration: "30s",
   },
@@ -46,7 +50,8 @@ export const TOUR_VIDEOS: TourVideo[] = [
     page: "schedule",
     title: "Schedule Generation Tour",
     description: "See how to use the Schedule page: Day, Week, Month, and Year views, subscribe for live updates, export, and move blocks.",
-    url: "/tours/schedule-generation.mp4",
+    url: "https://www.youtube.com/embed/ZVDfOxVJaBM",
+    type: "youtube",
     keywords: ["schedule", "day view", "week view", "month view", "year view", "subscribe", "export", "live", "blocks", "generation"],
     duration: "45s",
   },
@@ -55,7 +60,8 @@ export const TOUR_VIDEOS: TourVideo[] = [
     page: "canvas-extension",
     title: "Canvas Extension Tour",
     description: "Learn how to use the Canvas Extension to sync your Canvas assignments and manage them directly from 11Planner.",
-    url: "/tours/canvas-extension.mp4",
+    url: "https://www.youtube.com/embed/d4pLIMq9ENw",
+    type: "youtube",
     keywords: ["canvas", "extension", "canvas extension", "sync", "assignments", "integrate", "chrome", "browser"],
     duration: "30s",
   },
