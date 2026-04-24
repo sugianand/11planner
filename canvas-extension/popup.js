@@ -336,28 +336,36 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Handles Google OAuth login button click
+    // Handles Google OAuth login button click.
+    // Delegates to the background service worker so chrome.identity runs in
+    // the correct MV3 context (popup access to chrome.identity can be restricted).
     document.getElementById('googleLoginBtn')?.addEventListener('click', async () => {
         const btn = document.getElementById('googleLoginBtn');
         btn.disabled = true;
         btn.textContent = 'Connecting...';
         showStatus('Opening Google login...', 'info');
 
-        try {
-            const oauthResult = await loginWithGoogle();
+        chrome.runtime.sendMessage({ action: 'googleOAuthLogin' }, (response) => {
+            btn.disabled = false;
+            btn.innerHTML = GOOGLE_BTN_CONTENT;
 
-            const { userId, email: userEmail, accessToken } = oauthResult;
+            if (chrome.runtime.lastError) {
+                showStatus(`Google login failed: ${chrome.runtime.lastError.message}`, 'error');
+                return;
+            }
+
+            if (!response || response.error) {
+                showStatus(`Google login failed: ${response?.error || 'Unknown error'}`, 'error');
+                return;
+            }
+
+            const { userId, userEmail, accessToken } = response;
             chrome.storage.local.set({ userId, userEmail, accessToken }, () => {
                 showPanel(true, userEmail);
                 showStatus('Logged in with Google!', 'success');
                 setTimeout(() => { document.getElementById('status').className = 'status'; }, 2000);
             });
-        } catch (err) {
-            showStatus(`Google login failed: ${err.message}`, 'error');
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = GOOGLE_BTN_CONTENT;
-        }
+        });
     });
 
     // Redirects users without an account to website register mode
