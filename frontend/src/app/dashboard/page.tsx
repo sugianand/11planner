@@ -1529,16 +1529,16 @@ export default function Dashboard() {
                             {scene.description}
                           </p>
                           {scene.description.length > 42 && (
-                            <button
-                              type="button"
+                            <span
                               onClick={(e) => {
+                                e.preventDefault();
                                 e.stopPropagation();
                                 setExpandedSoundId((prev) => prev === scene.id ? null : scene.id);
                               }}
-                              className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 mt-0.5 transition-colors"
+                              className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 mt-0.5 transition-colors cursor-pointer block"
                             >
                               {expandedSoundId === scene.id ? 'less' : 'more...'}
-                            </button>
+                            </span>
                           )}
                         </div>
 
