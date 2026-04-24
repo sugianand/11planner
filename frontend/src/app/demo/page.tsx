@@ -37,7 +37,7 @@ export default function DemoPage() {
               className="w-full h-auto"
               poster="/images/background.png"
             >
-              <source src="/tours/dashboard.mp4" type="video/mp4" />
+              <source src="/tours/dashboard_page_video.mp4" type="video/mp4" />
               Your browser does not support the video tag.
             </video>
           </div>

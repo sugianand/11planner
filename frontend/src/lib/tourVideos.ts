@@ -19,7 +19,7 @@ export const TOUR_VIDEOS: TourVideo[] = [
     page: "dashboard",
     title: "Dashboard Tour",
     description: "Learn how to use the Dashboard: pick Focus Atmospheres, select music, run the timer, and track your productivity.",
-    url: "/tours/dashboard.mp4",
+    url: "/tours/dashboard_page_video.mp4",
     keywords: ["dashboard", "focus", "timer", "music", "productivity", "stats", "checklist", "atmosphere", "background"],
     duration: "30s",
   },
