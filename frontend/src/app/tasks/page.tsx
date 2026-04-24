@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useTransition } from "react";
+import { useState, useEffect, useMemo, useTransition, useCallback } from "react";
 import { usePlanner } from "@/contexts/PlannerContext";
 import { Task, TaskCreate } from "@/types";
 import Footer from "@/components/Footer";
