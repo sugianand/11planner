@@ -32,6 +32,7 @@ SUPPORT_SYSTEM_PROMPT = (
     "If the request is unclear, ask one short clarifying question only when needed. "
     "If a user asks for anything unrelated to 11Planner product usage/support, politely refuse and redirect to 11Planner-only help. "
     "Do not teach external subjects (for example biology, math, programming, writing, or general homework). "
+    "When users ask to SEE, SHOW, DEMO, TOUR, or WATCH how something works, suggest an appropriate tour video if available (dashboard, tasks, courses, schedule, or canvas-extension). "
     "You must respond as valid JSON only, matching the provided output schema."
 )
 
@@ -252,6 +253,7 @@ class SupportChatRequest(BaseModel):
 class SupportChatResponse(BaseModel):
     reply: str
     suggested_view: str | None = None
+    video_id: str | None = None
 
 
 class SupportStatusResponse(BaseModel):
@@ -292,20 +294,50 @@ def is_11planner_related(message: str, pathname: str | None) -> bool:
 
 
 # Returns deterministic fallback help when AI output is unavailable.
-def fallback_reply(message: str, pathname: str | None = None) -> tuple[str, str | None]:
+def fallback_reply(message: str, pathname: str | None = None) -> tuple[str, str | None, str | None]:
     normalized = message.lower()
     route = (pathname or "").lower()
+    
+    # Detect if user is asking for a video/tour
+    video_keywords = ["show", "video", "tour", "how", "walkthrough", "demo", "explain", "watch", "see", "guide", "tutorial"]
+    is_asking_for_video = any(keyword in normalized for keyword in video_keywords)
+    suggested_video_id: str | None = None
+    
+    # Map routes to video IDs
+    if is_asking_for_video:
+        if route.startswith("/dashboard"):
+            suggested_video_id = "dashboard-tour"
+        elif route.startswith("/tasks"):
+            suggested_video_id = "tasks-tour"
+        elif route.startswith("/courses"):
+            suggested_video_id = "courses-tour"
+        elif route.startswith("/schedule"):
+            suggested_video_id = "schedule-tour"
+        else:
+            # Check message keywords for video matches
+            if any(keyword in normalized for keyword in ["canvas", "extension"]):
+                suggested_video_id = "canvas-extension-tour"
+            elif any(keyword in normalized for keyword in ["dashboard", "focus", "music", "timer"]):
+                suggested_video_id = "dashboard-tour"
+            elif any(keyword in normalized for keyword in ["task", "pending", "completed"]):
+                suggested_video_id = "tasks-tour"
+            elif any(keyword in normalized for keyword in ["course", "syllabus"]):
+                suggested_video_id = "courses-tour"
+            elif any(keyword in normalized for keyword in ["schedule", "calendar", "block"]):
+                suggested_video_id = "schedule-tour"
 
     if route.startswith("/about"):
         return (
             "The About page explains what 11Planner is and who built it. It highlights the core mission to reduce deadline panic, the 30-minute focus block model, and the team members responsible for the project. Use it if you want a quick overview of the product and team.",
             "support",
+            None,
         )
 
     if route.startswith("/faq"):
         return (
             "The FAQ page answers common questions about what 11Planner does, syllabus uploads, schedule editing, recovery when you fall behind, privacy, setup time, calendar use, and support. Use it when you want quick pre-signup guidance.",
             "support",
+            None,
         )
 
     if route.startswith("/privacy"):
@@ -367,64 +399,69 @@ def fallback_reply(message: str, pathname: str | None = None) -> tuple[str, str 
         return (
             "Open Dashboard to build your study environment with Focus Atmosphere, choose a live background and soundscape, switch between Spotify and YouTube Music, use the Timer, and review Total Tasks, Total Hours, Productivity Score, Overdue, and Today's Checklist.",
             "dashboard",
+            suggested_video_id or "dashboard-tour" if is_asking_for_video else None,
         )
 
     if "schedule" in normalized or any(keyword in normalized for keyword in ("calendar", "block", "time", "view", "views", "subscribe", "export")):
         return (
             "Schedule has four views: Day, Week, Month (default), and Year. Use Subscribe (Live) to add the feed to a calendar app, Export to download an ICS backup, Today to jump back to the current date, and drag blocks to move them around.",
             "schedule",
+            suggested_video_id or "schedule-tour" if is_asking_for_video else None,
         )
 
     if any(keyword in normalized for keyword in ("course", "syllabus", "lab", "filter", "sort", "search")):
         return (
             "On Courses, use Search by name, code, professor, or day; filter with All Types, Online, In-Person, or Has Lab; and sort by Name (A-Z), Name (Z-A), Time (earliest), or Time (latest).",
             "courses",
+            suggested_video_id or "courses-tour" if is_asking_for_video else None,
         )
 
     if any(keyword in normalized for keyword in ("task", "assignment", "exam", "project", "completed", "pending", "filter", "sort", "tab")):
         return (
             "Tasks has Pending and Completed tabs. Filters include All Types, Assignment, Exam, Project, All courses, and deadline filters for All deadlines, Due today, Due in next 7 days, Due in next 30 days, and Overdue. Sort options are Deadline earliest/latest, Name A-Z/Z-A, and Priority high to low.",
             "tasks",
+            suggested_video_id or "tasks-tour" if is_asking_for_video else None,
         )
 
     if any(keyword in normalized for keyword in ("setting", "notification", "theme", "reminder", "password", "privacy", "account", "delete", "export")):
         return (
             "Settings is organized into three panels: Personalize, Notifications, and Account. Use Search settings to jump to the right panel. Personalize controls Theme Mode and Accent Theme; Notifications controls Push Notifications, Notification Sound, Browser Permission, Reminder lead time, Email Updates, and Weekly Report; Account controls Change Password, privacy toggles, Export Schedule as PDF, Clear Account Data, and Delete Account. Reset This Section resets only the current panel.",
             "settings",
+            None,
         )
     if any(keyword in normalized for keyword in ("bug", "error", "issue", "support", "problem")):
-        return "If something looks broken, open Support with the page name and the steps you took so the issue can be reproduced.", "support"
+        return ("If something looks broken, open Support with the page name and the steps you took so the issue can be reproduced.", "support", None)
 
     if route.startswith("/dashboard"):
-        return "I can help with the dashboard. Ask me about focus backgrounds, sounds, Spotify or YouTube Music, the timer, or the dashboard stats and checklist.", "dashboard"
+        return ("I can help with the dashboard. Ask me about focus backgrounds, sounds, Spotify or YouTube Music, the timer, or the dashboard stats and checklist.", "dashboard", None)
     if route.startswith("/profile/quiz"):
-        return "I can help with the preference quiz. Ask me what each step means, which answers are required, or how Submit saves your preferences and returns you to Dashboard.", "profile"
+        return ("I can help with the preference quiz. Ask me what each step means, which answers are required, or how Submit saves your preferences and returns you to Dashboard.", "profile", None)
     if route.startswith("/profile"):
-        return "I can help with Profile. Ask me what each profile stat means, how to edit your name, or how to retake the preference quiz.", "profile"
+        return ("I can help with Profile. Ask me what each profile stat means, how to edit your name, or how to retake the preference quiz.", "profile", None)
     if route.startswith("/about"):
-        return "I can help explain what the About page is for, who built 11Planner, and the project’s core mission.", "support"
+        return ("I can help explain what the About page is for, who built 11Planner, and the project’s core mission.", "support", None)
     if route.startswith("/faq"):
-        return "I can help explain what the FAQ page covers, like setup, privacy, editing schedules, and support.", "support"
+        return ("I can help explain what the FAQ page covers, like setup, privacy, editing schedules, and support.", "support", None)
     if route.startswith("/privacy"):
-        return "I can help explain the Privacy page, including Personalized Planner Recommendations, Learning Insights History, Anonymous Product Analytics, Include Personal Info in Exports, and how you can request deletion.", "support"
+        return ("I can help explain the Privacy page, including Personalized Planner Recommendations, Learning Insights History, Anonymous Product Analytics, Include Personal Info in Exports, and how you can request deletion.", "support", None)
     if route.startswith("/terms"):
-        return "I can help explain the Terms page and the rules for using 11Planner.", "support"
+        return ("I can help explain the Terms page and the rules for using 11Planner.", "support", None)
     if route.startswith("/logo-story"):
-        return "I can help explain the Logo Story page and the brand inspiration behind 11Planner.", "support"
+        return ("I can help explain the Logo Story page and the brand inspiration behind 11Planner.", "support", None)
     if route.startswith("/demo"):
-        return "I can help explain the Demo page and its walkthrough video.", "support"
+        return ("I can help explain the Demo page and its walkthrough video.", "support", None)
     if route.startswith("/schedule"):
-        return "I can help with Schedule. Ask me about Day, Week, Month, or Year views, Subscribe (Live), Export, Today, or moving blocks.", "schedule"
+        return ("I can help with Schedule. Ask me about Day, Week, Month, or Year views, Subscribe (Live), Export, Today, or moving blocks.", "schedule", None)
     if route.startswith("/tasks"):
-        return "I can help with Tasks. Ask me about Pending vs Completed tabs, filters, sorts, or marking a task complete.", "tasks"
+        return ("I can help with Tasks. Ask me about Pending vs Completed tabs, filters, sorts, or marking a task complete.", "tasks", None)
     if route.startswith("/courses"):
-        return "I can help with Courses. Ask me about course setup, labs, syllabi, filters, or sort options.", "courses"
+        return ("I can help with Courses. Ask me about course setup, labs, syllabi, filters, or sort options.", "courses", None)
     if route.startswith("/settings"):
-        return "I can help with Settings. Ask me about the Search settings filter, Appearance, Notifications, Privacy, Account, Data, or how Reset This Section works.", "settings"
+        return ("I can help with Settings. Ask me about the Search settings filter, Appearance, Notifications, Privacy, Account, Data, or how Reset This Section works.", "settings", None)
     if route.startswith("/notifications"):
-        return "I can help with Notifications. Ask me about Task Alerts, overdue and due-soon reminders, reminder lead time, the Mark Complete button for overdue tasks, or Study Block Alerts.", "notifications"
+        return ("I can help with Notifications. Ask me about Task Alerts, overdue and due-soon reminders, reminder lead time, the Mark Complete button for overdue tasks, or Study Block Alerts.", "notifications", None)
 
-    return "I can help with Tasks, Courses, Schedule, Settings, and support issues. Tell me what you’re trying to do.", None
+    return ("I can help with Tasks, Courses, Schedule, Settings, and support issues. Tell me what you're trying to do.", None, None)
 
 
 # Exposes support AI availability for frontend diagnostics.
@@ -480,6 +517,7 @@ async def chat_support(request: SupportChatRequest):
                     "output_schema": {
                         "reply": "string with concise, practical guidance and newline-separated steps when relevant",
                         "suggested_view": "optional one of: home|chat|news|help|tasks|courses|schedule|profile|settings|support",
+                        "video_id": "optional tour video ID if applicable: dashboard-tour, tasks-tour, courses-tour, schedule-tour, or canvas-extension-tour",
                     },
                 },
                 ensure_ascii=True,
@@ -501,9 +539,14 @@ async def chat_support(request: SupportChatRequest):
                 parsed = json.loads(content)
                 reply = str(parsed.get("reply") or "")
                 suggested_view = parsed.get("suggested_view")
+                video_id = parsed.get("video_id")
                 if not reply.strip():
                     raise ValueError("Missing reply from OpenAI.")
-                return SupportChatResponse(reply=reply.strip(), suggested_view=suggested_view if isinstance(suggested_view, str) else None)
+                return SupportChatResponse(
+                    reply=reply.strip(),
+                    suggested_view=suggested_view if isinstance(suggested_view, str) else None,
+                    video_id=video_id if isinstance(video_id, str) else None,
+                )
             except Exception as inner_exc:
                 last_exc = inner_exc
 
@@ -513,5 +556,5 @@ async def chat_support(request: SupportChatRequest):
         raise ValueError("OpenAI request failed without a captured exception.")
     except Exception as exc:
         logger.exception("Support chat OpenAI request failed: %s", exc)
-        reply, suggested_view = fallback_reply(request.message, request.pathname)
-        return SupportChatResponse(reply=reply, suggested_view=suggested_view)
+        reply, suggested_view, video_id = fallback_reply(request.message, request.pathname)
+        return SupportChatResponse(reply=reply, suggested_view=suggested_view, video_id=video_id)

@@ -736,17 +736,22 @@ export default function FocusDashboardPanel({
 
                 {musicProvider === 'youtube' ? (
                   <div className="mt-3 flex flex-wrap gap-2">
-                    {/* Opens YouTube Music directly so sign-in completes in the correct product context. */}
-                    <a
-                      href="https://music.youtube.com/"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center rounded-full border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                    {isConnectedForActiveProvider ? (
+                      <span className="inline-flex items-center rounded-full bg-emerald-100 px-3 py-2 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+                        Connected
+                      </span>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={handleProviderConnect}
+                      disabled={spotifyConnecting}
+                      className="inline-flex items-center rounded-full border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-70 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
                     >
-                      Connect YouTube Music
-                    </a>
+                      {spotifyConnecting ? "Connecting..." : "Connect Spotify"}
+                    </button>
+                    {/* Open Spotify home page in a new tab */}
                     <a
-                      href="https://music.youtube.com/"
+                      href="https://open.spotify.com/"
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex items-center rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700"

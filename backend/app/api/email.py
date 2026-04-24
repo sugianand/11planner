@@ -13,7 +13,6 @@ from supabase import Client, create_client
 
 router = APIRouter(prefix="/api", tags=["email"])
 
-PREFERENCES_FILE_PATH = Path(__file__).resolve().parents[2] / "notification_preferences.json"
 _supabase_client: Client | None = None
 
 
@@ -23,23 +22,6 @@ class SendEmailRequest(BaseModel):
     body: str
     html_body: str | None = None
     reply_to: str | None = None
-
-
-class NotificationPreferencesRequest(BaseModel):
-    user_email: str
-    user_name: str | None = None
-    email_updates_enabled: bool = True
-    weekly_report_enabled: bool = True
-
-
-class NotificationPreferencesResponse(BaseModel):
-    user_id: str
-    user_email: str
-    user_name: str | None = None
-    email_updates_enabled: bool
-    weekly_report_enabled: bool
-    last_weekly_report_week: str | None = None
-    updated_at: str
 
 
 # Lazily initializes and returns a shared Supabase client.
@@ -66,25 +48,6 @@ def get_supabase() -> Client:
 
     _supabase_client = create_client(url, key)
     return _supabase_client
-
-
-# Loads stored notification email preferences from disk.
-def read_notification_preferences() -> dict[str, dict]:
-    if not PREFERENCES_FILE_PATH.exists():
-        return {}
-    try:
-        raw = PREFERENCES_FILE_PATH.read_text(encoding="utf-8")
-        parsed = json.loads(raw) if raw else {}
-        if isinstance(parsed, dict):
-            return parsed
-    except Exception:
-        return {}
-    return {}
-
-
-# Persists notification email preferences to disk.
-def write_notification_preferences(preferences: dict[str, dict]) -> None:
-    PREFERENCES_FILE_PATH.write_text(json.dumps(preferences, indent=2), encoding="utf-8")
 
 
 # Creates a stable ISO week key used to avoid duplicate weekly emails.
@@ -339,31 +302,45 @@ def send_due_weekly_reports() -> int:
         return 0
 
     week_key = iso_week_key(now)
-    preferences = read_notification_preferences()
+    supabase = get_supabase()
+    
+    result = supabase.table("user_settings").select("user_id, last_weekly_report_week").eq("weekly_report_enabled", True).execute()
+    users = result.data or []
+    
     sent_count = 0
-    changed = False
 
-    for user_id, data in preferences.items():
-        if not data.get("weekly_report_enabled", True):
+    for user_data in users:
+        user_id = user_data.get("user_id")
+        if not user_id:
+            continue
+            
+        if user_data.get("last_weekly_report_week") == week_key:
             continue
 
-        recipient = data.get("user_email")
-        if not recipient:
-            continue
+        try:
+            auth_response = supabase.auth.admin.get_user_by_id(user_id)
+            recipient = auth_response.user.email
+            if not recipient:
+                continue
+                
+            profile_res = supabase.table("profiles").select("firstname, lastname").eq("id", user_id).maybe_single().execute()
+            user_name = None
+            if profile_res.data:
+                first = (profile_res.data.get("firstname") or "").strip()
+                last = (profile_res.data.get("lastname") or "").strip()
+                user_name = f"{first} {last}".strip() or None
 
-        if data.get("last_weekly_report_week") == week_key:
-            continue
+            subject, text_body, html_body = build_weekly_report_content(user_id, now, user_name)
+            send_smtp_email(recipient, subject, text_body, html_body=html_body)
 
-        subject, text_body, html_body = build_weekly_report_content(user_id, now, data.get("user_name"))
-        send_smtp_email(recipient, subject, text_body, html_body=html_body)
-
-        data["last_weekly_report_week"] = week_key
-        data["updated_at"] = datetime.now(timezone.utc).isoformat()
-        changed = True
-        sent_count += 1
-
-    if changed:
-        write_notification_preferences(preferences)
+            supabase.table("user_settings").update({
+                "last_weekly_report_week": week_key,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }).eq("user_id", user_id).execute()
+            
+            sent_count += 1
+        except Exception as e:
+            print(f"[weekly-email-worker] Failed to send to {user_id}: {e}")
 
     return sent_count
 
@@ -376,6 +353,113 @@ async def weekly_email_worker() -> None:
         except Exception as exc:
             print(f"[weekly-email-worker] {exc}")
         await asyncio.sleep(60 * 60)
+
+
+# In-memory set to prevent duplicate task alert emails within a server session.
+# Key: (user_id, task_id, alert_type) — cleared only on server restart.
+_sent_task_alerts: set[tuple[str, str, str]] = set()
+
+
+def parse_iso_datetime(value: str | None) -> datetime | None:
+    """Parses an ISO 8601 datetime string to a UTC-aware datetime."""
+    if not value:
+        return None
+    try:
+        normalized = value.replace("Z", "+00:00")
+        parsed = datetime.fromisoformat(normalized)
+        return parsed.replace(tzinfo=timezone.utc) if parsed.tzinfo is None else parsed.astimezone(timezone.utc)
+    except ValueError:
+        return None
+
+
+def send_due_task_alerts() -> int:
+    """
+    Checks all opted-in users for tasks that are overdue or within their
+    reminder window and sends email alerts for any not yet sent this session.
+    """
+    supabase = get_supabase()
+    now = datetime.now(timezone.utc)
+    sent_count = 0
+
+    # Fetch all users with email_updates_enabled, along with their reminder window.
+    settings_res = supabase.table("user_settings").select(
+        "user_id, reminder_lead_hours"
+    ).eq("email_updates_enabled", True).execute()
+
+    for user_settings in (settings_res.data or []):
+        user_id = user_settings.get("user_id")
+        if not user_id:
+            continue
+
+        lead_hours = user_settings.get("reminder_lead_hours") or 24
+        window_end = now + timedelta(hours=lead_hours)
+
+        try:
+            # Fetch incomplete tasks for this user.
+            tasks_res = supabase.table("tasks").select(
+                "id, task_title, deadline_at, status"
+            ).eq("user_id", user_id).neq("status", "completed").execute()
+
+            tasks = tasks_res.data or []
+            if not tasks:
+                continue
+
+            # Look up user email and name once per user.
+            auth_response = supabase.auth.admin.get_user_by_id(user_id)
+            recipient = auth_response.user.email
+            if not recipient:
+                continue
+
+            profile_res = supabase.table("profiles").select("firstname, lastname").eq("id", user_id).maybe_single().execute()
+            user_name = None
+            if profile_res.data:
+                first = (profile_res.data.get("firstname") or "").strip()
+                last = (profile_res.data.get("lastname") or "").strip()
+                user_name = f"{first} {last}".strip() or None
+
+            for task in tasks:
+                task_id = str(task.get("id") or "")
+                task_title = task.get("task_title") or "Untitled task"
+                deadline = parse_iso_datetime(task.get("deadline_at"))
+
+                if not deadline:
+                    continue
+
+                # Determine alert type.
+                if deadline < now:
+                    alert_type = "overdue"
+                    task_message = f"This task was due on {deadline.astimezone().strftime('%a, %b %d at %I:%M %p')} and has not been completed."
+                elif deadline <= window_end:
+                    alert_type = "soon"
+                    task_message = f"This task is due on {deadline.astimezone().strftime('%a, %b %d at %I:%M %p')}."
+                else:
+                    continue  # Not yet in the reminder window.
+
+                key = (user_id, task_id, alert_type)
+                if key in _sent_task_alerts:
+                    continue  # Already notified this session.
+
+                subject, text_body, html_body = build_task_alert_email(user_name, alert_type, task_title, task_message)
+                send_smtp_email(recipient, subject, text_body, html_body=html_body)
+                _sent_task_alerts.add(key)
+                sent_count += 1
+                print(f"[task-alert-worker] Sent '{alert_type}' alert to {recipient} for task '{task_title}'")
+
+        except Exception as e:
+            print(f"[task-alert-worker] Failed for user {user_id}: {e}")
+
+    return sent_count
+
+
+# Runs continuously every 15 minutes to dispatch task alert emails.
+async def task_alert_worker() -> None:
+    while True:
+        try:
+            await asyncio.to_thread(send_due_task_alerts)
+        except Exception as exc:
+            print(f"[task-alert-worker] {exc}")
+        await asyncio.sleep(15 * 60)  # Check every 15 minutes.
+
 
 
 # Reads an SMTP boolean flag with a safe default for local development.
@@ -460,55 +544,6 @@ async def send_email(payload: SendEmailRequest):
     return {"detail": "Email sent successfully."}
 
 
-@router.get("/email/preferences/{user_id}", response_model=NotificationPreferencesResponse)
-# Returns persisted email notification preferences for a user.
-async def get_email_preferences(user_id: str):
-    preferences = read_notification_preferences()
-    data = preferences.get(user_id)
-    if data is None:
-        raise HTTPException(status_code=404, detail="Notification preferences not found.")
-
-    return NotificationPreferencesResponse(
-        user_id=user_id,
-        user_email=data.get("user_email", ""),
-        user_name=data.get("user_name"),
-        email_updates_enabled=bool(data.get("email_updates_enabled", True)),
-        weekly_report_enabled=bool(data.get("weekly_report_enabled", True)),
-        last_weekly_report_week=data.get("last_weekly_report_week"),
-        updated_at=data.get("updated_at", datetime.now(timezone.utc).isoformat()),
-    )
-
-
-@router.put("/email/preferences/{user_id}", response_model=NotificationPreferencesResponse)
-# Upserts email notification preferences used by scheduled and alert emails.
-async def update_email_preferences(user_id: str, payload: NotificationPreferencesRequest):
-    user_email = validate_email_address(payload.user_email, "user_email")
-    preferences = read_notification_preferences()
-    now_iso = datetime.now(timezone.utc).isoformat()
-    previous = preferences.get(user_id, {})
-
-    preferences[user_id] = {
-        "user_email": user_email,
-        "user_name": (payload.user_name or "").strip() or None,
-        "email_updates_enabled": payload.email_updates_enabled,
-        "weekly_report_enabled": payload.weekly_report_enabled,
-        "last_weekly_report_week": previous.get("last_weekly_report_week"),
-        "updated_at": now_iso,
-    }
-
-    write_notification_preferences(preferences)
-
-    return NotificationPreferencesResponse(
-        user_id=user_id,
-        user_email=user_email,
-        user_name=(payload.user_name or "").strip() or None,
-        email_updates_enabled=payload.email_updates_enabled,
-        weekly_report_enabled=payload.weekly_report_enabled,
-        last_weekly_report_week=previous.get("last_weekly_report_week"),
-        updated_at=now_iso,
-    )
-
-
 @router.post("/email/weekly/send-due")
 # Triggers weekend weekly-report sends immediately for all due users.
 async def trigger_due_weekly_reports():
@@ -516,18 +551,37 @@ async def trigger_due_weekly_reports():
     return {"detail": f"Sent {sent} weekly report email(s)."}
 
 
+@router.post("/email/task-alerts/send-due")
+# Manually triggers the task alert worker — useful for testing without waiting 15 min.
+async def trigger_due_task_alerts():
+    sent = await asyncio.to_thread(send_due_task_alerts)
+    return {"detail": f"Sent {sent} task alert email(s)."}
+
+
+
 @router.post("/email/weekly/send-now/{user_id}")
 # Sends a one-time weekly report email for the specified user.
 async def send_weekly_report_now(user_id: str):
-    preferences = read_notification_preferences()
-    data = preferences.get(user_id)
+    supabase = get_supabase()
+    
+    try:
+        auth_response = supabase.auth.admin.get_user_by_id(user_id)
+        recipient = auth_response.user.email
+    except Exception as exc:
+        raise HTTPException(status_code=404, detail="User not found in auth.") from exc
 
-    if data is None:
-        raise HTTPException(status_code=404, detail="Notification preferences not found for this user.")
+    if not recipient:
+        raise HTTPException(status_code=400, detail="User does not have an email address.")
 
-    recipient = validate_email_address(data.get("user_email", ""), "user_email")
+    profile_res = supabase.table("profiles").select("firstname, lastname").eq("id", user_id).maybe_single().execute()
+    user_name = None
+    if profile_res.data:
+        first = (profile_res.data.get("firstname") or "").strip()
+        last = (profile_res.data.get("lastname") or "").strip()
+        user_name = f"{first} {last}".strip() or None
+
     now = datetime.now(timezone.utc)
-    subject, text_body, html_body = build_weekly_report_content(user_id, now, data.get("user_name"))
+    subject, text_body, html_body = build_weekly_report_content(user_id, now, user_name)
 
     try:
         send_smtp_email(recipient, subject, text_body, html_body=html_body)

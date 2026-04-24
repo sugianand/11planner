@@ -7,6 +7,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { usePlanner } from "@/contexts/PlannerContext";
 import { useTheme } from "@/contexts/ThemeContext";
+import { findRelevantTourVideos, TOUR_VIDEOS } from "@/lib/tourVideos";
 
 type ChatRole = "assistant" | "user";
 type WidgetView = "chat-list" | "chat" | "news" | "news-detail" | "help-center" | "article";
@@ -15,6 +16,7 @@ type ChatMessage = {
   id: string;
   role: ChatRole;
   text: string;
+  videoId?: string;
 };
 
 type ChatSession = {
@@ -41,6 +43,7 @@ type HelpArticle = {
 type SupportChatApiResponse = {
   reply: string;
   suggested_view?: string | null;
+  video_id?: string | null;
 };
 
 const SUPPORT_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -847,6 +850,7 @@ export default function SupportAssistantWidget() {
     scrollChatToBottom();
 
     let replyText = createAssistantReply(trimmed, pathname || "");
+    let suggestedVideoId: string | undefined;
     try {
       const apiResponse = await sendSupportChatMessage(
         trimmed,
@@ -854,14 +858,24 @@ export default function SupportAssistantWidget() {
         [...messages, userMessage]
       );
       replyText = apiResponse.reply || replyText;
+      suggestedVideoId = apiResponse.video_id;
     } catch {
       // fall back to the local assistant reply
+    }
+
+    // Check for tour video suggestions if no video was suggested by API
+    if (!suggestedVideoId) {
+      const relevantVideos = findRelevantTourVideos(trimmed, pathname || "");
+      if (relevantVideos.length > 0) {
+        suggestedVideoId = relevantVideos[0].id;
+      }
     }
 
     const assistantMessage: ChatMessage = {
       id: nextMessageId("assistant"),
       role: "assistant",
       text: replyText,
+      videoId: suggestedVideoId,
     };
 
     updateMessages((prev) => [...prev, assistantMessage]);
@@ -880,17 +894,28 @@ export default function SupportAssistantWidget() {
 
     const history = [...messages, userMessage];
     let replyText = createAssistantReply(question, pathname || "");
+    let suggestedVideoId: string | undefined;
     try {
       const apiResponse = await sendSupportChatMessage(question, pathname || "", history);
       replyText = apiResponse.reply || replyText;
+      suggestedVideoId = apiResponse.video_id;
     } catch {
       // fall back to the local assistant reply
+    }
+
+    // Check for tour video suggestions if no video was suggested by API
+    if (!suggestedVideoId) {
+      const relevantVideos = findRelevantTourVideos(question, pathname || "");
+      if (relevantVideos.length > 0) {
+        suggestedVideoId = relevantVideos[0].id;
+      }
     }
 
     const assistantMessage: ChatMessage = {
       id: nextMessageId("assistant"),
       role: "assistant",
       text: replyText,
+      videoId: suggestedVideoId,
     };
 
     updateMessages((prev) => [...prev, assistantMessage]);
@@ -1082,21 +1107,37 @@ export default function SupportAssistantWidget() {
                 </div>
 
                 <div ref={listRef} className="relative flex-1 min-h-0 overflow-y-auto space-y-3 pr-1 pt-3 pb-2">
-                  {messages.map((message) => (
-                    <div key={message.id} className={`flex gap-2 ${message.role === "assistant" ? "justify-start" : "justify-end"}`}>
-                      {message.role === "assistant" && <ElevenAvatar size="sm" effectiveTheme={effectiveTheme} />}
-                      <div
-                        className={`max-w-[82%] rounded-[22px] px-3.5 py-3 text-sm leading-relaxed whitespace-pre-line break-words shadow-[0_14px_30px_-24px_rgba(15,23,42,0.55)] ${
-                          message.role === "assistant"
-                            ? "border border-slate-200/80 dark:border-slate-700/80 bg-white/90 dark:bg-slate-900/75 text-slate-800 dark:text-slate-100 backdrop-blur"
-                            : "text-white"
-                        }`}
-                        style={message.role === "user" ? { backgroundColor: "var(--theme-accent-strong)" } : undefined}
-                      >
-                        {message.text}
+                  {messages.map((message) => {
+                    const video = message.videoId ? TOUR_VIDEOS.find((v) => v.id === message.videoId) : undefined;
+                    return (
+                      <div key={message.id} className={`flex gap-2 ${message.role === "assistant" ? "justify-start" : "justify-end"}`}>
+                        {message.role === "assistant" && <ElevenAvatar size="sm" effectiveTheme={effectiveTheme} />}
+                        <div
+                          className={`max-w-[82%] rounded-[22px] px-3.5 py-3 text-sm leading-relaxed whitespace-pre-line break-words shadow-[0_14px_30px_-24px_rgba(15,23,42,0.55)] ${
+                            message.role === "assistant"
+                              ? "border border-slate-200/80 dark:border-slate-700/80 bg-white/90 dark:bg-slate-900/75 text-slate-800 dark:text-slate-100 backdrop-blur"
+                              : "text-white"
+                          }`}
+                          style={message.role === "user" ? { backgroundColor: "var(--theme-accent-strong)" } : undefined}
+                        >
+                          <div>{message.text}</div>
+                          {video && (
+                            <div className="mt-3 pt-3 border-t border-slate-300 dark:border-slate-600">
+                              <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-2">{video.title}</p>
+                              <video
+                                controls
+                                className="w-full rounded-lg max-h-64 bg-black"
+                                poster={undefined}
+                              >
+                                <source src={video.url} type="video/mp4" />
+                                Your browser does not support the video tag.
+                              </video>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
 
                   {isThinking && (
                     <div className="flex gap-2 justify-start">

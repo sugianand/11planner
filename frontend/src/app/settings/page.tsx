@@ -115,7 +115,7 @@ function SettingsPageContent() {
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [isSendingPasswordReset, setIsSendingPasswordReset] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
-  const [loadedServerNotificationPreferences, setLoadedServerNotificationPreferences] = useState(false);
+
   const [loadedSupabaseSettings, setLoadedSupabaseSettings] = useState(false);
   const hydratedSupabaseUserIdRef = useRef<string | null>(null);
   const [actionMessage, setActionMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -248,54 +248,9 @@ function SettingsPageContent() {
 
   useEffect(() => {
     if (!user?.id) {
-      setLoadedServerNotificationPreferences(false);
       setLoadedSupabaseSettings(false);
       hydratedSupabaseUserIdRef.current = null;
-      return;
     }
-
-    let isActive = true;
-
-    // Loads saved server-side notification email preferences for cross-device consistency.
-    const loadServerPreferences = async () => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/email/preferences/${user.id}`);
-        if (!response.ok) {
-          setLoadedServerNotificationPreferences(true);
-          return;
-        }
-
-        const data = (await response.json()) as {
-          email_updates_enabled?: boolean;
-          weekly_report_enabled?: boolean;
-        };
-
-        if (!isActive) {
-          return;
-        }
-
-        if (typeof data.email_updates_enabled === "boolean") {
-          setEmailUpdates(data.email_updates_enabled);
-          localStorage.setItem("emailUpdates", String(data.email_updates_enabled));
-        }
-        if (typeof data.weekly_report_enabled === "boolean") {
-          setWeeklyReport(data.weekly_report_enabled);
-          localStorage.setItem("weeklyReport", String(data.weekly_report_enabled));
-        }
-      } catch {
-        // Keep local settings if the backend preference endpoint is unavailable.
-      } finally {
-        if (isActive) {
-          setLoadedServerNotificationPreferences(true);
-        }
-      }
-    };
-
-    void loadServerPreferences();
-
-    return () => {
-      isActive = false;
-    };
   }, [user?.id]);
 
   useEffect(() => {
@@ -387,41 +342,7 @@ function SettingsPageContent() {
     setReminderLeadHours,
   ]);
 
-  useEffect(() => {
-    if (!user?.id || !user.email || !loadedServerNotificationPreferences) {
-      return;
-    }
 
-    // Persists email update + weekly report settings for backend-driven notifications.
-    const syncServerPreferences = async () => {
-      try {
-        await fetch(`${API_BASE_URL}/api/email/preferences/${user.id}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            user_email: user.email,
-            user_name: `${(user.firstname || "").trim()} ${(user.lastname || "").trim()}`.trim() || null,
-            email_updates_enabled: emailUpdates,
-            weekly_report_enabled: weeklyReport,
-          }),
-        });
-      } catch {
-        // Keep local behavior working even when preference sync cannot reach backend.
-      }
-    };
-
-    void syncServerPreferences();
-  }, [
-    user?.id,
-    user?.email,
-    user?.firstname,
-    user?.lastname,
-    emailUpdates,
-    weeklyReport,
-    loadedServerNotificationPreferences,
-  ]);
 
   useEffect(() => {
     const userId = user?.id;
@@ -495,32 +416,9 @@ function SettingsPageContent() {
 
     previousPanelRef.current = activePanel;
 
-    if (!actionMessage) {
-      return;
-    }
-
-    // Clear error banners when switching tabs so stale failures do not linger out of context.
-    if (actionMessage.type === "error") {
-      setActionMessage(null);
-      return;
-    }
-
-    if (activePanel === "data") {
-      return;
-    }
-
-    const dismissOnLeaveData = new Set([
-      "Learning insights history deleted. New insights start now.",
-      "Schedule PDF downloaded.",
-      "Schedule opened in a new tab. Use your browser print dialog to save as PDF.",
-      "Please allow pop-ups to export schedule as PDF.",
-      "Print-ready schedule export opened with explicit time rows.",
-    ]);
-
-    if (actionMessage?.text && (dismissOnLeaveData.has(actionMessage.text) || actionMessage.text.startsWith("Failed to export schedule:"))) {
-      setActionMessage(null);
-    }
-  }, [activePanel, actionMessage]);
+    // Clear all action messages when switching tabs so stale notifications don't linger.
+    setActionMessage(null);
+  }, [activePanel]);
 
   const [savedSettings, setSavedSettings] = useState({
     theme: theme as Theme,
@@ -1010,7 +908,7 @@ function SettingsPageContent() {
           })
           .eq("id", user.id);
         if (clearProfilePreferences.error) throw clearProfilePreferences.error;
-
+// This is used for cloud-synced theme, color theme, and notification preferences, so it runs after clearing all user data to ensure a clean slate.
         const clearCloudSettings = await supabase
           .from("user_settings")
           .delete()
@@ -1102,7 +1000,7 @@ function SettingsPageContent() {
       },
     });
   };
-
+// Tracks whether any settings have unsaved changes compared to the last saved state, to conditionally trigger auto-saving and warn about unsaved changes when navigating away.
   const hasChanges = useMemo(() => {
     return (
       theme !== savedSettings.theme ||
@@ -1250,7 +1148,7 @@ function SettingsPageContent() {
     ],
     []
   );
-
+// Filters the navigation items based on the search query, matching against both the label and associated keywords for each section.
   const filteredNavItems = useMemo(() => {
     const query = settingsSearch.trim().toLowerCase();
     if (!query) return navItems;

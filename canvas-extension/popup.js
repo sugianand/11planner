@@ -236,36 +236,53 @@ function launchOAuthFlow(authUrl) {
     });
 }
 
+async function generatePKCE() {
+    const array = new Uint8Array(96);
+    crypto.getRandomValues(array);
+    const verifier = btoa(String.fromCharCode(...array))
+        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    const data = new TextEncoder().encode(verifier);
+    const digest = await crypto.subtle.digest('SHA-256', data);
+    const challenge = btoa(String.fromCharCode(...new Uint8Array(digest)))
+        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    return { verifier, challenge };
+}
+
 async function loginWithGoogle() {
     const redirectUri = getOAuthRedirectUrl();
-    const authUrl = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUri)}&response_type=token`;
+    const { verifier, challenge } = await generatePKCE();
+
+    const authUrl = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUri)}&code_challenge=${challenge}&code_challenge_method=S256`;
 
     const responseUrl = await launchOAuthFlow(authUrl);
-    const params = parseHashParams(responseUrl);
-    const accessToken = params.get('access_token');
-    const oauthError = params.get('error_description') || params.get('error');
+
+    const parsedUrl = new URL(responseUrl);
+    const code = parsedUrl.searchParams.get('code');
+    const oauthError = parsedUrl.searchParams.get('error_description') || parsedUrl.searchParams.get('error');
 
     if (oauthError) {
-        throw new Error(oauthError);
+        throw new Error(decodeURIComponent(oauthError));
     }
 
-    if (!accessToken) {
-        throw new Error('Google login did not return an access token.');
+    if (!code) {
+        throw new Error('Google login did not return an authorization code.');
     }
 
-    const profileRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+    const tokenRes = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=pkce`, {
+        method: 'POST',
         headers: {
-            apikey: SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
         },
+        body: JSON.stringify({ auth_code: code, code_verifier: verifier }),
     });
 
-    const profile = await profileRes.json();
-    if (!profileRes.ok || !profile?.id || !profile?.email) {
-        throw new Error(profile?.message || 'Could not load your profile after Google login.');
+    const tokenData = await tokenRes.json();
+    if (!tokenRes.ok || !tokenData.access_token) {
+        throw new Error(tokenData.error_description || tokenData.message || 'Token exchange failed.');
     }
 
-    return { userId: profile.id, email: profile.email, accessToken };
+    return { userId: tokenData.user.id, email: tokenData.user.email, accessToken: tokenData.access_token };
 }
 
 // Initializes popup UI when page loads
@@ -327,25 +344,9 @@ document.addEventListener('DOMContentLoaded', () => {
         showStatus('Opening Google login...', 'info');
 
         try {
-            const oauthResult = await new Promise((resolve, reject) => {
-                chrome.runtime.sendMessage({ action: 'googleOAuthLogin' }, response => {
-                    if (chrome.runtime.lastError) {
-                        reject(new Error(chrome.runtime.lastError.message || 'Could not start Google login.'));
-                        return;
-                    }
-                    if (!response) {
-                        reject(new Error('No OAuth response from background.'));
-                        return;
-                    }
-                    if (response.error) {
-                        reject(new Error(response.error));
-                        return;
-                    }
-                    resolve(response);
-                });
-            });
+            const oauthResult = await loginWithGoogle();
 
-            const { userId, userEmail, accessToken } = oauthResult;
+            const { userId, email: userEmail, accessToken } = oauthResult;
             chrome.storage.local.set({ userId, userEmail, accessToken }, () => {
                 showPanel(true, userEmail);
                 showStatus('Logged in with Google!', 'success');

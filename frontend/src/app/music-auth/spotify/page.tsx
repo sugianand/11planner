@@ -4,7 +4,7 @@
 // stores it in localStorage, posts it back to the opener window, then closes.
 
 import { useEffect } from "react";
-
+// handles callback from Spotify OAuth and sends result back to the main app window via localStorage and postMessage, then closes itself
 export default function SpotifyAuthCallbackPage() {
   // Extract OAuth params from the URL, persist the result, notify the opener window, and close
   useEffect(() => {

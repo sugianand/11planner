@@ -6,7 +6,7 @@
 import Link from "next/link";
 import Footer from "@/components/Footer";
 import { usePlanner } from "@/contexts/PlannerContext";
-
+// Support page with contact info, response expectations, common fixes, and related links, styled for clarity and ease of use.
 export default function SupportPage() {
   const { userId } = usePlanner();
   // Only show "Back to home" for authenticated users
@@ -30,7 +30,7 @@ export default function SupportPage() {
       body: "You will receive troubleshooting guidance, clarifications, or escalation details."
     }
   ];
-
+//Returns the JSX for the support page, including a header, support highlights, contact info, common fixes, and related links, with conditional rendering of a back to home link if the user is logged in.
   return (
     <div className="min-h-screen relative overflow-hidden transition-colors duration-500 pb-0">
       <div className="fixed inset-0 bg-focus-light dark:bg-focus-dark -z-20"></div>

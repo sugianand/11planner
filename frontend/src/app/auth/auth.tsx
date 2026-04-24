@@ -26,7 +26,7 @@ const initialForm: FormState = {
   confirmPassword: "",
   resetEmail: "",
 };
-
+// Main auth page that handles login, registration, and password reset by switching modes, with form state management and dialog for feedback
 export default function AuthPage() {
   const [mode, setMode] = useState<Mode>("login");
   const [form, setForm] = useState<FormState>(initialForm);
@@ -154,7 +154,7 @@ export default function AuthPage() {
       });
       return;
     }
-
+// Attempt to sign in with Supabase auth, showing error dialog on failure and routing on success
     const { data: authData, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -278,7 +278,7 @@ export default function AuthPage() {
             <button className="btn" onClick={sendPasswordResetEmail}>
               Send Reset Link
             </button>
-
+{/* Back to login link in forgot password mode */}
             <div className="auth-footer">
               <button
                 className="link-btn"
@@ -293,14 +293,14 @@ export default function AuthPage() {
           </>
         ) : (
           <>
-            <input
+            <input 
               type="text"
               name="username"
               placeholder="Username"
               value={form.username}
               onChange={handleInputChange}
             />
-
+{/* Added date of birth field to registration form */}
             <input
               type="email"
               name="email"
@@ -323,7 +323,7 @@ export default function AuthPage() {
               value={form.password}
               onChange={handleInputChange}
             />
-
+{/* Added confirm password field to registration form for validation */}
             <input
               type="password"
               name="confirmPassword"
