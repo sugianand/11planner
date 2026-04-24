@@ -62,6 +62,87 @@ That's really it. The scheduling algorithm handles urgency scoring, break spacin
 
 ---
 
+## Screenshots
+
+> To add real screenshots: take them, save them to `docs/screenshots/`, and update the paths below.
+
+### Landing Page
+The first thing you see when you open 11Planner. Explains what it does, has a sign-up/login button, and shows the "11" branding with the story behind the name.
+
+![Landing Page](./docs/screenshots/landing.png)
+
+---
+
+### Dashboard
+The main hub once you're logged in. Shows your upcoming deadlines, a breakdown of pending vs. completed tasks, quick-action buttons (Add Task, Add Course, View Schedule), and the Focus Dashboard panel at the bottom.
+
+![Dashboard](./docs/screenshots/dashboard.png)
+
+---
+
+### Focus Mode — Dashboard
+The dashboard with a video background active and the Pomodoro timer running. Shows the three UI modes: standard, glass panels (transparent), and the full hide-all-UI mode where everything except the timer disappears.
+
+![Focus Mode](./docs/screenshots/focus_mode.png)
+
+---
+
+### Tasks Page
+Your full task list sorted by deadline. Shows the priority color coding (red = high, yellow = medium, blue = normal), the complete/in-progress toggle, and the "New Task" form on the right with the course dropdown, deadline picker, estimated hours, and priority slider.
+
+![Tasks Page](./docs/screenshots/tasks.png)
+
+---
+
+### Courses Page
+All your added courses shown as cards. Each card shows the course name, code, professor, and meeting days/times. The "Add Course" panel on the right has the syllabus PDF upload zone — drag a PDF in and the fields fill themselves.
+
+![Courses Page](./docs/screenshots/courses.png)
+
+---
+
+### Schedule — Week View
+The generated schedule in week view. Color-coded blocks for class times (from courses), study blocks (from schedule generation), and break blocks. Shows how tasks are distributed across the week without overlapping classes.
+
+![Week View](./docs/screenshots/schedule_week.png)
+
+---
+
+### Schedule — Day View
+Zoomed into a single day. Shows the hourly breakdown with each study block's task name, estimated duration, and priority. You can drag blocks to different time slots directly from this view.
+
+![Day View](./docs/screenshots/schedule_day.png)
+
+---
+
+### Schedule — Month View
+Full month calendar. Shows which days have study blocks scheduled, how many, and which are highest priority. Good for getting a sense of how heavy a week looks ahead of time.
+
+![Month View](./docs/screenshots/schedule_month.png)
+
+---
+
+### Profile & Preferences
+Where you set your study preferences — which days you're available, what time of day you prefer to work, your work style (steady vs. crunch), and how you like to approach assignments. These feed directly into the schedule generator.
+
+![Profile Page](./docs/screenshots/profile.png)
+
+---
+
+### Settings Page
+Theme switcher (Light/Dark/Auto), color accent selector, daily study hour cap slider, notification toggle and lead-time selector, and timer duration settings. Every setting syncs to your Supabase profile.
+
+![Settings](./docs/screenshots/settings.png)
+
+---
+
+### Canvas Chrome Extension
+The extension popup on a Canvas course page. Shows the "Sync to 11Planner" button, the list of detected assignments with their due dates, and a status indicator showing how many were successfully imported.
+
+![Canvas Extension](./docs/screenshots/canvas_extension.png)
+
+---
+
 ## Tech stack
 
 | | |
