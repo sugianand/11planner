@@ -131,7 +131,7 @@ export default function TasksPage() {
   }, [userId, loadCourses, loadTasks]);
 
   // Simple, clean task completion handler
-  const handleToggleTaskCompletion = async (taskId: string, currentCompleted: boolean) => {
+  const handleToggleTaskCompletion = useCallback(async (taskId: string, currentCompleted: boolean) => {
     try {
       setTogglingTaskId(taskId);
       await updateTask(taskId, { completed: !currentCompleted });
@@ -149,7 +149,7 @@ export default function TasksPage() {
         message: err instanceof Error ? err.message : "Failed to update task",
       });
     }
-  };
+  }, [updateTask]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

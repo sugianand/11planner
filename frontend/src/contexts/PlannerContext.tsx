@@ -753,9 +753,15 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
       if (!updatedData || updatedData.length === 0) throw new Error("Task not found");
 
       // Update ONLY the specific task in local state by ID
-      setTasks((prev) =>
-        prev.map((t) => t.id === id ? { ...t, ...task } : t)
-      );
+      setTasks((prev) => {
+        const updated = prev.map((t) => {
+          if (t.id === id) {
+            return { ...t, ...task };
+          }
+          return t;
+        });
+        return updated;
+      });
 
       // Store completion timestamp if completing
       if (task.completed !== undefined && typeof window !== "undefined") {
