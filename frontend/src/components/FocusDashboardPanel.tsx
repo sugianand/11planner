@@ -747,11 +747,11 @@ export default function FocusDashboardPanel({
                       disabled={spotifyConnecting}
                       className="inline-flex items-center rounded-full border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-70 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
                     >
-                      {spotifyConnecting ? "Connecting..." : "Connect Spotify"}
+                      {spotifyConnecting ? "Connecting..." : "Connect YouTube"}
                     </button>
-                    {/* Open Spotify home page in a new tab */}
+                    {/* Open YouTube Music in a new tab */}
                     <a
-                      href="https://open.spotify.com/"
+                      href="https://music.youtube.com/"
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex items-center rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700"
