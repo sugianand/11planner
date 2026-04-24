@@ -3,6 +3,7 @@
 import { ReactNode, createContext, useContext, useEffect, useMemo, useState, Dispatch, SetStateAction } from 'react';
 
 export type YouTubeMood = 'lofi' | 'synthwave' | 'coding';
+export type Soundscape = 'none' | 'rain' | 'forest' | 'ocean' | 'cafe' | 'fireplace' | 'thunderstorm' | 'wind' | 'birds';
 
 export type YouTubeTrack = {
   title: string;
@@ -31,9 +32,17 @@ interface MusicContextType {
   isYoutubePlaying: boolean;
   setIsYoutubePlaying: Dispatch<SetStateAction<boolean>>;
 
+  // Soundscape state (ambient background audio)
+  activeSoundscape: Soundscape;
+  setActiveSoundscape: Dispatch<SetStateAction<Soundscape>>;
+  soundscapeVolume: number;
+  setSoundscapeVolume: Dispatch<SetStateAction<number>>;
+  isSoundscapePlaying: boolean;
+  setIsSoundscapePlaying: Dispatch<SetStateAction<boolean>>;
+
   // General music state
-  musicProvider: 'spotify' | 'youtube';
-  setMusicProvider: Dispatch<SetStateAction<'spotify' | 'youtube'>>;
+  musicProvider: 'spotify' | 'youtube' | 'soundscape';
+  setMusicProvider: Dispatch<SetStateAction<'spotify' | 'youtube' | 'soundscape'>>;
   isMusicOpen: boolean;
   setIsMusicOpen: Dispatch<SetStateAction<boolean>>;
 
@@ -57,8 +66,13 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   const [activeYoutubeIndex, setActiveYoutubeIndex] = useState(0);
   const [isYoutubePlaying, setIsYoutubePlaying] = useState(false);
 
+  // Soundscape state
+  const [activeSoundscape, setActiveSoundscape] = useState<Soundscape>('none');
+  const [soundscapeVolume, setSoundscapeVolume] = useState(0.5);
+  const [isSoundscapePlaying, setIsSoundscapePlaying] = useState(false);
+
   // General music state
-  const [musicProvider, setMusicProvider] = useState<'spotify' | 'youtube'>('spotify');
+  const [musicProvider, setMusicProvider] = useState<'spotify' | 'youtube' | 'soundscape'>('spotify');
   const [isMusicOpen, setIsMusicOpen] = useState(false);
 
   const youtubeTracks: YouTubeTrack[] = [
@@ -98,6 +112,9 @@ export function MusicProvider({ children }: { children: ReactNode }) {
           isYoutubePlaying: iyp,
           musicProvider: mp,
           isMusicOpen: imo,
+          activeSoundscape: as,
+          soundscapeVolume: sv,
+          isSoundscapePlaying: isp,
         } = JSON.parse(saved);
 
         if (sp) setSpotifyPlaylist(sp);
@@ -107,6 +124,9 @@ export function MusicProvider({ children }: { children: ReactNode }) {
         if (iyp !== undefined) setIsYoutubePlaying(iyp);
         if (mp) setMusicProvider(mp);
         if (imo !== undefined) setIsMusicOpen(imo);
+        if (as) setActiveSoundscape(as);
+        if (sv !== undefined) setSoundscapeVolume(sv);
+        if (isp !== undefined) setIsSoundscapePlaying(isp);
       }
     } catch (e) {
       console.error('Failed to load music state:', e);
@@ -124,12 +144,15 @@ export function MusicProvider({ children }: { children: ReactNode }) {
         isYoutubePlaying,
         musicProvider,
         isMusicOpen,
+        activeSoundscape,
+        soundscapeVolume,
+        isSoundscapePlaying,
       };
       localStorage.setItem(MUSIC_STORAGE_KEY, JSON.stringify(state));
     } catch (e) {
       console.error('Failed to save music state:', e);
     }
-  }, [spotifyPlaylist, spotifyConnected, youtubeMood, activeYoutubeIndex, isYoutubePlaying, musicProvider, isMusicOpen]);
+  }, [spotifyPlaylist, spotifyConnected, youtubeMood, activeYoutubeIndex, isYoutubePlaying, musicProvider, isMusicOpen, activeSoundscape, soundscapeVolume, isSoundscapePlaying]);
 
   const value = useMemo(
     () => ({
@@ -151,6 +174,12 @@ export function MusicProvider({ children }: { children: ReactNode }) {
       setMusicProvider,
       isMusicOpen,
       setIsMusicOpen,
+      activeSoundscape,
+      setActiveSoundscape,
+      soundscapeVolume,
+      setSoundscapeVolume,
+      isSoundscapePlaying,
+      setIsSoundscapePlaying,
       youtubeTracks,
     }),
     [
@@ -163,6 +192,9 @@ export function MusicProvider({ children }: { children: ReactNode }) {
       isYoutubePlaying,
       musicProvider,
       isMusicOpen,
+      activeSoundscape,
+      soundscapeVolume,
+      isSoundscapePlaying,
     ]
   );
 

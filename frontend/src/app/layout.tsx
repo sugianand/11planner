@@ -8,6 +8,7 @@ import { MusicProvider } from "@/contexts/MusicContext";
 import Navigation from "@/components/Navigation";
 import NotificationToasts from "@/components/NotificationToasts";
 import GlobalTimerTicker from "@/components/GlobalTimerTicker";
+import PersistentAudioPlayer from "@/components/PersistentAudioPlayer";
 import SupportAssistantClient from "@/components/SupportAssistantClient";
 import "./globals.css";
 import "@material-symbols/font-400/outlined.css";
@@ -58,6 +59,7 @@ export default function RootLayout({
                   <NotificationToasts />
                   {children}
                   <GlobalTimerTicker />
+                  <PersistentAudioPlayer />
                   <SupportAssistantClient />
                 </NotificationProvider>
               </MusicProvider>
