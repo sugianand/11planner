@@ -1128,8 +1128,8 @@ export default function SupportAssistantWidget() {
                                 key={video.id}
                                 controls
                                 controlsList="nodownload"
-                                className="w-full rounded-lg max-h-64 bg-black"
-                                preload="metadata"
+                                className="w-full rounded-lg max-h-64 bg-black block"
+                                crossOrigin="anonymous"
                               >
                                 <source src={video.url} type="video/mp4" />
                                 Your browser does not support the video tag.
