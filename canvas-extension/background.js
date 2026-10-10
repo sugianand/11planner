@@ -4,8 +4,8 @@
  */
 
 const DEFAULT_API_URL = 'https://my11planner-api.vercel.app';
-const SUPABASE_URL = 'https://ddszcujvbvvihwsrkzsk.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkc3pjdWp2YnZ2aWh3c3JrenNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAxNjIzNDYsImV4cCI6MjA4NTczODM0Nn0.HfSG1DHiGG3Riv_JVFvFBWJggy40tPS4iAavIDKjs1o';
+const SUPABASE_URL = 'https://zweedoinjlbwnqyuwqlk.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_RlOKu6hZUuYakoIlkBfo4g_vkm0yg0J';
 
 // Generates a PKCE verifier and challenge pair for Supabase OAuth.
 async function generatePKCE() {

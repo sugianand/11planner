@@ -4,8 +4,8 @@
  */
 
 // Supabase configuration (anon key is safe to embed in client code)
-const SUPABASE_URL = 'https://ddszcujvbvvihwsrkzsk.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkc3pjdWp2YnZ2aWh3c3JrenNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAxNjIzNDYsImV4cCI6MjA4NTczODM0Nn0.HfSG1DHiGG3Riv_JVFvFBWJggy40tPS4iAavIDKjs1o';
+const SUPABASE_URL = 'https://zweedoinjlbwnqyuwqlk.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_RlOKu6hZUuYakoIlkBfo4g_vkm0yg0J';
 const WEBSITE_BASE_URL = 'http://localhost:3000';
 const GOOGLE_BTN_CONTENT = `
         <span class="google-mark" aria-hidden="true">
