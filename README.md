@@ -12,7 +12,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)](https://typescriptlang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**[🚀 Live Demo](https://11planner.vercel.app)** &nbsp;·&nbsp; **[📖 How to Run](./RUN_INSTRUCTIONS.md)** &nbsp;·&nbsp; **[📋 User Manual](./USER_MANUAL.md)**
+**[🚀 Live Demo](https://my11planner.vercel.app)** &nbsp;·&nbsp; **[📖 How to Run](./RUN_INSTRUCTIONS.md)** &nbsp;·&nbsp; **[📋 User Manual](./USER_MANUAL.md)**
 
 </div>
 
