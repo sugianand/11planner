@@ -128,3 +128,20 @@ To enable Canvas LMS sync, load the Chrome extension manually:
 - **All data persists** in Supabase — restarting the backend does not reset any data.
 - Backend config: `backend/app/main.py`
 - Frontend config: `frontend/next.config.ts`
+
+## Deploying to Vercel
+
+The app deploys as two Vercel projects from this one repo:
+
+| Project | Root Directory | URL |
+|---|---|---|
+| `my11planner` (frontend) | `frontend` | https://my11planner.vercel.app |
+| `my11planner-api` (backend) | `backend` | https://my11planner-api.vercel.app |
+
+**Frontend env vars:** `NEXT_PUBLIC_API_URL=https://my11planner-api.vercel.app`, `NEXT_PUBLIC_SPOTIFY_CLIENT_ID` (optional).
+
+**Backend env vars:** `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, and `SMTP_*` if sending email.
+
+The backend runs as a serverless function (`backend/api/index.py`), so the hourly email loops are off on Vercel.
+
+After a domain change, update Supabase → Authentication → URL Configuration (Site URL + `/auth/callback` and `/auth/reset-password` redirects) and the Spotify redirect URI (`/music-auth/spotify`).

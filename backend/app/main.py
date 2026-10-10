@@ -23,7 +23,9 @@ load_dotenv(Path(__file__).resolve().parents[1] / ".env", override=True)
 async def lifespan(_app: FastAPI):
     worker_task: asyncio.Task | None = None
     alert_task: asyncio.Task | None = None
-    run_worker = os.getenv("RUN_WEEKLY_EMAIL_WORKER", "true").lower() not in {"0", "false", "no", "off"}
+    # Long-running loops can't live in serverless functions, so they default off on Vercel.
+    default_worker = "false" if os.getenv("VERCEL") else "true"
+    run_worker = os.getenv("RUN_WEEKLY_EMAIL_WORKER", default_worker).lower() not in {"0", "false", "no", "off"}
 
     if run_worker:
         worker_task = asyncio.create_task(weekly_email_worker())

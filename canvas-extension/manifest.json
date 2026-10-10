@@ -17,7 +17,7 @@
     "http://127.0.0.1:8000/*",
     "https://127.0.0.1:8000/*",
     "https://ddszcujvbvvihwsrkzsk.supabase.co/*",
-    "https://11planner-production.up.railway.app/*"
+    "https://my11planner-api.vercel.app/*"
   ],
   "action": {
     "default_popup": "popup.html",
