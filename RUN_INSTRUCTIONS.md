@@ -142,6 +142,6 @@ The app deploys as two Vercel projects from this one repo:
 
 **Backend env vars:** `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, and `SMTP_*` if sending email.
 
-The backend runs as a serverless function (`backend/api/index.py`), so the hourly email loops are off on Vercel.
+The backend runs as a serverless function (Vercel FastAPI preset, entry `backend/index.py`), so the hourly email loops are off on Vercel.
 
 After a domain change, update Supabase → Authentication → URL Configuration (Site URL + `/auth/callback` and `/auth/reset-password` redirects) and the Spotify redirect URI (`/music-auth/spotify`).
